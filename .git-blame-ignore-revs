@@ -1,0 +1,5 @@
+# Commits de formato masivo: ignorarlos en git blame.
+# Uso local: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: aplicar ruff format y autofix de ruff (F1)
+566c0c8a45aa03427c6a499c20b7dd5bab4c61b7
