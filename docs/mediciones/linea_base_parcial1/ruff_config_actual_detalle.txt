@@ -1,0 +1,21 @@
+benchmarks/comparar.py:18:8: F401 [*] `sys` imported but unused
+benchmarks/perfilar_cprofile.py:31:5: F841 Local variable `peds` is assigned to but never used
+benchmarks/perfilar_memoria.py:19:8: F401 [*] `sys` imported but unused
+benchmarks/perfilar_memoria.py:22:29: F401 [*] `memory_profiler.memory_usage` imported but unused
+benchmarks/perfilar_memoria.py:28:35: F401 [*] `src.pedidos.agrupador.agrupar_pedidos_batch` imported but unused
+benchmarks/perfilar_memoria.py:161:13: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:163:13: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:164:13: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:168:13: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:169:13: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:173:13: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:174:13: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:177:13: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:184:9: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:185:9: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:186:9: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:187:9: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:190:9: F541 [*] f-string without any placeholders
+benchmarks/perfilar_memoria.py:191:9: F541 [*] f-string without any placeholders
+Found 19 errors.
+[*] 18 fixable with the `--fix` option (1 hidden fix can be enabled with the `--unsafe-fixes` option).

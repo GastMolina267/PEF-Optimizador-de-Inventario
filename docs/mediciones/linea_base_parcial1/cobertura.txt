@@ -1,0 +1,56 @@
+........................................................................ [ 85%]
+............                                                             [100%]
+=============================== warnings summary ===============================
+tests/test_etapa_5.py::TestEquivalenciaEscalaMediana::test_equivalencia_busquedas_id_y_nombre
+tests/test_etapa_5.py::TestEquivalenciaEscalaGrande::test_top_n_en_dataset_grande
+  <site-packages>/_pytest/fixtures.py:1313: PytestRemovedIn10Warning: Class-scoped fixture defined as instance method is deprecated.
+  Instance attributes set in this fixture will NOT be visible to test methods,
+  as each test gets a new instance while the fixture runs only once per class.
+  Use @classmethod decorator and set attributes on cls instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#class-scoped-fixture-as-instance-method
+    fixturefunc = resolve_fixture_function(fixturedef, request)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.10.12-final-0 _______________
+
+Name                                    Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------
+src/__init__.py                             0      0   100%
+src/cache/__init__.py                       2      0   100%
+src/cache/cache_consultas.py               93     18    81%   31, 36-38, 47, 55, 73, 76-77, 82-86, 106, 120, 124, 146
+src/datos/__init__.py                       3      0   100%
+src/datos/cargador.py                      60     18    70%   28, 31, 34, 42, 45-46, 59, 62-63, 66, 93, 98-99, 122-135
+src/datos/validador.py                     43      9    79%   36, 38, 42, 44, 49, 51, 55, 59, 64
+src/inventario/__init__.py                  3      0   100%
+src/inventario/catalogo_hash.py            79     27    66%   41-46, 54, 85, 95, 110, 126-133, 137-144, 152-153, 161
+src/inventario/catalogo_lineal.py          62     10    84%   34, 79, 84, 92, 99, 110-113, 121
+src/modelos/__init__.py                     3      0   100%
+src/modelos/pedido.py                      69      4    94%   42, 71, 77, 135
+src/modelos/producto.py                    31      1    97%   66
+src/motor/__init__.py                       2      0   100%
+src/motor/motor_inventario.py             124     18    85%   49, 84, 87, 95, 113, 140-150, 182-184, 206, 268
+src/pedidos/__init__.py                     5      0   100%
+src/pedidos/agrupador.py                   49      3    94%   39, 67, 84
+src/pedidos/combinaciones.py              114      9    92%   32, 67-69, 117, 123-124, 227-228
+src/pedidos/procesador_concurrente.py      88     50    43%   44-48, 62-115, 138, 174-183, 196-204
+src/pedidos/procesador_secuencial.py       53      6    89%   101-109
+src/ranking/__init__.py                     2      0   100%
+src/ranking/top_productos.py               42      7    83%   31, 39, 76, 84, 109-111
+src/ui/__init__.py                          0      0   100%
+src/ui/app.py                             115     57    50%   65-67, 77-100, 129-137, 141-148, 163-165, 176-189, 193-194, 197, 283-289
+src/ui/componentes/__init__.py              2      0   100%
+src/ui/componentes/panel_estado.py         59      8    86%   134-135, 171, 203-204, 207-208, 211
+src/ui/pantallas/__init__.py                8      0   100%
+src/ui/pantallas/agrupacion.py             76     16    79%   111, 115, 118-122, 131-139, 219
+src/ui/pantallas/alternativas.py          104     34    67%   105-106, 140-145, 149-151, 154-158, 167-175, 184-186, 198-200, 227-228, 283
+src/ui/pantallas/catalogo.py              162     21    87%   207, 212-213, 240-249, 261, 265, 272-273, 276-277, 300, 305-306, 333-334, 349, 413, 425
+src/ui/pantallas/comparacion.py           118     18    85%   114-117, 120, 123-127, 131, 140-144, 154-155
+src/ui/pantallas/inicio.py                 76     18    76%   142, 145-166, 203, 294-295
+src/ui/pantallas/pedidos.py               131     16    88%   133-134, 141-145, 165-166, 168, 180, 182, 374, 376, 389-390
+src/ui/pantallas/top_productos.py          86     21    76%   140, 144-146, 149-153, 162-168, 177-178, 182-183, 269
+src/ui/tema.py                            141     15    89%   54, 66, 73, 79-81, 87, 209-210, 505-511
+---------------------------------------------------------------------
+TOTAL                                    2005    404    80%
+Coverage XML written to file docs/mediciones/linea_base_parcial1/coverage.xml
+84 passed, 2 warnings in 30.62s

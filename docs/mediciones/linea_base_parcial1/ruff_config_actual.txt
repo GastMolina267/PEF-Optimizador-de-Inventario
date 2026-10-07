@@ -1,0 +1,5 @@
+14	F541	[*] f-string-missing-placeholders
+ 4	F401	[*] unused-import
+ 1	F841	[ ] unused-variable
+Found 19 errors.
+[*] 18 fixable with the `--fix` option (1 hidden fix can be enabled with the `--unsafe-fixes` option).
