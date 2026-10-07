@@ -2,9 +2,9 @@ name: CI - Verificación del Proyecto
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, dev, parcial-2, "p2/**" ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev, parcial-2 ]
   workflow_dispatch:
 
 concurrency:
@@ -34,15 +34,19 @@ jobs:
       - name: Instalar herramientas de análisis
         run: |
           python -m pip install --upgrade pip
-          pip install ruff compileall2
+          pip install "ruff==0.16.10"
 
       - name: Compilación de sintaxis bytecode (Zero Syntax Errors)
         run: |
-          python -m compileall -q src automations tests scripts main.py
+          python -m compileall -q src automations benchmarks tests scripts main.py
 
-      - name: Análisis estático con Ruff
+      - name: Análisis estático con Ruff (PEP 8, imports, nombres, bugbear)
         run: |
-          ruff check src/ automations/ tests/ scripts/ main.py
+          ruff check .
+
+      - name: Formato con Ruff (sin cambios pendientes)
+        run: |
+          ruff format --check .
 
   # =========================================================================
   # 2. Matriz de Pruebas Unitarias y Cobertura (Linux & Windows)
@@ -73,12 +77,14 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
-      - name: Ejecutar Suite de 78 Pruebas con Cobertura (Pytest)
+      - name: Ejecutar suite de pruebas con cobertura (Pytest)
         run: |
           python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
 
-      - name: Subir reporte de cobertura (Ubuntu / Python 3.11)
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      # Lo consume el job de SonarQube. Antes la condición pedía Python 3.11,
+      # que no está en la matriz, y el reporte nunca se subía.
+      - name: Subir reporte de cobertura (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
@@ -151,9 +157,48 @@ jobs:
 
           slides = data.get('slides', [])
           assert len(slides) == 11, f'Se esperaban 11 slides, encontradas {len(slides)}'
-          
+
           dollar = chr(36)
           raw_text = json.dumps(data, ensure_ascii=False)
           assert raw_text.count(dollar) == 0, f'Se encontraron {raw_text.count(dollar)} símbolos $ en slides.json'
           print('✓ Presentación validada: 11 diapositivas conformes y 0 símbolos $ detectados.')
           "
+
+  # =========================================================================
+  # 4. Análisis de calidad con SonarQube Cloud
+  # =========================================================================
+  sonarqube:
+    name: Análisis de Calidad (SonarQube Cloud)
+    needs: test-suite
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Descargar repositorio (historial completo para blame y código nuevo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Descargar reporte de cobertura
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+
+      - name: Generar reporte de Ruff para SonarQube
+        run: |
+          pip install "ruff==0.16.10"
+          ruff check . --output-format=json --output-file=ruff-report.json --exit-zero
+
+      - name: Aviso si falta el token
+        if: env.SONAR_TOKEN == ''
+        run: |
+          echo "::warning::No hay secret SONAR_TOKEN: se omite el análisis de SonarQube."
+
+      - name: Análisis SonarQube Cloud
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v8.3.0

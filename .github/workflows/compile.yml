@@ -162,4 +162,3 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ startsWith(github.ref, 'refs/heads/dev') || contains(steps.resolver_tag.outputs.tag, 'dev') || contains(steps.resolver_tag.outputs.tag, 'rc') }}
-

@@ -6,6 +6,7 @@ __pycache__/
 # Pytest / Coverage
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 
 # Virtual Environment
@@ -28,6 +29,7 @@ Desktop.ini
 *.lprof
 mprofile_*.dat
 coverage.xml
+ruff-report.json
 
 # Compilación y Empaquetado (PyInstaller, Build, Wheels)
 build/
