@@ -220,10 +220,7 @@ def generar_dataset_sintetico(
         nombre_completo = f"{nombre_base} {modificador} #{prod_id}"
 
         # ~5% de productos sin stock (para forzar casos de alternativas y pedidos parciales)
-        if rnd.random() < 0.05:
-            stock = 0
-        else:
-            stock = rnd.randint(5, 250)
+        stock = 0 if rnd.random() < 0.05 else rnd.randint(5, 250)
 
         precio = round(rnd.uniform(500.0, 65000.0), 2)
 

@@ -5,6 +5,8 @@ Navegación oscura, contenido claro, acción naranja. Dualidad Baseline | Optimi
 
 from __future__ import annotations
 
+import contextlib
+
 import flet as ft
 
 # Cromo de consola (top nav + side nav)
@@ -90,10 +92,8 @@ def alineacion_center() -> ft.alignment.Alignment:
 
 def actualizar_control(control) -> None:
     """Invoca update() de forma segura capturando excepciones si el control aún no está montado."""
-    try:
+    with contextlib.suppress(Exception):
         control.update()
-    except Exception:
-        pass
 
 
 def estilo_boton_primario() -> ft.ButtonStyle:

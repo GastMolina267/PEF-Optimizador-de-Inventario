@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 import flet as ft
 
 from src.motor.motor_inventario import MotorInventario
@@ -104,10 +106,8 @@ class PantallaAlternativas(ft.Container):
         self.col_combinaciones = ft.ListView(spacing=4, expand=True, padding=8)
 
         self._construir_interfaz()
-        try:
+        with contextlib.suppress(Exception):
             self._ejecutar_busqueda()
-        except Exception:
-            pass
 
     def _construir_interfaz(self) -> None:
         self.content = ft.Column(

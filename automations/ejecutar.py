@@ -12,6 +12,7 @@ en ``docs/``; jamás altera el motor de inventario.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 from pathlib import Path
 
@@ -45,10 +46,8 @@ def construir_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     if sys.stdout and hasattr(sys.stdout, "reconfigure"):
-        try:
+        with contextlib.suppress(Exception):
             sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        except Exception:
-            pass
 
     args = construir_parser().parse_args(argv)
     raiz = resolver_raiz(args.raiz)

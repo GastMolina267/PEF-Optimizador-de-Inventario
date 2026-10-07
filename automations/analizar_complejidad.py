@@ -135,7 +135,7 @@ class _VisitanteCuerpo(ast.NodeVisitor):
         self.generic_visit(nodo)
 
     def visit_Compare(self, nodo: ast.Compare) -> None:
-        for operador, comparando in zip(nodo.ops, nodo.comparators):
+        for operador, comparando in zip(nodo.ops, nodo.comparators, strict=True):
             if isinstance(operador, ast.In) and _es_nombre_hash(comparando):
                 self.evidencia.accesos_hash.append(f"in {_nombre_iterable(comparando)}")
             if isinstance(operador, ast.In) and _es_nombre_hash(nodo.left):

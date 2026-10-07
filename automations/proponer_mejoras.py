@@ -262,12 +262,15 @@ def analisis_estatico_si_faltan_informes(raiz: Path) -> list[str]:
             continue
         arbol = ast.parse(ruta.read_text(encoding="utf-8"), filename=str(ruta))
         texto = ast.dump(arbol)
-        if "For(" in texto and spec.nombre_calificado.endswith("buscar_por_id"):
-            if "CatalogoLineal" in spec.nombre_calificado:
-                avisos.append(
-                    f"`{spec.nombre_calificado}` recorre una lista: búsqueda lineal "
-                    "O(n) — ya contrastada con `CatalogoHash`."
-                )
+        if (
+            "For(" in texto
+            and spec.nombre_calificado.endswith("buscar_por_id")
+            and "CatalogoLineal" in spec.nombre_calificado
+        ):
+            avisos.append(
+                f"`{spec.nombre_calificado}` recorre una lista: búsqueda lineal "
+                "O(n) — ya contrastada con `CatalogoHash`."
+            )
         if "ProcessPoolExecutor" in texto and "concurrente" in spec.ruta_relativa:
             avisos.append(
                 f"`{spec.nombre_calificado}` crea procesos: revisar overhead de IPC "

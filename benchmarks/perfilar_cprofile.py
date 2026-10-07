@@ -29,7 +29,6 @@ def ejecutar_flujo_completo(ruta_dataset: Path, estrategia: str = "optimizado") 
     motor.cargar_dataset(ruta_dataset)
 
     prods = motor.catalogo.obtener_todos()
-    peds = motor.pedidos
 
     # 1. Búsquedas repetitivas de catálogo
     for i in range(min(50, len(prods))):

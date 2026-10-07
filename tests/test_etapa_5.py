@@ -62,7 +62,7 @@ class TestEquivalenciaEscalaMediana:
             top_heap = calcular_top_solicitados_heap(pedidos, cat_hash, k=k)
 
             assert len(top_sort) == len(top_heap)
-            for (p_sort, cant_sort), (p_heap, cant_heap) in zip(top_sort, top_heap):
+            for (p_sort, cant_sort), (p_heap, cant_heap) in zip(top_sort, top_heap, strict=True):
                 assert cant_sort == cant_heap
                 assert p_sort.id == p_heap.id
 
@@ -80,7 +80,7 @@ class TestEquivalenciaEscalaMediana:
         assert res_sec.pedidos_imposibles == res_conc.pedidos_imposibles
 
         # Muestreo de resultados individuales
-        for p_sec, p_conc in zip(res_sec.resultados[:20], res_conc.resultados[:20]):
+        for p_sec, p_conc in zip(res_sec.resultados[:20], res_conc.resultados[:20], strict=True):
             assert p_sec.id_pedido == p_conc.id_pedido
             assert p_sec.estado == p_conc.estado
             assert p_sec.lineas_cubiertas == p_conc.lineas_cubiertas
@@ -99,7 +99,7 @@ class TestEquivalenciaEscalaMediana:
         )
 
         assert len(res_puro.combinaciones) == len(res_memo.combinaciones)
-        for c_puro, c_memo in zip(res_puro.combinaciones, res_memo.combinaciones):
+        for c_puro, c_memo in zip(res_puro.combinaciones, res_memo.combinaciones, strict=True):
             assert abs(c_puro.costo_total - c_memo.costo_total) < 1e-2
 
 

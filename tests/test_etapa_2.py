@@ -280,8 +280,8 @@ class TestDeterminismoSemilla:
         assert len(prods1) == len(prods2)
         assert len(peds1) == len(peds2)
 
-        for p1, p2 in zip(prods1, prods2):
+        for p1, p2 in zip(prods1, prods2, strict=True):
             assert p1 == p2
 
-        for ped1, ped2 in zip(peds1, peds2):
+        for ped1, ped2 in zip(peds1, peds2, strict=True):
             assert ped1 == ped2
