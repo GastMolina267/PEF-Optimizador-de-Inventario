@@ -1,0 +1,12 @@
+Temas Segundo parcial: sobre el primer parcial agregar
+Eliminar codigo redundante
+Compiladores y herramientas de optimizacion (usar una de acuerdo al lenguaje que usen):
+python -> scalene - py-spy - SnakeViz - java -> Java Flight Recorder - Java Mission Control
+Herramientas Generales: YourKit - New Relic​ - Elastic APM​ (aplicar una, pueden usar cualquier otra)
+Escritura y lectura de archivos grandes -> batching - buffer - procesamiento en paralelo
+legibilidad y mantenibilidad: nombre de variables - comentarios y docstring - organizacion y formato del codigo: pep 8
+Uso de generadores de documentacion: Sphinx (se puede usar cualquier otra herramienta)
+Herramientas de analisis de calidad:SonarQube (se puede usar cualquier herramineta)
+Refactorizacion
+Testing
+Uso de algun framework ​
