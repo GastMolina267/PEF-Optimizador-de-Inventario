@@ -10,13 +10,17 @@ Verifica:
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
+import pytest
 
 from automations.analizar_complejidad import (
     MARCA_FIN,
     MARCA_INICIO,
     analizar_repositorio,
+)
+from automations.analizar_complejidad import (
     ejecutar as ejecutar_complejidad,
 )
 from automations.inventario_funciones import (
@@ -25,14 +29,28 @@ from automations.inventario_funciones import (
     resolver_raiz,
 )
 from automations.proponer_mejoras import (
-    recoger_hotspots,
-    escribir_informe,
     ejecutar as ejecutar_propuestas,
+)
+from automations.proponer_mejoras import (
+    escribir_informe,
+    recoger_hotspots,
 )
 
 BASE_DIR = resolver_raiz(Path(__file__))
 DOCS = BASE_DIR / "docs"
-SRC = BASE_DIR / "src"
+
+
+@pytest.fixture
+def repo_temporal(tmp_path: Path) -> Path:
+    """Copia ``src/`` y ``docs/`` a un directorio temporal.
+
+    Las automatizaciones escriben en ``docs/``. Correrlas sobre una copia evita que
+    cada ejecución de la suite modifique ``docs/analisis.md`` y
+    ``docs/propuestas-mejora.md`` del repositorio real.
+    """
+    for carpeta in ("src", "docs"):
+        shutil.copytree(BASE_DIR / carpeta, tmp_path / carpeta)
+    return tmp_path
 
 
 def _informe_por_nombre(nombre: str):
@@ -105,15 +123,14 @@ class TestDerivacionAST:
         inf = _informe_por_nombre("CatalogoHash.buscar_por_id")
         assert inf.justificacion
         assert any(
-            token in inf.justificacion.lower()
-            for token in ("hash", "dict", "get", "bucle")
+            token in inf.justificacion.lower() for token in ("hash", "dict", "get", "bucle")
         )
 
 
 class TestEscrituraAnalisis:
-    def test_regenera_bloque_sin_borrar_comentario_del_grupo(self):
-        ejecutar_complejidad(BASE_DIR)
-        texto = (DOCS / "analisis.md").read_text(encoding="utf-8")
+    def test_regenera_bloque_sin_borrar_comentario_del_grupo(self, repo_temporal):
+        ejecutar_complejidad(repo_temporal)
+        texto = (repo_temporal / "docs" / "analisis.md").read_text(encoding="utf-8")
         assert MARCA_INICIO in texto
         assert MARCA_FIN in texto
         assert texto.index(MARCA_INICIO) < texto.index(MARCA_FIN)
@@ -125,9 +142,9 @@ class TestEscrituraAnalisis:
         assert "CatalogoLineal.buscar_por_id" in texto
         assert "ORIGIN-AUTO-COMPLEJIDAD" in texto
 
-    def test_bloque_menciona_evidencia_ast(self):
-        ejecutar_complejidad(BASE_DIR)
-        texto = (DOCS / "analisis.md").read_text(encoding="utf-8")
+    def test_bloque_menciona_evidencia_ast(self, repo_temporal):
+        ejecutar_complejidad(repo_temporal)
+        texto = (repo_temporal / "docs" / "analisis.md").read_text(encoding="utf-8")
         bloque = texto.split(MARCA_INICIO, 1)[1].split(MARCA_FIN, 1)[0]
         assert "Evidencia AST" in bloque
         assert "heapq" in bloque
@@ -139,18 +156,12 @@ class TestPropuestasHotspots:
         hotspots = recoger_hotspots(BASE_DIR)
         origenes = {h.origen for h in hotspots}
         assert "cProfile" in origenes or "line_profiler" in origenes
-        assert any(
-            "buscar_por_id" in h.simbolo or "CreateProcess" in h.simbolo
-            for h in hotspots
-        )
+        assert any("buscar_por_id" in h.simbolo or "CreateProcess" in h.simbolo for h in hotspots)
 
-    def test_escribe_informe_sin_tocar_src(self):
-        huellas = {
-            ruta: ruta.stat().st_mtime
-            for ruta in SRC.rglob("*.py")
-        }
-        ruta, _hotspots, propuestas = escribir_informe(BASE_DIR)
-        assert ruta == DOCS / "propuestas-mejora.md"
+    def test_escribe_informe_sin_tocar_src(self, repo_temporal):
+        huellas = {ruta: ruta.stat().st_mtime for ruta in (repo_temporal / "src").rglob("*.py")}
+        ruta, _hotspots, propuestas = escribir_informe(repo_temporal)
+        assert ruta == repo_temporal / "docs" / "propuestas-mejora.md"
         texto = ruta.read_text(encoding="utf-8")
         assert "Propuestas de mejora" in texto
         assert "No aplicar" in texto or "no aplicada" in texto.lower()
@@ -160,9 +171,9 @@ class TestPropuestasHotspots:
         for archivo, mtime in huellas.items():
             assert archivo.stat().st_mtime == mtime, f"Se modificó {archivo}"
 
-    def test_cli_propuestas_idempotente_en_src(self):
-        ejecutar_propuestas(BASE_DIR)
-        assert (DOCS / "propuestas-mejora.md").is_file()
+    def test_cli_propuestas_idempotente_en_src(self, repo_temporal):
+        ejecutar_propuestas(repo_temporal)
+        assert (repo_temporal / "docs" / "propuestas-mejora.md").is_file()
 
 
 class TestArtefactosOrigin:
@@ -179,8 +190,6 @@ class TestArtefactosOrigin:
             assert "español" in contenido.lower() or "Español" in contenido
 
     def test_prompts_prohíben_aplicar_codigo(self):
-        prompt = (DOCS / "prompts-origin" / "hotspots-propuestas.txt").read_text(
-            encoding="utf-8"
-        )
+        prompt = (DOCS / "prompts-origin" / "hotspots-propuestas.txt").read_text(encoding="utf-8")
         assert "NO apliques" in prompt or "No apliques" in prompt
         assert "src/" in prompt

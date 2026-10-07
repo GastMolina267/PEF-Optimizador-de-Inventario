@@ -12,6 +12,7 @@ en ``docs/``; jamás altera el motor de inventario.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 from pathlib import Path
 
@@ -45,10 +46,8 @@ def construir_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     if sys.stdout and hasattr(sys.stdout, "reconfigure"):
-        try:
+        with contextlib.suppress(Exception):
             sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        except Exception:
-            pass
 
     args = construir_parser().parse_args(argv)
     raiz = resolver_raiz(args.raiz)
@@ -58,10 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         informes = ejecutar_complejidad(raiz)
         print(f"[complejidad] {len(informes)} funciones fundamentales -> docs/analisis.md")
         for inf in informes:
-            print(
-                f"  - {inf.funcion.nombre_calificado}: "
-                f"{inf.promedio} (peor {inf.peor})"
-            )
+            print(f"  - {inf.funcion.nombre_calificado}: {inf.promedio} (peor {inf.peor})")
 
     if args.propuestas or correr_todo:
         ruta = ejecutar_propuestas(raiz)

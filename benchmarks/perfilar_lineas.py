@@ -17,8 +17,10 @@ Genera:
 """
 
 from __future__ import annotations
+
 import io
 from pathlib import Path
+
 from line_profiler import LineProfiler
 
 from src.datos.cargador import cargar_dataset

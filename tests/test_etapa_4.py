@@ -15,23 +15,25 @@ Verifica:
 """
 
 from __future__ import annotations
+
 from pathlib import Path
-import pytest
+
 import flet as ft
+import pytest
 
 from src.motor.motor_inventario import MotorInventario
+from src.ui.componentes.panel_estado import PanelEstado
+from src.ui.pantallas.agrupacion import PantallaAgrupacion
+from src.ui.pantallas.alternativas import PantallaAlternativas
+from src.ui.pantallas.catalogo import PantallaCatalogo
+from src.ui.pantallas.comparacion import PantallaComparacion
+from src.ui.pantallas.inicio import PantallaInicio
+from src.ui.pantallas.pedidos import PantallaPedidos
+from src.ui.pantallas.top_productos import PantallaTopProductos
 from src.ui.tema import (
     crear_badge_estado,
     crear_tarjeta_kpi,
 )
-from src.ui.componentes.panel_estado import PanelEstado
-from src.ui.pantallas.inicio import PantallaInicio
-from src.ui.pantallas.catalogo import PantallaCatalogo
-from src.ui.pantallas.pedidos import PantallaPedidos
-from src.ui.pantallas.agrupacion import PantallaAgrupacion
-from src.ui.pantallas.top_productos import PantallaTopProductos
-from src.ui.pantallas.alternativas import PantallaAlternativas
-from src.ui.pantallas.comparacion import PantallaComparacion
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"
@@ -104,7 +106,10 @@ class TestPantallasInstanciacion:
         # Probar búsqueda por texto
         pantalla.input_busqueda.value = "taladro"
         pantalla._ejecutar_busqueda()
-        assert "taladro" in pantalla.txt_tiempo_busqueda.value.lower() or "tiempo" in pantalla.txt_tiempo_busqueda.value.lower()
+        assert (
+            "taladro" in pantalla.txt_tiempo_busqueda.value.lower()
+            or "tiempo" in pantalla.txt_tiempo_busqueda.value.lower()
+        )
 
     def test_pantalla_pedidos(self, motor_cargado: MotorInventario):
         pantalla = PantallaPedidos(
@@ -153,6 +158,7 @@ class TestPantallasInstanciacion:
     def test_app_main_inicializacion(self):
         """Verifica que la función main arme la estructura completa en una Page."""
         from unittest.mock import MagicMock
+
         from src.ui.app import main
 
         mock_page = MagicMock()
@@ -165,4 +171,3 @@ class TestPantallasInstanciacion:
         assert len(mock_page.controls) == 1
         col_principal = mock_page.controls[0]
         assert len(col_principal.controls) == 2  # panel_estado y cuerpo_principal
-

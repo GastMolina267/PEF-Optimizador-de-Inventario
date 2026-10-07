@@ -6,8 +6,10 @@ Permite comparar:
 """
 
 from __future__ import annotations
+
 import heapq
-from typing import Sequence
+from collections.abc import Sequence
+
 from src.modelos.pedido import Pedido
 from src.modelos.producto import Producto
 

@@ -1,11 +1,13 @@
 """Módulo para la carga, validación y persistencia de datasets en formato JSON."""
 
 from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any
-from src.modelos.producto import Producto
+
 from src.modelos.pedido import Pedido
+from src.modelos.producto import Producto
 
 
 def validar_dataset(datos: dict[str, Any]) -> tuple[list[Producto], list[Pedido]]:
@@ -28,7 +30,9 @@ def validar_dataset(datos: dict[str, Any]) -> tuple[list[Producto], list[Pedido]
         raise ValueError("El contenido raíz del dataset debe ser un objeto JSON (diccionario).")
 
     if "productos" not in datos or not isinstance(datos["productos"], list):
-        raise ValueError("El dataset debe incluir una clave 'productos' con una lista de elementos.")
+        raise ValueError(
+            "El dataset debe incluir una clave 'productos' con una lista de elementos."
+        )
 
     if "pedidos" not in datos or not isinstance(datos["pedidos"], list):
         raise ValueError("El dataset debe incluir una clave 'pedidos' con una lista de elementos.")
@@ -43,7 +47,9 @@ def validar_dataset(datos: dict[str, Any]) -> tuple[list[Producto], list[Pedido]
         try:
             prod = Producto.desde_diccionario(item)
         except Exception as e:
-            raise ValueError(f"Error en datos de producto #{idx} (id={item.get('id')}): {e}") from e
+            raise ValueError(
+                f"Error en datos de producto #{idx} (id={item.get('id')}): {e}"
+            ) from e
 
         if prod.id in ids_productos:
             raise ValueError(f"Identificador de producto duplicado en dataset: #{prod.id}")
@@ -90,13 +96,17 @@ def cargar_dataset_json(ruta: str | Path) -> tuple[list[Producto], list[Pedido]]
     """
     path_archivo = Path(ruta)
     if not path_archivo.is_file():
-        raise FileNotFoundError(f"No se encontró el archivo de dataset en la ruta: {path_archivo.resolve()}")
+        raise FileNotFoundError(
+            f"No se encontró el archivo de dataset en la ruta: {path_archivo.resolve()}"
+        )
 
-    with open(path_archivo, "r", encoding="utf-8") as f:
+    with open(path_archivo, encoding="utf-8") as f:
         try:
             contenido = json.load(f)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Error de sintaxis JSON en el archivo {path_archivo.name}: {e}") from e
+            raise ValueError(
+                f"Error de sintaxis JSON en el archivo {path_archivo.name}: {e}"
+            ) from e
 
     return validar_dataset(contenido)
 
@@ -123,7 +133,8 @@ def guardar_dataset_json(
     path_archivo.parent.mkdir(parents=True, exist_ok=True)
 
     payload: dict[str, Any] = {
-        "metadatos": metadatos or {
+        "metadatos": metadatos
+        or {
             "total_productos": len(productos),
             "total_pedidos": len(pedidos),
         },

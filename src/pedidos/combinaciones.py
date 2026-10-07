@@ -10,9 +10,11 @@ Compara:
 """
 
 from __future__ import annotations
+
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
+
 from src.modelos.producto import Producto
 
 
@@ -95,7 +97,8 @@ class BuscadorAlternativas:
         # Filtrar candidatos de la categoría con stock disponible
         cat_norm = categoria.lower().strip()
         candidatos = [
-            p for p in self._productos_disponibles
+            p
+            for p in self._productos_disponibles
             if p.categoria.lower().strip() == cat_norm
             and (producto_original is None or p.id != producto_original.id)
             and p.precio <= presupuesto_maximo
@@ -115,7 +118,6 @@ class BuscadorAlternativas:
             # que la profundidad de recursión nunca exceda el límite del call stack de Python
             if len(candidatos) > 40:
                 candidatos = candidatos[:40]
-
 
         presupuesto_centavos = int(round(presupuesto_maximo * 100))
 

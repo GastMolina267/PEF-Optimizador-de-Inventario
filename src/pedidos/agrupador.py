@@ -6,10 +6,13 @@ y reducir la cantidad de consultas individuales al inventario.
 """
 
 from __future__ import annotations
+
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
-from src.modelos.producto import Producto
+from typing import Any
+
 from src.modelos.pedido import Pedido
+from src.modelos.producto import Producto
 
 
 @dataclass(slots=True)
@@ -108,7 +111,9 @@ def agrupar_pedidos_batch(
                 )
 
     # Ordenar por id_producto o cantidad para presentación predecible
-    items_consolidados = sorted(acumulador.values(), key=lambda it: it.cantidad_total, reverse=True)
+    items_consolidados = sorted(
+        acumulador.values(), key=lambda it: it.cantidad_total, reverse=True
+    )
 
     return LotePickingConsolidado(
         total_pedidos=len(pedidos),

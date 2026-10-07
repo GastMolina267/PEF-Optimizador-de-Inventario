@@ -13,11 +13,11 @@ Genera la tabla comparativa oficial en consola y la exporta a:
 """
 
 from __future__ import annotations
+
 import gc
-from pathlib import Path
-import sys
 import time
 import tracemalloc
+from pathlib import Path
 from typing import Any
 
 from src.datos.cargador import cargar_dataset
@@ -52,7 +52,9 @@ def _agrupacion_lineal_ingenua(pedidos, catalogo_lineal):
     return acumulador
 
 
-def medir_tiempo_y_memoria(func, *args, iteraciones: int = 3, **kwargs) -> tuple[float, float, Any]:
+def medir_tiempo_y_memoria(
+    func, *args, iteraciones: int = 3, **kwargs
+) -> tuple[float, float, Any]:
     """Ejecuta una función múltiples veces y retorna (tiempo_promedio_ms, memoria_pico_kb, resultado)."""
     # Calentamiento
     res = func(*args, **kwargs)
@@ -100,72 +102,94 @@ def ejecutar_benchmarks_dataset(nombre_archivo: str) -> list[dict[str, Any]]:
     filas_resultados = []
 
     # 1. Búsqueda por ID (Lineal O(n) vs Hash O(1))
-    t_base, m_base, _ = medir_tiempo_y_memoria(cat_lineal.buscar_por_id, id_muestra, iteraciones=10)
+    t_base, m_base, _ = medir_tiempo_y_memoria(
+        cat_lineal.buscar_por_id, id_muestra, iteraciones=10
+    )
     t_opt, m_opt, _ = medir_tiempo_y_memoria(cat_hash.buscar_por_id, id_muestra, iteraciones=10)
     sp = (t_base / t_opt) if t_opt > 0 else 1.0
-    filas_resultados.append({
-        "dataset": nombre_archivo,
-        "operacion": "Búsqueda por ID",
-        "complejidad_base": "O(n)",
-        "complejidad_opt": "O(1)",
-        "t_base_ms": t_base,
-        "t_opt_ms": t_opt,
-        "mem_base_kb": m_base,
-        "mem_opt_kb": m_opt,
-        "speedup": sp,
-        "detalle": f"ID {id_muestra} en catálogo de {n_prods} productos",
-    })
+    filas_resultados.append(
+        {
+            "dataset": nombre_archivo,
+            "operacion": "Búsqueda por ID",
+            "complejidad_base": "O(n)",
+            "complejidad_opt": "O(1)",
+            "t_base_ms": t_base,
+            "t_opt_ms": t_opt,
+            "mem_base_kb": m_base,
+            "mem_opt_kb": m_opt,
+            "speedup": sp,
+            "detalle": f"ID {id_muestra} en catálogo de {n_prods} productos",
+        }
+    )
 
     # 2. Búsqueda por Nombre (Lineal O(n) vs Invertido + LRU O(1)/O(k))
-    t_base, m_base, _ = medir_tiempo_y_memoria(cat_lineal.buscar_por_nombre, termino_busqueda, iteraciones=10)
-    t_opt, m_opt, _ = medir_tiempo_y_memoria(motor.buscar_por_nombre, termino_busqueda, iteraciones=10)
+    t_base, m_base, _ = medir_tiempo_y_memoria(
+        cat_lineal.buscar_por_nombre, termino_busqueda, iteraciones=10
+    )
+    t_opt, m_opt, _ = medir_tiempo_y_memoria(
+        motor.buscar_por_nombre, termino_busqueda, iteraciones=10
+    )
     sp = (t_base / t_opt) if t_opt > 0 else 1.0
-    filas_resultados.append({
-        "dataset": nombre_archivo,
-        "operacion": "Búsqueda por Nombre",
-        "complejidad_base": "O(n)",
-        "complejidad_opt": "O(1) amort.",
-        "t_base_ms": t_base,
-        "t_opt_ms": t_opt,
-        "mem_base_kb": m_base,
-        "mem_opt_kb": m_opt,
-        "speedup": sp,
-        "detalle": f"Término '{termino_busqueda}' (índice invertido + LRU)",
-    })
+    filas_resultados.append(
+        {
+            "dataset": nombre_archivo,
+            "operacion": "Búsqueda por Nombre",
+            "complejidad_base": "O(n)",
+            "complejidad_opt": "O(1) amort.",
+            "t_base_ms": t_base,
+            "t_opt_ms": t_opt,
+            "mem_base_kb": m_base,
+            "mem_opt_kb": m_opt,
+            "speedup": sp,
+            "detalle": f"Término '{termino_busqueda}' (índice invertido + LRU)",
+        }
+    )
 
     # 3. Top-N Productos Solicitados (Sort O(N log N) vs Heap O(N log k), k=5)
-    t_base, m_base, _ = medir_tiempo_y_memoria(calcular_top_solicitados_lineal, pedidos, cat_lineal, k=5, iteraciones=5)
-    t_opt, m_opt, _ = medir_tiempo_y_memoria(calcular_top_solicitados_heap, pedidos, cat_hash, k=5, iteraciones=5)
+    t_base, m_base, _ = medir_tiempo_y_memoria(
+        calcular_top_solicitados_lineal, pedidos, cat_lineal, k=5, iteraciones=5
+    )
+    t_opt, m_opt, _ = medir_tiempo_y_memoria(
+        calcular_top_solicitados_heap, pedidos, cat_hash, k=5, iteraciones=5
+    )
     sp = (t_base / t_opt) if t_opt > 0 else 1.0
-    filas_resultados.append({
-        "dataset": nombre_archivo,
-        "operacion": "Ranking Top-N (k=5)",
-        "complejidad_base": "O(N log N)",
-        "complejidad_opt": "O(N log k)",
-        "t_base_ms": t_base,
-        "t_opt_ms": t_opt,
-        "mem_base_kb": m_base,
-        "mem_opt_kb": m_opt,
-        "speedup": sp,
-        "detalle": f"heapq.nlargest acotado en k=5 sobre {n_peds} pedidos",
-    })
+    filas_resultados.append(
+        {
+            "dataset": nombre_archivo,
+            "operacion": "Ranking Top-N (k=5)",
+            "complejidad_base": "O(N log N)",
+            "complejidad_opt": "O(N log k)",
+            "t_base_ms": t_base,
+            "t_opt_ms": t_opt,
+            "mem_base_kb": m_base,
+            "mem_opt_kb": m_opt,
+            "speedup": sp,
+            "detalle": f"heapq.nlargest acotado en k=5 sobre {n_peds} pedidos",
+        }
+    )
 
     # 4. Agrupación Batch Picking (Ingenuo O(P*L*n) vs Consolidado O(L))
-    t_base, m_base, _ = medir_tiempo_y_memoria(_agrupacion_lineal_ingenua, pedidos, cat_lineal, iteraciones=3)
-    t_opt, m_opt, _ = medir_tiempo_y_memoria(agrupar_pedidos_batch, pedidos, cat_hash, iteraciones=3)
+    t_base, m_base, _ = medir_tiempo_y_memoria(
+        _agrupacion_lineal_ingenua, pedidos, cat_lineal, iteraciones=3
+    )
+    t_opt, m_opt, _ = medir_tiempo_y_memoria(
+        agrupar_pedidos_batch, pedidos, cat_hash, iteraciones=3
+    )
     sp = (t_base / t_opt) if t_opt > 0 else 1.0
-    filas_resultados.append({
-        "dataset": nombre_archivo,
-        "operacion": "Batch Picking Consolidado",
-        "complejidad_base": "O(P·L·n)",
-        "complejidad_opt": "O(L)",
-        "t_base_ms": t_base,
-        "t_opt_ms": t_opt,
-        "mem_base_kb": m_base,
-        "mem_opt_kb": m_opt,
-        "speedup": sp,
-        "detalle": "Acumulación en 1 pasada hash vs. búsquedas anidadas",
-    })
+    filas_resultados.append(
+        {
+            "dataset": nombre_archivo,
+            "operacion": "Batch Picking Consolidado",
+            "complejidad_base": "O(P·L·n)",
+            "complejidad_opt": "O(L)",
+            "t_base_ms": t_base,
+            "t_opt_ms": t_opt,
+            "mem_base_kb": m_base,
+            "mem_opt_kb": m_opt,
+            "speedup": sp,
+            "detalle": "Acumulación en 1 pasada hash vs. búsquedas anidadas",
+        }
+    )
 
     # 5. Alternativas / Sustitutos (Recursión O(2^N) vs DP Memo O(N*P))
     # Se evalúa el mismo subconjunto de candidatos para evidenciar la poda de estados
@@ -189,18 +213,20 @@ def ejecutar_benchmarks_dataset(nombre_archivo: str) -> list[dict[str, Any]]:
         iteraciones=2,
     )
     sp = (t_base / t_opt) if t_opt > 0 else 1.0
-    filas_resultados.append({
-        "dataset": nombre_archivo,
-        "operacion": "Combinaciones Sustitutas",
-        "complejidad_base": "O(2^N)",
-        "complejidad_opt": "O(N·P)",
-        "t_base_ms": t_base,
-        "t_opt_ms": t_opt,
-        "mem_base_kb": m_base,
-        "mem_opt_kb": m_opt,
-        "speedup": sp,
-        "detalle": f"Memo DP reutilizó {r_opt.hits_memo} llamadas; poda en árbol",
-    })
+    filas_resultados.append(
+        {
+            "dataset": nombre_archivo,
+            "operacion": "Combinaciones Sustitutas",
+            "complejidad_base": "O(2^N)",
+            "complejidad_opt": "O(N·P)",
+            "t_base_ms": t_base,
+            "t_opt_ms": t_opt,
+            "mem_base_kb": m_base,
+            "mem_opt_kb": m_opt,
+            "speedup": sp,
+            "detalle": f"Memo DP reutilizó {r_opt.hits_memo} llamadas; poda en árbol",
+        }
+    )
 
     # 6. Preparación de Pedidos: aísla concurrencia (mismo CatalogoHash en ambos lados).
     # No mezclar catálogo lineal O(n) con el pool: eso atribuye al IPC un speedup que
@@ -212,18 +238,20 @@ def ejecutar_benchmarks_dataset(nombre_archivo: str) -> list[dict[str, Any]]:
         procesar_pedidos_concurrente, cat_hash, pedidos, descontar_stock=False, iteraciones=2
     )
     sp = (t_base / t_opt) if t_opt > 0 else 1.0
-    filas_resultados.append({
-        "dataset": nombre_archivo,
-        "operacion": "Preparación de Pedidos",
-        "complejidad_base": "O(P·L)",
-        "complejidad_opt": "O((P·L)/C + IPC)",
-        "t_base_ms": t_base,
-        "t_opt_ms": t_opt,
-        "mem_base_kb": m_base,
-        "mem_opt_kb": m_opt,
-        "speedup": sp,
-        "detalle": "Mismo CatalogoHash: ProcessPoolExecutor vs. secuencial (aísla IPC)",
-    })
+    filas_resultados.append(
+        {
+            "dataset": nombre_archivo,
+            "operacion": "Preparación de Pedidos",
+            "complejidad_base": "O(P·L)",
+            "complejidad_opt": "O((P·L)/C + IPC)",
+            "t_base_ms": t_base,
+            "t_opt_ms": t_opt,
+            "mem_base_kb": m_base,
+            "mem_opt_kb": m_opt,
+            "speedup": sp,
+            "detalle": "Mismo CatalogoHash: ProcessPoolExecutor vs. secuencial (aísla IPC)",
+        }
+    )
 
     return filas_resultados
 
@@ -251,11 +279,21 @@ def formatear_tabla_markdown(resultados: list[dict[str, Any]]) -> str:
     lineas.append("")
     lineas.append("---")
     lineas.append("### Conclusiones Principales del Benchmarking")
-    lineas.append("1. **Catálogo:** La transición de lista $O(n)$ a tabla hash $O(1)$ muestra aceleraciones de órdenes de magnitud a medida que $n$ crece (superando 100x en `grande.json`).")
-    lineas.append("2. **Batch Picking:** Evitar el producto cartesiano de búsquedas repetidas $O(P \\cdot L \\cdot n)$ mediante consolidación en una sola pasada con hash map $O(L)$ elimina por completo el cuello de botella crítico en almacén.")
-    lineas.append("3. **Top-N:** `heapq.nlargest` $O(N \\log k)$ mantiene memoria acotada a $k$ elementos frente a la lista completa de ordenamiento $O(N \\log N)$.")
-    lineas.append("4. **Sustitutos:** La memoización de estados DP convierte un árbol exponencial $O(2^N)$ en tiempo pseudo-polinomial $O(N \\cdot P)$, permitiendo explorar cientos de combinaciones en milisegundos.")
-    lineas.append("5. **Concurrencia:** La fila de preparación usa el **mismo** `CatalogoHash` a ambos lados para no confundir IPC con la ganancia O(n)→O(1). En lotes chicos el overhead de procesos/pickle domina; el pool solo paga cuando P·L cubre ese costo fijo.")
+    lineas.append(
+        "1. **Catálogo:** La transición de lista $O(n)$ a tabla hash $O(1)$ muestra aceleraciones de órdenes de magnitud a medida que $n$ crece (superando 100x en `grande.json`)."
+    )
+    lineas.append(
+        "2. **Batch Picking:** Evitar el producto cartesiano de búsquedas repetidas $O(P \\cdot L \\cdot n)$ mediante consolidación en una sola pasada con hash map $O(L)$ elimina por completo el cuello de botella crítico en almacén."
+    )
+    lineas.append(
+        "3. **Top-N:** `heapq.nlargest` $O(N \\log k)$ mantiene memoria acotada a $k$ elementos frente a la lista completa de ordenamiento $O(N \\log N)$."
+    )
+    lineas.append(
+        "4. **Sustitutos:** La memoización de estados DP convierte un árbol exponencial $O(2^N)$ en tiempo pseudo-polinomial $O(N \\cdot P)$, permitiendo explorar cientos de combinaciones en milisegundos."
+    )
+    lineas.append(
+        "5. **Concurrencia:** La fila de preparación usa el **mismo** `CatalogoHash` a ambos lados para no confundir IPC con la ganancia O(n)→O(1). En lotes chicos el overhead de procesos/pickle domina; el pool solo paga cuando P·L cubre ese costo fijo."
+    )
     lineas.append("")
 
     return "\n".join(lineas)

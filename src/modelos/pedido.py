@@ -1,6 +1,7 @@
 """Módulo de definición de modelos asociados a Pedidos y resultados de procesamiento."""
 
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -9,9 +10,9 @@ from typing import Any
 class EstadoPedido(str, Enum):
     """Estado de resolución de un pedido en el almacén."""
 
-    CUBIERTO = "cubierto"      # Todo el stock requerido estuvo disponible y se asignó
-    PARCIAL = "parcial"        # Se pudo cubrir al menos una línea, pero hubo faltantes
-    IMPOSIBLE = "imposible"    # Ninguna línea pudo ser satisfecha por falta total de stock
+    CUBIERTO = "cubierto"  # Todo el stock requerido estuvo disponible y se asignó
+    PARCIAL = "parcial"  # Se pudo cubrir al menos una línea, pero hubo faltantes
+    IMPOSIBLE = "imposible"  # Ninguna línea pudo ser satisfecha por falta total de stock
 
 
 @dataclass(slots=True)

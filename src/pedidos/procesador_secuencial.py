@@ -5,8 +5,10 @@ resolviendo la disponibilidad de cada línea contra el catálogo de inventario.
 """
 
 from __future__ import annotations
+
 import time
-from typing import Sequence
+from collections.abc import Sequence
+
 from src.modelos.pedido import (
     EstadoPedido,
     Pedido,
@@ -99,8 +101,10 @@ def procesar_pedidos_secuencial(
         # Aplicación de descuentos de stock si fue solicitado
         if descontar_stock:
             debe_descontar = (
-                (politica_descuento == "solo_cubiertos" and estado == EstadoPedido.CUBIERTO)
-                or (politica_descuento == "todo_lo_posible" and estado in (EstadoPedido.CUBIERTO, EstadoPedido.PARCIAL))
+                politica_descuento == "solo_cubiertos" and estado == EstadoPedido.CUBIERTO
+            ) or (
+                politica_descuento == "todo_lo_posible"
+                and estado in (EstadoPedido.CUBIERTO, EstadoPedido.PARCIAL)
             )
             if debe_descontar:
                 todas_lineas = lineas_cubiertas + lineas_faltantes

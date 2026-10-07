@@ -11,26 +11,28 @@ Verifica:
 """
 
 from __future__ import annotations
-import pytest
+
 from pathlib import Path
 
-from src.modelos.producto import Producto
+import pytest
+
+from benchmarks.generar_datos import crear_dataset_demo_oral, generar_dataset_sintetico
+from src.datos.cargador import (
+    cargar_dataset_json,
+    validar_dataset,
+)
+from src.datos.validador import ValidadorDataset
+from src.inventario.catalogo_lineal import CatalogoLineal
 from src.modelos.pedido import (
     EstadoPedido,
     LineaPedido,
     Pedido,
     ResumenProcesamiento,
 )
-from src.inventario.catalogo_lineal import CatalogoLineal
-from src.ranking.top_productos import calcular_top_solicitados_lineal
-from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
-from src.datos.cargador import (
-    cargar_dataset_json,
-    validar_dataset,
-)
-from src.datos.validador import ValidadorDataset
+from src.modelos.producto import Producto
 from src.motor.motor_inventario import MotorInventario
-from benchmarks.generar_datos import generar_dataset_sintetico, crear_dataset_demo_oral
+from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
+from src.ranking.top_productos import calcular_top_solicitados_lineal
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"
@@ -256,7 +258,9 @@ class TestMotorInventarioAPI:
         resumen = motor.procesar_pedidos(descontar_stock=False)
         assert isinstance(resumen, ResumenProcesamiento)
         assert resumen.pedidos_procesados == 20
-        assert (resumen.pedidos_cubiertos + resumen.pedidos_parciales + resumen.pedidos_imposibles) == 20
+        assert (
+            resumen.pedidos_cubiertos + resumen.pedidos_parciales + resumen.pedidos_imposibles
+        ) == 20
 
         # 5. Top-N productos más solicitados
         top_5 = motor.obtener_top_solicitados(k=5)
@@ -276,8 +280,8 @@ class TestDeterminismoSemilla:
         assert len(prods1) == len(prods2)
         assert len(peds1) == len(peds2)
 
-        for p1, p2 in zip(prods1, prods2):
+        for p1, p2 in zip(prods1, prods2, strict=True):
             assert p1 == p2
 
-        for ped1, ped2 in zip(peds1, peds2):
+        for ped1, ped2 in zip(peds1, peds2, strict=True):
             assert ped1 == ped2

@@ -1,13 +1,20 @@
 """Pantalla de Productos Más Solicitados (Top-N)."""
 
 from __future__ import annotations
+
 import time
+
 import flet as ft
+
 from src.motor.motor_inventario import MotorInventario
-from src.ranking.top_productos import calcular_top_solicitados_heap, calcular_top_solicitados_lineal
+from src.ranking.top_productos import (
+    calcular_top_solicitados_heap,
+    calcular_top_solicitados_lineal,
+)
 from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
+    COLOR_FONDO_APP,
     COLOR_PRIMARIO,
     COLOR_SECUNDARIO,
     COLOR_SUPERFICIE,
@@ -17,18 +24,17 @@ from src.ui.tema import (
     actualizar_control,
     alineacion_center,
     borde_all,
-    padding_symmetric,
     crear_banner_explicativo,
     crear_barra_herramientas,
     crear_dropdown,
     crear_encabezado,
     crear_tarjeta_kpi,
     crear_titulo_seccion,
-    COLOR_FONDO_APP,
     envolver_lista,
     envolver_metricas,
     estilo_boton_primario,
     formatear_tiempo_ms,
+    padding_symmetric,
 )
 
 
@@ -121,12 +127,14 @@ class PantallaTopProductos(ft.Container):
                     complejidad_opt="Min-Heap acotado O(N log k)",
                     por_que_importa="El algoritmo con Heap mantiene únicamente los k elementos en memoria, ahorrando espacio y tiempo sin ordenar el catálogo completo.",
                 ),
-                crear_barra_herramientas([
-                    self.dropdown_metodo,
-                    self.dropdown_k,
-                    self.dropdown_orden,
-                    self.btn_sentido_orden,
-                ]),
+                crear_barra_herramientas(
+                    [
+                        self.dropdown_metodo,
+                        self.dropdown_k,
+                        self.dropdown_orden,
+                        self.btn_sentido_orden,
+                    ]
+                ),
                 envolver_metricas(self.fila_kpis),
                 crear_titulo_seccion("Productos con Mayor Demanda en el Lote Activo"),
                 envolver_lista(self.col_ranking),
@@ -147,8 +155,14 @@ class PantallaTopProductos(ft.Container):
 
     def _alternar_sentido_orden(self):
         self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = ft.Icons.ARROW_UPWARD_ROUNDED if self.orden_ascendente else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        self.btn_sentido_orden.tooltip = "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
+        self.btn_sentido_orden.icon = (
+            ft.Icons.ARROW_UPWARD_ROUNDED
+            if self.orden_ascendente
+            else ft.Icons.ARROW_DOWNWARD_ROUNDED
+        )
+        self.btn_sentido_orden.tooltip = (
+            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
+        )
         actualizar_control(self.btn_sentido_orden)
         self._aplicar_ordenamiento()
 
@@ -179,10 +193,14 @@ class PantallaTopProductos(ft.Container):
 
         inicio = time.perf_counter()
         if metodo == "heap":
-            resultados = calcular_top_solicitados_heap(self.motor.pedidos, self.motor.catalogo, k=k)
+            resultados = calcular_top_solicitados_heap(
+                self.motor.pedidos, self.motor.catalogo, k=k
+            )
             alg_desc = f"Min-Heap heapq.nlargest (k={k})"
         else:
-            resultados = calcular_top_solicitados_lineal(self.motor.pedidos, self.motor.catalogo, k=k)
+            resultados = calcular_top_solicitados_lineal(
+                self.motor.pedidos, self.motor.catalogo, k=k
+            )
             alg_desc = f"Ordenamiento Total sort() (k={k})"
         duracion_ms = (time.perf_counter() - inicio) * 1000.0
 
@@ -190,10 +208,34 @@ class PantallaTopProductos(ft.Container):
 
         # Actualizar KPIs
         self.fila_kpis.controls = [
-            crear_tarjeta_kpi("Productos en Ranking", f"{len(resultados)} / {k}", f"Top-{k} solicitado", ft.Icons.LEADERBOARD, COLOR_PRIMARIO),
-            crear_tarjeta_kpi("Demanda Acumulada", f"{demanda_total_top:,}", "Unidades requeridas", ft.Icons.TRENDING_UP, COLOR_EXITO),
-            crear_tarjeta_kpi("Tiempo de Cómputo", formatear_tiempo_ms(duracion_ms), alg_desc, ft.Icons.SPEED, COLOR_SECUNDARIO),
-            crear_tarjeta_kpi("Cota de Complejidad", "O(N log k)" if metodo == "heap" else "O(N log N)", "Consumo acotado a k" if metodo == "heap" else "Ordena universo N", ft.Icons.MEMORY, COLOR_PRIMARIO),
+            crear_tarjeta_kpi(
+                "Productos en Ranking",
+                f"{len(resultados)} / {k}",
+                f"Top-{k} solicitado",
+                ft.Icons.LEADERBOARD,
+                COLOR_PRIMARIO,
+            ),
+            crear_tarjeta_kpi(
+                "Demanda Acumulada",
+                f"{demanda_total_top:,}",
+                "Unidades requeridas",
+                ft.Icons.TRENDING_UP,
+                COLOR_EXITO,
+            ),
+            crear_tarjeta_kpi(
+                "Tiempo de Cómputo",
+                formatear_tiempo_ms(duracion_ms),
+                alg_desc,
+                ft.Icons.SPEED,
+                COLOR_SECUNDARIO,
+            ),
+            crear_tarjeta_kpi(
+                "Cota de Complejidad",
+                "O(N log k)" if metodo == "heap" else "O(N log N)",
+                "Consumo acotado a k" if metodo == "heap" else "Ordena universo N",
+                ft.Icons.MEMORY,
+                COLOR_PRIMARIO,
+            ),
         ]
 
         self.ranking_actual = list(resultados)
@@ -214,7 +256,11 @@ class PantallaTopProductos(ft.Container):
         max_demanda = max((cant for _, cant in self.ranking_actual), default=1)
 
         for i, (prod, cantidad) in enumerate(self.ranking_actual, 1):
-            color_medalla = COLOR_PRIMARIO if i == 1 else (COLOR_SECUNDARIO if i == 2 else ("#F59E0B" if i == 3 else COLOR_TEXTO_MUTED))
+            color_medalla = (
+                COLOR_PRIMARIO
+                if i == 1
+                else (COLOR_SECUNDARIO if i == 2 else ("#F59E0B" if i == 3 else COLOR_TEXTO_MUTED))
+            )
             fraccion_demanda = (cantidad / max_demanda) if max_demanda > 0 else 0.0
 
             barra_demanda = ft.ProgressBar(
@@ -231,22 +277,45 @@ class PantallaTopProductos(ft.Container):
                             ft.Row(
                                 controls=[
                                     ft.Container(
-                                        content=ft.Text(f"#{i}", size=13, weight=ft.FontWeight.BOLD, color=color_medalla),
+                                        content=ft.Text(
+                                            f"#{i}",
+                                            size=13,
+                                            weight=ft.FontWeight.BOLD,
+                                            color=color_medalla,
+                                        ),
                                         width=35,
                                         alignment=alineacion_center(),
                                     ),
                                     ft.Column(
                                         controls=[
-                                            ft.Text(prod.nombre, size=13, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_PRIMARIO),
-                                            ft.Text(f"#{prod.id} | {prod.categoria} | Stock: {prod.stock} Unidades", size=11, color=COLOR_TEXTO_MUTED),
+                                            ft.Text(
+                                                prod.nombre,
+                                                size=13,
+                                                weight=ft.FontWeight.W_600,
+                                                color=COLOR_TEXTO_PRIMARIO,
+                                            ),
+                                            ft.Text(
+                                                f"#{prod.id} | {prod.categoria} | Stock: {prod.stock} Unidades",
+                                                size=11,
+                                                color=COLOR_TEXTO_MUTED,
+                                            ),
                                         ],
                                         expand=True,
                                         spacing=1,
                                     ),
                                     ft.Column(
                                         controls=[
-                                            ft.Text(f"{cantidad:,} Unidades demandadas", size=12, weight=ft.FontWeight.BOLD, color=COLOR_EXITO),
-                                            ft.Text(f"${prod.precio:,.2f} c/u", size=10.5, color=COLOR_TEXTO_MUTED),
+                                            ft.Text(
+                                                f"{cantidad:,} Unidades demandadas",
+                                                size=12,
+                                                weight=ft.FontWeight.BOLD,
+                                                color=COLOR_EXITO,
+                                            ),
+                                            ft.Text(
+                                                f"${prod.precio:,.2f} c/u",
+                                                size=10.5,
+                                                color=COLOR_TEXTO_MUTED,
+                                            ),
                                         ],
                                         horizontal_alignment=ft.CrossAxisAlignment.END,
                                         spacing=1,
@@ -268,7 +337,11 @@ class PantallaTopProductos(ft.Container):
         if not items:
             items.append(
                 ft.Container(
-                    content=ft.Text("No se encontraron registros de pedidos en este escenario.", size=13, color=COLOR_TEXTO_MUTED),
+                    content=ft.Text(
+                        "No se encontraron registros de pedidos en este escenario.",
+                        size=13,
+                        color=COLOR_TEXTO_MUTED,
+                    ),
                     padding=20,
                 )
             )

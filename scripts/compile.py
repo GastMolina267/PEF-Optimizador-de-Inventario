@@ -10,6 +10,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,7 @@ def verificar_pyinstaller() -> bool:
     """Comprueba si PyInstaller está disponible en el entorno."""
     try:
         import PyInstaller  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -40,10 +42,8 @@ def limpiar_directorios() -> None:
             shutil.rmtree(carpeta, ignore_errors=True)
 
     for spec_file in BASE_DIR.glob("*.spec"):
-        try:
+        with contextlib.suppress(OSError):
             spec_file.unlink()
-        except OSError:
-            pass
 
 
 def construir_comando(mode: str, debug: bool) -> list[str]:

@@ -1,9 +1,14 @@
 from __future__ import annotations
+
+import contextlib
+
 import flet as ft
+
 from src.motor.motor_inventario import MotorInventario
 from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
+    COLOR_FONDO_APP,
     COLOR_PELIGRO,
     COLOR_PRIMARIO,
     COLOR_SECUNDARIO,
@@ -13,18 +18,17 @@ from src.ui.tema import (
     COLOR_TEXTO_SECUNDARIO,
     actualizar_control,
     borde_all,
-    padding_symmetric,
     crear_banner_explicativo,
     crear_barra_herramientas,
     crear_dropdown,
     crear_encabezado,
     crear_tarjeta_kpi,
     crear_titulo_seccion,
-    COLOR_FONDO_APP,
     envolver_lista,
     envolver_metricas,
     estilo_boton_primario,
     formatear_tiempo_ms,
+    padding_symmetric,
 )
 
 
@@ -44,7 +48,9 @@ class PantallaAlternativas(ft.Container):
         self.orden_ascendente = True
 
         categorias_disponibles = sorted({p.categoria for p in self.motor.catalogo.obtener_todos()})
-        cat_inicial = categorias_disponibles[0] if categorias_disponibles else "Ferretería y Herramientas"
+        cat_inicial = (
+            categorias_disponibles[0] if categorias_disponibles else "Ferretería y Herramientas"
+        )
 
         self.dropdown_categoria = crear_dropdown(
             label="Categoría del sustituto",
@@ -100,10 +106,8 @@ class PantallaAlternativas(ft.Container):
         self.col_combinaciones = ft.ListView(spacing=4, expand=True, padding=8)
 
         self._construir_interfaz()
-        try:
+        with contextlib.suppress(Exception):
             self._ejecutar_busqueda()
-        except Exception:
-            pass
 
     def _construir_interfaz(self) -> None:
         self.content = ft.Column(
@@ -120,15 +124,19 @@ class PantallaAlternativas(ft.Container):
                     complejidad_opt="Programación Dinámica Memoizada O(N·P)",
                     por_que_importa="La memoización de subproblemas previene la explosión exponencial O(2^N), permitiendo encontrar combinaciones óptimas en menos de 1 milisegundo.",
                 ),
-                crear_barra_herramientas([
-                    self.dropdown_categoria,
-                    self.input_presupuesto,
-                    self.switch_memo,
-                    self.dropdown_orden,
-                    self.btn_sentido_orden,
-                ]),
+                crear_barra_herramientas(
+                    [
+                        self.dropdown_categoria,
+                        self.input_presupuesto,
+                        self.switch_memo,
+                        self.dropdown_orden,
+                        self.btn_sentido_orden,
+                    ]
+                ),
                 envolver_metricas(self.fila_kpis),
-                crear_titulo_seccion("Combinaciones Sustitutas Encontradas (Clic para desplegar productos)"),
+                crear_titulo_seccion(
+                    "Combinaciones Sustitutas Encontradas (Clic para desplegar productos)"
+                ),
                 envolver_lista(self.col_combinaciones),
             ],
             spacing=10,
@@ -138,22 +146,32 @@ class PantallaAlternativas(ft.Container):
     def al_recargar_dataset(self) -> None:
         """Callback al recargar dataset."""
         categorias_disponibles = sorted({p.categoria for p in self.motor.catalogo.obtener_todos()})
-        cat_inicial = categorias_disponibles[0] if categorias_disponibles else "Ferretería y Herramientas"
-        self.dropdown_categoria.options = [ft.dropdown.Option(cat, cat) for cat in categorias_disponibles]
+        cat_inicial = (
+            categorias_disponibles[0] if categorias_disponibles else "Ferretería y Herramientas"
+        )
+        self.dropdown_categoria.options = [
+            ft.dropdown.Option(cat, cat) for cat in categorias_disponibles
+        ]
         self.dropdown_categoria.value = cat_inicial
         actualizar_control(self.dropdown_categoria)
         self._ejecutar_busqueda()
 
     def al_cambiar_estrategia_global(self, nueva_estrategia: str) -> None:
         """Sincroniza el switch de memoización con la estrategia global."""
-        self.switch_memo.value = (nueva_estrategia == "optimizado")
+        self.switch_memo.value = nueva_estrategia == "optimizado"
         actualizar_control(self.switch_memo)
         self._ejecutar_busqueda()
 
     def _alternar_sentido_orden(self):
         self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = ft.Icons.ARROW_UPWARD_ROUNDED if self.orden_ascendente else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        self.btn_sentido_orden.tooltip = "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
+        self.btn_sentido_orden.icon = (
+            ft.Icons.ARROW_UPWARD_ROUNDED
+            if self.orden_ascendente
+            else ft.Icons.ARROW_DOWNWARD_ROUNDED
+        )
+        self.btn_sentido_orden.tooltip = (
+            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
+        )
         actualizar_control(self.btn_sentido_orden)
         self._aplicar_ordenamiento()
 
@@ -196,16 +214,41 @@ class PantallaAlternativas(ft.Container):
                 max_candidatos=35,
             )
         except Exception as err:
-            self.notificar(f"Error al calcular combinaciones: {err}", ft.Icons.ERROR_OUTLINE, COLOR_PELIGRO)
+            self.notificar(
+                f"Error al calcular combinaciones: {err}", ft.Icons.ERROR_OUTLINE, COLOR_PELIGRO
+            )
             return
-
 
         # Actualizar KPIs
         self.fila_kpis.controls = [
-            crear_tarjeta_kpi("Combinaciones Halladas", f"{resultado.total_combinaciones:,}", f"Presupuesto: ${presupuesto:,.0f}", ft.Icons.AUTO_AWESOME, COLOR_PRIMARIO),
-            crear_tarjeta_kpi("Tiempo de Exploración", formatear_tiempo_ms(resultado.tiempo_ejecucion_ms), f"{'DP con Memo' if usar_memo else 'Árbol Recursivo'}", ft.Icons.SPEED, COLOR_EXITO),
-            crear_tarjeta_kpi("Llamadas Reutilizadas", f"{resultado.hits_memo:,}", "Subproblemas cacheados", ft.Icons.SAVED_SEARCH, COLOR_SECUNDARIO),
-            crear_tarjeta_kpi("Complejidad Teórica", "O(N * P)" if usar_memo else "O(2^N)", "Pseudo-polinomial" if usar_memo else "Exponencial", ft.Icons.FUNCTIONS, COLOR_PRIMARIO),
+            crear_tarjeta_kpi(
+                "Combinaciones Halladas",
+                f"{resultado.total_combinaciones:,}",
+                f"Presupuesto: ${presupuesto:,.0f}",
+                ft.Icons.AUTO_AWESOME,
+                COLOR_PRIMARIO,
+            ),
+            crear_tarjeta_kpi(
+                "Tiempo de Exploración",
+                formatear_tiempo_ms(resultado.tiempo_ejecucion_ms),
+                f"{'DP con Memo' if usar_memo else 'Árbol Recursivo'}",
+                ft.Icons.SPEED,
+                COLOR_EXITO,
+            ),
+            crear_tarjeta_kpi(
+                "Llamadas Reutilizadas",
+                f"{resultado.hits_memo:,}",
+                "Subproblemas cacheados",
+                ft.Icons.SAVED_SEARCH,
+                COLOR_SECUNDARIO,
+            ),
+            crear_tarjeta_kpi(
+                "Complejidad Teórica",
+                "O(N * P)" if usar_memo else "O(2^N)",
+                "Pseudo-polinomial" if usar_memo else "Exponencial",
+                ft.Icons.FUNCTIONS,
+                COLOR_PRIMARIO,
+            ),
         ]
 
         self.combinaciones_actuales = list(resultado.combinaciones)
@@ -240,10 +283,29 @@ class PantallaAlternativas(ft.Container):
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Text(f"#{p.id}", size=12, color=COLOR_PRIMARIO, weight=ft.FontWeight.BOLD, width=50),
-                                ft.Text(p.nombre, size=13, color=COLOR_TEXTO_PRIMARIO, expand=True),
-                                ft.Text(f"Stock: {p.stock} Unidades", size=12, color=COLOR_TEXTO_SECUNDARIO, width=130),
-                                ft.Text(f"${p.precio:,.2f}", size=13, color=COLOR_EXITO, weight=ft.FontWeight.BOLD, width=90),
+                                ft.Text(
+                                    f"#{p.id}",
+                                    size=12,
+                                    color=COLOR_PRIMARIO,
+                                    weight=ft.FontWeight.BOLD,
+                                    width=50,
+                                ),
+                                ft.Text(
+                                    p.nombre, size=13, color=COLOR_TEXTO_PRIMARIO, expand=True
+                                ),
+                                ft.Text(
+                                    f"Stock: {p.stock} Unidades",
+                                    size=12,
+                                    color=COLOR_TEXTO_SECUNDARIO,
+                                    width=130,
+                                ),
+                                ft.Text(
+                                    f"${p.precio:,.2f}",
+                                    size=13,
+                                    color=COLOR_EXITO,
+                                    weight=ft.FontWeight.BOLD,
+                                    width=90,
+                                ),
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         ),
@@ -255,7 +317,12 @@ class PantallaAlternativas(ft.Container):
                 content=ft.Column(
                     controls=[
                         ft.Divider(height=1, color=COLOR_BORDE),
-                        ft.Text("Artículos sustitutos que integran la combinación:", size=12, weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_MUTED),
+                        ft.Text(
+                            "Artículos sustitutos que integran la combinación:",
+                            size=12,
+                            weight=ft.FontWeight.BOLD,
+                            color=COLOR_TEXTO_MUTED,
+                        ),
                         *filas_prods,
                     ],
                     spacing=4,
@@ -266,10 +333,24 @@ class PantallaAlternativas(ft.Container):
 
             tile = ft.ExpansionTile(
                 leading=ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, color=COLOR_EXITO, size=20),
-                title=ft.Text(f"Alternativa #{i}: {len(comb.productos)} productos sustitutos", size=14, weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO),
-                subtitle=ft.Text(f"Total: ${costo_total:,.2f} ({porc_uso:.1f}% del presupuesto) | Remanente: ${diferencia:,.2f}", size=12, color=COLOR_TEXTO_SECUNDARIO),
+                title=ft.Text(
+                    f"Alternativa #{i}: {len(comb.productos)} productos sustitutos",
+                    size=14,
+                    weight=ft.FontWeight.BOLD,
+                    color=COLOR_TEXTO_PRIMARIO,
+                ),
+                subtitle=ft.Text(
+                    f"Total: ${costo_total:,.2f} ({porc_uso:.1f}% del presupuesto) | Remanente: ${diferencia:,.2f}",
+                    size=12,
+                    color=COLOR_TEXTO_SECUNDARIO,
+                ),
                 trailing=ft.Container(
-                    content=ft.Text(f"${costo_total:,.2f}", size=13, weight=ft.FontWeight.BOLD, color=COLOR_EXITO),
+                    content=ft.Text(
+                        f"${costo_total:,.2f}",
+                        size=13,
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_EXITO,
+                    ),
                     padding=padding_symmetric(horizontal=8, vertical=4),
                     bgcolor=COLOR_TARJETA,
                     border_radius=6,
@@ -293,4 +374,3 @@ class PantallaAlternativas(ft.Container):
 
         self.col_combinaciones.controls = items
         actualizar_control(self)
-

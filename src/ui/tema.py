@@ -4,6 +4,9 @@ Navegación oscura, contenido claro, acción naranja. Dualidad Baseline | Optimi
 """
 
 from __future__ import annotations
+
+import contextlib
+
 import flet as ft
 
 # Cromo de consola (top nav + side nav)
@@ -45,7 +48,6 @@ TAM_TITULO = 20
 TAM_CUERPO = 13
 TAM_ETIQUETA = 12
 TAM_DATO = 22
-
 
 
 def borde_all(ancho: float = 1, color: str = COLOR_BORDE) -> ft.border.Border:
@@ -90,10 +92,8 @@ def alineacion_center() -> ft.alignment.Alignment:
 
 def actualizar_control(control) -> None:
     """Invoca update() de forma segura capturando excepciones si el control aún no está montado."""
-    try:
+    with contextlib.suppress(Exception):
         control.update()
-    except Exception:
-        pass
 
 
 def estilo_boton_primario() -> ft.ButtonStyle:
@@ -111,7 +111,9 @@ def crear_encabezado(titulo: str, subtitulo: str, extra=None) -> ft.Row:
     controles = [
         ft.Column(
             controls=[
-                ft.Text(titulo, size=TAM_TITULO, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_PRIMARIO),
+                ft.Text(
+                    titulo, size=TAM_TITULO, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_PRIMARIO
+                ),
                 ft.Text(subtitulo, size=TAM_CUERPO, color=COLOR_TEXTO_MUTED),
             ],
             spacing=2,
@@ -292,11 +294,14 @@ def crear_tarjeta_kpi(
     )
 
 
-
 def crear_badge_tiempo(tiempo_ms: float, speedup: float | None = None) -> ft.Container:
     """Chip de duración como en el panel Performance. Sin emoji."""
     tiempo_texto = formatear_tiempo_ms(tiempo_ms)
-    color_tiempo = COLOR_EXITO if tiempo_ms < 1.0 else (COLOR_ADVERTENCIA if tiempo_ms < 20.0 else COLOR_PRIMARIO)
+    color_tiempo = (
+        COLOR_EXITO
+        if tiempo_ms < 1.0
+        else (COLOR_ADVERTENCIA if tiempo_ms < 20.0 else COLOR_PRIMARIO)
+    )
 
     controles = [
         ft.Text(
@@ -311,10 +316,18 @@ def crear_badge_tiempo(tiempo_ms: float, speedup: float | None = None) -> ft.Con
     if speedup is not None and speedup > 0:
         texto_speedup = f"{speedup:.1f}x" if speedup >= 1.0 else f"{speedup:.2f}x"
         color_speedup = COLOR_EXITO if speedup >= 1.0 else COLOR_PELIGRO
-        controles.extend([
-            ft.Text("·", size=12, color=COLOR_TEXTO_MUTED),
-            ft.Text(texto_speedup, size=13, weight=ft.FontWeight.W_700, color=color_speedup, font_family=FAMILIA_DATOS),
-        ])
+        controles.extend(
+            [
+                ft.Text("·", size=12, color=COLOR_TEXTO_MUTED),
+                ft.Text(
+                    texto_speedup,
+                    size=13,
+                    weight=ft.FontWeight.W_700,
+                    color=color_speedup,
+                    font_family=FAMILIA_DATOS,
+                ),
+            ]
+        )
 
     return ft.Container(
         content=ft.Row(
@@ -341,8 +354,18 @@ def crear_banner_explicativo(
     chip_base = ft.Container(
         content=ft.Row(
             controls=[
-                ft.Text("Baseline", size=TAM_ETIQUETA, weight=ft.FontWeight.W_700, color=COLOR_ADVERTENCIA),
-                ft.Text(complejidad_base, size=TAM_CUERPO, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_PRIMARIO),
+                ft.Text(
+                    "Baseline",
+                    size=TAM_ETIQUETA,
+                    weight=ft.FontWeight.W_700,
+                    color=COLOR_ADVERTENCIA,
+                ),
+                ft.Text(
+                    complejidad_base,
+                    size=TAM_CUERPO,
+                    weight=ft.FontWeight.W_600,
+                    color=COLOR_TEXTO_PRIMARIO,
+                ),
             ],
             spacing=8,
             tight=True,
@@ -356,8 +379,15 @@ def crear_banner_explicativo(
     chip_opt = ft.Container(
         content=ft.Row(
             controls=[
-                ft.Text("Optimizado", size=TAM_ETIQUETA, weight=ft.FontWeight.W_700, color=COLOR_EXITO),
-                ft.Text(complejidad_opt, size=TAM_CUERPO, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_PRIMARIO),
+                ft.Text(
+                    "Optimizado", size=TAM_ETIQUETA, weight=ft.FontWeight.W_700, color=COLOR_EXITO
+                ),
+                ft.Text(
+                    complejidad_opt,
+                    size=TAM_CUERPO,
+                    weight=ft.FontWeight.W_600,
+                    color=COLOR_TEXTO_PRIMARIO,
+                ),
             ],
             spacing=8,
             tight=True,
@@ -433,67 +463,228 @@ def crear_columna_corrida(titulo: str, tiempo_ms: float, es_baseline: bool) -> f
     )
 
 
-
-
 def crear_dialogo_explicativo_modos(page: ft.Page) -> ft.AlertDialog:
     """Genera un modal interactivo completo con la comparativa conceptual entre Modo Baseline y Optimizado."""
     filas_tabla = [
         ft.DataRow(
             cells=[
-                ft.DataCell(ft.Text("Búsqueda de Productos", weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO, size=12)),
-                ft.DataCell(ft.Text("Lineal O(n)\nRecorrido secuencial de lista", color=COLOR_ADVERTENCIA, size=11)),
-                ft.DataCell(ft.Text("Hash O(1) amort.\nDict + Índice Invertido + LRU", color=COLOR_EXITO, size=11)),
-                ft.DataCell(ft.Text("Acceso inmediato sin importar tamaño de catálogo.", color=COLOR_TEXTO_SECUNDARIO, size=11)),
+                ft.DataCell(
+                    ft.Text(
+                        "Búsqueda de Productos",
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXTO_PRIMARIO,
+                        size=12,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Lineal O(n)\nRecorrido secuencial de lista",
+                        color=COLOR_ADVERTENCIA,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Hash O(1) amort.\nDict + Índice Invertido + LRU",
+                        color=COLOR_EXITO,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Acceso inmediato sin importar tamaño de catálogo.",
+                        color=COLOR_TEXTO_SECUNDARIO,
+                        size=11,
+                    )
+                ),
             ]
         ),
         ft.DataRow(
             cells=[
-                ft.DataCell(ft.Text("Batch Picking (Agrupación)", weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO, size=12)),
-                ft.DataCell(ft.Text("Anidada O(P·L·n)\nBúsqueda por línea y pedido", color=COLOR_ADVERTENCIA, size=11)),
-                ft.DataCell(ft.Text("Consolidada O(L)\n1 pasada con acumulación hash", color=COLOR_EXITO, size=11)),
-                ft.DataCell(ft.Text("Elimina el producto cartesiano en almacén.", color=COLOR_TEXTO_SECUNDARIO, size=11)),
+                ft.DataCell(
+                    ft.Text(
+                        "Batch Picking (Agrupación)",
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXTO_PRIMARIO,
+                        size=12,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Anidada O(P·L·n)\nBúsqueda por línea y pedido",
+                        color=COLOR_ADVERTENCIA,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Consolidada O(L)\n1 pasada con acumulación hash",
+                        color=COLOR_EXITO,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Elimina el producto cartesiano en almacén.",
+                        color=COLOR_TEXTO_SECUNDARIO,
+                        size=11,
+                    )
+                ),
             ]
         ),
         ft.DataRow(
             cells=[
-                ft.DataCell(ft.Text("Ranking Top-N", weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO, size=12)),
-                ft.DataCell(ft.Text("Sort Global O(N log N)\nOrdena todo el catálogo", color=COLOR_ADVERTENCIA, size=11)),
-                ft.DataCell(ft.Text("Heap O(N log k)\nMin-Heap acotado a k nodos", color=COLOR_EXITO, size=11)),
-                ft.DataCell(ft.Text("Memoria O(k) constante sin ordenar N completo.", color=COLOR_TEXTO_SECUNDARIO, size=11)),
+                ft.DataCell(
+                    ft.Text(
+                        "Ranking Top-N",
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXTO_PRIMARIO,
+                        size=12,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Sort Global O(N log N)\nOrdena todo el catálogo",
+                        color=COLOR_ADVERTENCIA,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Heap O(N log k)\nMin-Heap acotado a k nodos", color=COLOR_EXITO, size=11
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Memoria O(k) constante sin ordenar N completo.",
+                        color=COLOR_TEXTO_SECUNDARIO,
+                        size=11,
+                    )
+                ),
             ]
         ),
         ft.DataRow(
             cells=[
-                ft.DataCell(ft.Text("Alternativas Sustitutas", weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO, size=12)),
-                ft.DataCell(ft.Text("Recursión O(2^N)\nExplosión combinatorial", color=COLOR_ADVERTENCIA, size=11)),
-                ft.DataCell(ft.Text("DP Memoizada O(N·P)\nReutilización de subproblemas", color=COLOR_EXITO, size=11)),
-                ft.DataCell(ft.Text("Explora miles de opciones en milisegundos.", color=COLOR_TEXTO_SECUNDARIO, size=11)),
+                ft.DataCell(
+                    ft.Text(
+                        "Alternativas Sustitutas",
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXTO_PRIMARIO,
+                        size=12,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Recursión O(2^N)\nExplosión combinatorial",
+                        color=COLOR_ADVERTENCIA,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "DP Memoizada O(N·P)\nReutilización de subproblemas",
+                        color=COLOR_EXITO,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Explora miles de opciones en milisegundos.",
+                        color=COLOR_TEXTO_SECUNDARIO,
+                        size=11,
+                    )
+                ),
             ]
         ),
         ft.DataRow(
             cells=[
-                ft.DataCell(ft.Text("Caché de Consultas", weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO, size=12)),
-                ft.DataCell(ft.Text("Sin Caché\nRecálculo repetido", color=COLOR_ADVERTENCIA, size=11)),
-                ft.DataCell(ft.Text("LRU Reactiva O(1)\nInvalidación por mutación de stock", color=COLOR_EXITO, size=11)),
-                ft.DataCell(ft.Text("Evita consultas redundantes sin datos obsoletos.", color=COLOR_TEXTO_SECUNDARIO, size=11)),
+                ft.DataCell(
+                    ft.Text(
+                        "Caché de Consultas",
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXTO_PRIMARIO,
+                        size=12,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text("Sin Caché\nRecálculo repetido", color=COLOR_ADVERTENCIA, size=11)
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "LRU Reactiva O(1)\nInvalidación por mutación de stock",
+                        color=COLOR_EXITO,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Evita consultas redundantes sin datos obsoletos.",
+                        color=COLOR_TEXTO_SECUNDARIO,
+                        size=11,
+                    )
+                ),
             ]
         ),
         ft.DataRow(
             cells=[
-                ft.DataCell(ft.Text("Procesamiento de Pedidos", weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO, size=12)),
-                ft.DataCell(ft.Text("Secuencial O(P·L)\nMono-hilo atado al GIL", color=COLOR_ADVERTENCIA, size=11)),
-                ft.DataCell(ft.Text("Concurrente O((P·L)/C + IPC)\nProcessPoolExecutor", color=COLOR_EXITO, size=11)),
-                ft.DataCell(ft.Text("Paralelismo real multivariado en lotes masivos.", color=COLOR_TEXTO_SECUNDARIO, size=11)),
+                ft.DataCell(
+                    ft.Text(
+                        "Procesamiento de Pedidos",
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXTO_PRIMARIO,
+                        size=12,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Secuencial O(P·L)\nMono-hilo atado al GIL",
+                        color=COLOR_ADVERTENCIA,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Concurrente O((P·L)/C + IPC)\nProcessPoolExecutor",
+                        color=COLOR_EXITO,
+                        size=11,
+                    )
+                ),
+                ft.DataCell(
+                    ft.Text(
+                        "Paralelismo real multivariado en lotes masivos.",
+                        color=COLOR_TEXTO_SECUNDARIO,
+                        size=11,
+                    )
+                ),
             ]
         ),
     ]
 
     tabla_comparativa = ft.DataTable(
         columns=[
-            ft.DataColumn(ft.Text("Operación", weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO, size=12)),
-            ft.DataColumn(ft.Text("Modo Baseline", weight=ft.FontWeight.BOLD, color=COLOR_ADVERTENCIA, size=12)),
-            ft.DataColumn(ft.Text("Modo Optimizado O(1)", weight=ft.FontWeight.BOLD, color=COLOR_EXITO, size=12)),
-            ft.DataColumn(ft.Text("Justificación Técnica", weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_SECUNDARIO, size=12)),
+            ft.DataColumn(
+                ft.Text(
+                    "Operación", weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO, size=12
+                )
+            ),
+            ft.DataColumn(
+                ft.Text(
+                    "Modo Baseline", weight=ft.FontWeight.BOLD, color=COLOR_ADVERTENCIA, size=12
+                )
+            ),
+            ft.DataColumn(
+                ft.Text(
+                    "Modo Optimizado O(1)", weight=ft.FontWeight.BOLD, color=COLOR_EXITO, size=12
+                )
+            ),
+            ft.DataColumn(
+                ft.Text(
+                    "Justificación Técnica",
+                    weight=ft.FontWeight.BOLD,
+                    color=COLOR_TEXTO_SECUNDARIO,
+                    size=12,
+                )
+            ),
         ],
         rows=filas_tabla,
         heading_row_color=COLOR_SUPERFICIE,
@@ -510,12 +701,16 @@ def crear_dialogo_explicativo_modos(page: ft.Page) -> ft.AlertDialog:
             dlg.open = False
             actualizar_control(page)
 
-
     dlg = ft.AlertDialog(
         title=ft.Row(
             controls=[
                 ft.Icon(ft.Icons.COMPARE_ARROWS_ROUNDED, size=24, color=COLOR_PRIMARIO),
-                ft.Text("Diferencias Arquitecturales: Baseline vs. Optimizado", size=18, weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO),
+                ft.Text(
+                    "Diferencias Arquitecturales: Baseline vs. Optimizado",
+                    size=18,
+                    weight=ft.FontWeight.BOLD,
+                    color=COLOR_TEXTO_PRIMARIO,
+                ),
             ],
             spacing=8,
         ),

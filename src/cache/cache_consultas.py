@@ -8,9 +8,11 @@ Diferenciación conceptual clave frente a la memoización:
 """
 
 from __future__ import annotations
+
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
+
 from src.modelos.producto import Producto
 
 T = TypeVar("T")
@@ -163,7 +165,9 @@ class GestorCacheConsultas:
         ratio_global = (total_hits / total_consultas * 100.0) if total_consultas > 0 else 0.0
 
         return {
-            "total_entradas_activas": len(self._cache_busquedas) + len(self._cache_categorias) + len(self._cache_top_n),
+            "total_entradas_activas": len(self._cache_busquedas)
+            + len(self._cache_categorias)
+            + len(self._cache_top_n),
             "hits_globales": total_hits,
             "misses_globales": total_misses,
             "tasa_aciertos_global_pct": round(ratio_global, 2),

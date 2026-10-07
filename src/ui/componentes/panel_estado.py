@@ -4,7 +4,9 @@ Muestra dataset, conmutador Baseline | Optimizado, tiempo líder y resultado.
 """
 
 from __future__ import annotations
+
 import flet as ft
+
 from src.ui.tema import (
     COLOR_ADVERTENCIA,
     COLOR_EXITO,
@@ -151,7 +153,9 @@ class PanelEstado(ft.Container):
             al_clic=lambda _: self._elegir("optimizado"),
         )
 
-    def _boton_modo(self, texto: str, activo: bool, color: str, fondo: str, al_clic) -> ft.Container:
+    def _boton_modo(
+        self, texto: str, activo: bool, color: str, fondo: str, al_clic
+    ) -> ft.Container:
         return ft.Container(
             content=ft.Text(
                 texto,

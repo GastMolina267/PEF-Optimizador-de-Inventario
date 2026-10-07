@@ -12,22 +12,25 @@ Permite alternar dinámicamente entre:
 """
 
 from __future__ import annotations
+
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
-from src.modelos.producto import Producto
-from src.modelos.pedido import Pedido, ResumenProcesamiento
-from src.inventario.catalogo_lineal import CatalogoLineal
+from typing import Any
+
+from src.cache.cache_consultas import GestorCacheConsultas
+from src.datos.cargador import cargar_dataset_json
 from src.inventario.catalogo_hash import CatalogoHash
-from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
-from src.pedidos.procesador_concurrente import procesar_pedidos_concurrente
-from src.pedidos.agrupador import agrupar_pedidos_batch, LotePickingConsolidado
+from src.inventario.catalogo_lineal import CatalogoLineal
+from src.modelos.pedido import Pedido, ResumenProcesamiento
+from src.modelos.producto import Producto
+from src.pedidos.agrupador import LotePickingConsolidado, agrupar_pedidos_batch
 from src.pedidos.combinaciones import BuscadorAlternativas, ResultadoAlternativas
+from src.pedidos.procesador_concurrente import procesar_pedidos_concurrente
+from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
 from src.ranking.top_productos import (
     calcular_top_solicitados_heap,
     calcular_top_solicitados_lineal,
 )
-from src.cache.cache_consultas import GestorCacheConsultas
-from src.datos.cargador import cargar_dataset_json
 
 
 class MotorInventario:
@@ -81,7 +84,9 @@ class MotorInventario:
         """Permite alternar entre 'baseline' y 'optimizado' conservando los datos cargados."""
         estrategia_norm = nueva_estrategia.lower().strip()
         if estrategia_norm not in ("baseline", "optimizado"):
-            raise ValueError(f"Estrategia inválida: '{nueva_estrategia}'. Debe ser 'baseline' u 'optimizado'.")
+            raise ValueError(
+                f"Estrategia inválida: '{nueva_estrategia}'. Debe ser 'baseline' u 'optimizado'."
+            )
 
         if self._estrategia == estrategia_norm:
             return
@@ -160,7 +165,9 @@ class MotorInventario:
         lote = pedidos if pedidos is not None else self._pedidos
 
         # Decidir si procesar concurrente o secuencial
-        es_concurrente = concurrente if concurrente is not None else (self.es_optimizado and len(lote) >= 50)
+        es_concurrente = (
+            concurrente if concurrente is not None else (self.es_optimizado and len(lote) >= 50)
+        )
 
         if es_concurrente:
             resumen = procesar_pedidos_concurrente(
@@ -217,9 +224,7 @@ class MotorInventario:
 
     calcular_top_productos = obtener_top_solicitados
 
-    def agrupar_pedidos(
-        self, pedidos: Sequence[Pedido] | None = None
-    ) -> LotePickingConsolidado:
+    def agrupar_pedidos(self, pedidos: Sequence[Pedido] | None = None) -> LotePickingConsolidado:
         """Agrupa las líneas de los pedidos para Batch Picking consolidado."""
         lote = pedidos if pedidos is not None else self._pedidos
         return agrupar_pedidos_batch(lote, self._catalogo)

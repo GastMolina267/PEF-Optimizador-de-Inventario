@@ -1,0 +1,30 @@
+# Hooks locales de calidad. Instalación (una sola vez por clon):
+#   pip install pre-commit
+#   pre-commit install
+# Ejecución manual sobre todo el repo:
+#   pre-commit run --all-files
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+        exclude: ^\.agents/
+      # Solo código y configuración: en Markdown los espacios finales son saltos de
+      # línea, y los datasets/reportes generados no se tocan a mano.
+      - id: end-of-file-fixer
+        types_or: [python, yaml, toml]
+        exclude: ^\.agents/
+      - id: trailing-whitespace
+        types_or: [python, yaml, toml]
+        exclude: ^\.agents/
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=5000]
