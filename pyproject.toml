@@ -52,6 +52,10 @@ addopts = "-ra --strict-markers"
 
 [tool.coverage.run]
 source = ["src"]
+# Mide también el código que corre en los workers del ProcessPoolExecutor.
+concurrency = ["multiprocessing", "thread"]
+parallel = true
+sigterm = true
 omit = [
     "tests/*",
     "benchmarks/*",
@@ -63,12 +67,32 @@ show_missing = true
 skip_covered = false
 
 [tool.ruff]
-line-length = 100
+# PEP 8 admite hasta 99 caracteres por línea si el equipo lo acuerda.
+line-length = 99
 target-version = "py310"
+extend-exclude = [".agents", ".cursor", ".impeccable", "docs"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W"]
+select = [
+    "E",    # pycodestyle (errores PEP 8)
+    "W",    # pycodestyle (advertencias PEP 8)
+    "F",    # pyflakes (imports y variables sin uso, etc.)
+    "I",    # isort (orden de imports)
+    "N",    # pep8-naming (convenciones de nombres)
+    "B",    # flake8-bugbear (errores probables)
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade (sintaxis moderna para py310)
+]
+# E501: las líneas largas que el formateador no puede partir (strings y comentarios)
+# se corrigen a mano en la fase F7 (legibilidad). Ver docs/planificacion-parcial-2.md.
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "automations", "benchmarks", "scripts"]
+
+[tool.ruff.format]
+quote-style = "double"
+line-ending = "lf"
