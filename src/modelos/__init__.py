@@ -1,6 +1,5 @@
 """Modelos de dominio del Optimizador de Inventario y Pedidos."""
 
-from src.modelos.producto import Producto
 from src.modelos.pedido import (
     EstadoPedido,
     LineaPedido,
@@ -9,6 +8,7 @@ from src.modelos.pedido import (
     ResultadoPedido,
     ResumenProcesamiento,
 )
+from src.modelos.producto import Producto
 
 __all__ = [
     "Producto",

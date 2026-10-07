@@ -58,10 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         informes = ejecutar_complejidad(raiz)
         print(f"[complejidad] {len(informes)} funciones fundamentales -> docs/analisis.md")
         for inf in informes:
-            print(
-                f"  - {inf.funcion.nombre_calificado}: "
-                f"{inf.promedio} (peor {inf.peor})"
-            )
+            print(f"  - {inf.funcion.nombre_calificado}: {inf.promedio} (peor {inf.peor})")
 
     if args.propuestas or correr_todo:
         ruta = ejecutar_propuestas(raiz)

@@ -14,18 +14,15 @@ Genera:
 """
 
 from __future__ import annotations
-import gc
-from pathlib import Path
-import sys
-import tracemalloc
 
-from memory_profiler import memory_usage
+import gc
+import tracemalloc
+from pathlib import Path
 
 from src.cache.cache_consultas import GestorCacheConsultas
 from src.datos.cargador import cargar_dataset
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
-from src.pedidos.agrupador import agrupar_pedidos_batch
 from src.pedidos.combinaciones import BuscadorAlternativas
 from src.ranking.top_productos import (
     calcular_top_solicitados_heap,
@@ -65,8 +62,12 @@ def analizar_huella_catalogos(productos) -> dict[str, float]:
 
 def analizar_huella_top_n(pedidos, catalogo_hash, catalogo_lineal, k=5) -> dict[str, float]:
     """Compara la memoria peak de sorted() vs heapq.nlargest()."""
-    _, peak_sort, _ = medir_pico_tracemalloc(calcular_top_solicitados_lineal, pedidos, catalogo_lineal, k)
-    _, peak_heap, _ = medir_pico_tracemalloc(calcular_top_solicitados_heap, pedidos, catalogo_hash, k)
+    _, peak_sort, _ = medir_pico_tracemalloc(
+        calcular_top_solicitados_lineal, pedidos, catalogo_lineal, k
+    )
+    _, peak_heap, _ = medir_pico_tracemalloc(
+        calcular_top_solicitados_heap, pedidos, catalogo_hash, k
+    )
 
     return {
         "sort_pico_kb": peak_sort,
@@ -82,12 +83,20 @@ def analizar_huella_memoizacion(productos) -> dict[str, float]:
 
     # Búsqueda pura recursiva
     _, peak_puro, r_puro = medir_pico_tracemalloc(
-        buscador.buscar_alternativas, cat_ejemplo, 35000.0, usar_memoizacion=False, max_candidatos=14
+        buscador.buscar_alternativas,
+        cat_ejemplo,
+        35000.0,
+        usar_memoizacion=False,
+        max_candidatos=14,
     )
 
     # Búsqueda DP memoizada
     _, peak_memo, r_memo = medir_pico_tracemalloc(
-        buscador.buscar_alternativas, cat_ejemplo, 35000.0, usar_memoizacion=True, max_candidatos=14
+        buscador.buscar_alternativas,
+        cat_ejemplo,
+        35000.0,
+        usar_memoizacion=True,
+        max_candidatos=14,
     )
 
     return {
@@ -157,40 +166,44 @@ def main():
         # 3. Memoización
         stats_memo = analizar_huella_memoizacion(prods)
 
-        lineas_informe.extend([
-            f"--------------------------------------------------------------------------------",
-            f" DATASET: {ds_nombre} ({len(prods)} productos, {len(peds)} pedidos)",
-            f"--------------------------------------------------------------------------------",
-            f" 1. Estructura de Catálogo:",
-            f"    - Catálogo Lineal (Lista): Actual = {stats_cat['lineal_actual_kb']:.2f} KB | Pico = {stats_cat['lineal_pico_kb']:.2f} KB",
-            f"    - Catálogo Hash (Diccionarios + Índices): Actual = {stats_cat['hash_actual_kb']:.2f} KB | Pico = {stats_cat['hash_pico_kb']:.2f} KB",
-            f"    * Trade-off: El catálogo hash invierte ~{stats_cat['hash_actual_kb'] - stats_cat['lineal_actual_kb']:.1f} KB adicionales para brindar búsquedas O(1).",
-            f"",
-            f" 2. Ranking Top-N (k=5):",
-            f"    - Ordenamiento Total (sorted): Pico = {stats_top['sort_pico_kb']:.2f} KB",
-            f"    - Min-Heap Acotado (heapq.nlargest): Pico = {stats_top['heap_pico_kb']:.2f} KB",
-            f"    * Ahorro de memoria con Min-Heap: {stats_top['ahorro_kb']:.2f} KB (mantiene solo k elementos en memoria).",
-            f"",
-            f" 3. Alternativas Sustitutas (DP Memoización vs. Recursión Pura):",
-            f"    - Árbol Recursivo Puro: Pico = {stats_memo['recursion_pico_kb']:.2f} KB",
-            f"    - DP Memoizada: Pico = {stats_memo['memo_pico_kb']:.2f} KB (Entradas memo creadas: {stats_memo['entradas_memo']}, Hits: {stats_memo['hits_memo']})",
-            f"",
-        ])
+        lineas_informe.extend(
+            [
+                "--------------------------------------------------------------------------------",
+                f" DATASET: {ds_nombre} ({len(prods)} productos, {len(peds)} pedidos)",
+                "--------------------------------------------------------------------------------",
+                " 1. Estructura de Catálogo:",
+                f"    - Catálogo Lineal (Lista): Actual = {stats_cat['lineal_actual_kb']:.2f} KB | Pico = {stats_cat['lineal_pico_kb']:.2f} KB",
+                f"    - Catálogo Hash (Diccionarios + Índices): Actual = {stats_cat['hash_actual_kb']:.2f} KB | Pico = {stats_cat['hash_pico_kb']:.2f} KB",
+                f"    * Trade-off: El catálogo hash invierte ~{stats_cat['hash_actual_kb'] - stats_cat['lineal_actual_kb']:.1f} KB adicionales para brindar búsquedas O(1).",
+                "",
+                " 2. Ranking Top-N (k=5):",
+                f"    - Ordenamiento Total (sorted): Pico = {stats_top['sort_pico_kb']:.2f} KB",
+                f"    - Min-Heap Acotado (heapq.nlargest): Pico = {stats_top['heap_pico_kb']:.2f} KB",
+                f"    * Ahorro de memoria con Min-Heap: {stats_top['ahorro_kb']:.2f} KB (mantiene solo k elementos en memoria).",
+                "",
+                " 3. Alternativas Sustitutas (DP Memoización vs. Recursión Pura):",
+                f"    - Árbol Recursivo Puro: Pico = {stats_memo['recursion_pico_kb']:.2f} KB",
+                f"    - DP Memoizada: Pico = {stats_memo['memo_pico_kb']:.2f} KB (Entradas memo creadas: {stats_memo['entradas_memo']}, Hits: {stats_memo['hits_memo']})",
+                "",
+            ]
+        )
 
     # 4. Análisis de la caché LRU
     print("\n---> Analizando ciclo de vida y purga de la caché LRU...")
     stats_cache = analizar_huella_cache_lru()
-    lineas_informe.extend([
-        f"--------------------------------------------------------------------------------",
-        f" COMPORTAMIENTO DE LA CACHÉ LRU (GESTIÓN REACTIVA DE MEMORIA)",
-        f"--------------------------------------------------------------------------------",
-        f" - Capacidad máxima acotada: 50 búsquedas, 20 top-N, 20 alternativas",
-        f" - Huella de memoria llena: {stats_cache['cache_llena_kb']:.2f} KB (Pico: {stats_cache['cache_pico_kb']:.2f} KB)",
-        f" - Huella tras invalidación reactiva por mutación de stock: {stats_cache['cache_post_inval_kb']:.2f} KB",
-        f" * Conclusión: La política de desalojo LRU previene fugas de memoria (memory leaks),",
-        f"   garantizando un límite superior estricto de memoria O(C) independiente del volumen de consultas.",
-        "",
-    ])
+    lineas_informe.extend(
+        [
+            "--------------------------------------------------------------------------------",
+            " COMPORTAMIENTO DE LA CACHÉ LRU (GESTIÓN REACTIVA DE MEMORIA)",
+            "--------------------------------------------------------------------------------",
+            " - Capacidad máxima acotada: 50 búsquedas, 20 top-N, 20 alternativas",
+            f" - Huella de memoria llena: {stats_cache['cache_llena_kb']:.2f} KB (Pico: {stats_cache['cache_pico_kb']:.2f} KB)",
+            f" - Huella tras invalidación reactiva por mutación de stock: {stats_cache['cache_post_inval_kb']:.2f} KB",
+            " * Conclusión: La política de desalojo LRU previene fugas de memoria (memory leaks),",
+            "   garantizando un límite superior estricto de memoria O(C) independiente del volumen de consultas.",
+            "",
+        ]
+    )
 
     contenido_final = "\n".join(lineas_informe)
     with open(ruta_salida, "w", encoding="utf-8") as f:

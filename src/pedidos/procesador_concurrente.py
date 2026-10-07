@@ -20,12 +20,14 @@ Justificación técnica académica:
 """
 
 from __future__ import annotations
+
 import atexit
 import os
 import time
+from collections.abc import Sequence
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
-from typing import Sequence
+
 from src.modelos.pedido import (
     EstadoPedido,
     Pedido,
@@ -152,8 +154,7 @@ def procesar_pedidos_concurrente(
     workers = max_workers or min(os.cpu_count() or 4, len(pedidos))
     tamano_chunk = max(1, (len(pedidos) + workers - 1) // workers)
     fragmentos = [
-        list(pedidos[i : i + tamano_chunk])
-        for i in range(0, len(pedidos), tamano_chunk)
+        list(pedidos[i : i + tamano_chunk]) for i in range(0, len(pedidos), tamano_chunk)
     ]
 
     # 3. Reutilizar ProcessPoolExecutor. En Windows, CreateProcess por clic cuesta cientos de ms.
@@ -166,8 +167,7 @@ def procesar_pedidos_concurrente(
     todos_resultados: list[ResultadoPedido] = []
     try:
         futuros = [
-            _executor.submit(_evaluar_fragmento_pedidos, frag, mapa_stock)
-            for frag in fragmentos
+            _executor.submit(_evaluar_fragmento_pedidos, frag, mapa_stock) for frag in fragmentos
         ]
         for f in futuros:
             todos_resultados.extend(f.result())
@@ -176,8 +176,7 @@ def procesar_pedidos_concurrente(
         _executor = ProcessPoolExecutor(max_workers=workers)
         _executor_workers = workers
         futuros = [
-            _executor.submit(_evaluar_fragmento_pedidos, frag, mapa_stock)
-            for frag in fragmentos
+            _executor.submit(_evaluar_fragmento_pedidos, frag, mapa_stock) for frag in fragmentos
         ]
         for f in futuros:
             todos_resultados.extend(f.result())
@@ -195,11 +194,14 @@ def procesar_pedidos_concurrente(
     if descontar_stock:
         for res_pedido in todos_resultados:
             debe_descontar = (
-                (politica_descuento == "solo_cubiertos" and res_pedido.estado == EstadoPedido.CUBIERTO)
-                or (politica_descuento == "todo_lo_posible" and res_pedido.estado in (EstadoPedido.CUBIERTO, EstadoPedido.PARCIAL))
+                politica_descuento == "solo_cubiertos"
+                and res_pedido.estado == EstadoPedido.CUBIERTO
+            ) or (
+                politica_descuento == "todo_lo_posible"
+                and res_pedido.estado in (EstadoPedido.CUBIERTO, EstadoPedido.PARCIAL)
             )
             if debe_descontar:
-                for rl in (res_pedido.lineas_cubiertas + res_pedido.lineas_faltantes):
+                for rl in res_pedido.lineas_cubiertas + res_pedido.lineas_faltantes:
                     if rl.cantidad_asignada > 0:
                         catalogo.descontar_stock(rl.id_producto, rl.cantidad_asignada)
 

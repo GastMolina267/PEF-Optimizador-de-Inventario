@@ -1,16 +1,23 @@
 """Pantalla de Comparación Experimental Baseline vs. Optimizado."""
 
 from __future__ import annotations
+
 import time
 import tracemalloc
+
 import flet as ft
+
 from src.motor.motor_inventario import MotorInventario
-from src.ranking.top_productos import calcular_top_solicitados_heap, calcular_top_solicitados_lineal
-from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
 from src.pedidos.procesador_concurrente import procesar_pedidos_concurrente
+from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
+from src.ranking.top_productos import (
+    calcular_top_solicitados_heap,
+    calcular_top_solicitados_lineal,
+)
 from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
+    COLOR_FONDO_APP,
     COLOR_PELIGRO,
     COLOR_PRIMARIO,
     COLOR_SECUNDARIO,
@@ -27,7 +34,6 @@ from src.ui.tema import (
     crear_encabezado,
     crear_tarjeta_kpi,
     crear_titulo_seccion,
-    COLOR_FONDO_APP,
     envolver_lista,
     envolver_metricas,
     estilo_boton_primario,
@@ -97,10 +103,12 @@ class PantallaComparacion(ft.Container):
                     complejidad_opt="O(1), O(N log k), Multi-Proceso, O(N·P)",
                     por_que_importa="Satisface el requisito central de la rúbrica del parcial y suministra la evidencia empírica directa para la exposición oral.",
                 ),
-                crear_barra_herramientas([
-                    self.dropdown_orden,
-                    self.btn_sentido_orden,
-                ]),
+                crear_barra_herramientas(
+                    [
+                        self.dropdown_orden,
+                        self.btn_sentido_orden,
+                    ]
+                ),
                 envolver_metricas(self.fila_kpis),
                 crear_titulo_seccion("Tabla de Comparación Experimental Obligatoria (Rúbrica)"),
                 envolver_lista(self.col_tabla_comparativa),
@@ -121,8 +129,14 @@ class PantallaComparacion(ft.Container):
 
     def _alternar_sentido_orden(self):
         self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = ft.Icons.ARROW_UPWARD_ROUNDED if self.orden_ascendente else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        self.btn_sentido_orden.tooltip = "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
+        self.btn_sentido_orden.icon = (
+            ft.Icons.ARROW_UPWARD_ROUNDED
+            if self.orden_ascendente
+            else ft.Icons.ARROW_DOWNWARD_ROUNDED
+        )
+        self.btn_sentido_orden.tooltip = (
+            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
+        )
         actualizar_control(self.btn_sentido_orden)
         self._aplicar_ordenamiento()
 
@@ -151,10 +165,14 @@ class PantallaComparacion(ft.Container):
         peds = self.motor.pedidos
 
         if not prods or not peds:
-            self.notificar("Cargue un dataset primero desde la pantalla de Inicio.", ft.Icons.WARNING)
+            self.notificar(
+                "Cargue un dataset primero desde la pantalla de Inicio.", ft.Icons.WARNING
+            )
             return
 
-        self.notificar("Ejecutando suite experimental comparativa...", icono=ft.Icons.HOURGLASS_EMPTY)
+        self.notificar(
+            "Ejecutando suite experimental comparativa...", icono=ft.Icons.HOURGLASS_EMPTY
+        )
 
         # 1. Búsquedas de catálogo (Lineal vs Hash)
         palabra_muestra = "a"
@@ -190,13 +208,16 @@ class PantallaComparacion(ft.Container):
         # 4. Alternativas (Recursivo puro vs DP Memoizado)
         cat_ejemplo = prods[0].categoria
         t0 = time.perf_counter()
-        _ = self.motor.buscar_alternativas(cat_ejemplo, 35000.0, forzar_memoizacion=False, max_combinaciones=10)
+        _ = self.motor.buscar_alternativas(
+            cat_ejemplo, 35000.0, forzar_memoizacion=False, max_combinaciones=10
+        )
         t_alt_base = (time.perf_counter() - t0) * 1000.0
 
         t0 = time.perf_counter()
-        res_alt_memo = self.motor.buscar_alternativas(cat_ejemplo, 35000.0, forzar_memoizacion=True, max_combinaciones=10)
+        res_alt_memo = self.motor.buscar_alternativas(
+            cat_ejemplo, 35000.0, forzar_memoizacion=True, max_combinaciones=10
+        )
         t_alt_opt = (time.perf_counter() - t0) * 1000.0
-
 
         # Medición de memoria general del proceso
         tracemalloc.start()
@@ -213,18 +234,66 @@ class PantallaComparacion(ft.Container):
 
         # Actualizar KPIs
         self.fila_kpis.controls = [
-            crear_tarjeta_kpi("Aceleración Búsqueda", f"{sp_busq:.1f}x", "Hash O(1) vs. Lista O(n)", ft.Icons.ROCKET_LAUNCH, COLOR_PRIMARIO),
-            crear_tarjeta_kpi("Aceleración Top-N", f"{sp_top:.1f}x", "Heap vs. Sort total", ft.Icons.TRENDING_UP, COLOR_SECUNDARIO),
-            crear_tarjeta_kpi("Aceleración Alternativas", f"{sp_alt:.1f}x", "DP Memo vs. Recursión pura", ft.Icons.PSYCHOLOGY, COLOR_EXITO),
-            crear_tarjeta_kpi("Memoria Heap Activa", f"{mem_mb:.2f} MB", "Estructuras en memoria", ft.Icons.MEMORY, COLOR_PRIMARIO),
+            crear_tarjeta_kpi(
+                "Aceleración Búsqueda",
+                f"{sp_busq:.1f}x",
+                "Hash O(1) vs. Lista O(n)",
+                ft.Icons.ROCKET_LAUNCH,
+                COLOR_PRIMARIO,
+            ),
+            crear_tarjeta_kpi(
+                "Aceleración Top-N",
+                f"{sp_top:.1f}x",
+                "Heap vs. Sort total",
+                ft.Icons.TRENDING_UP,
+                COLOR_SECUNDARIO,
+            ),
+            crear_tarjeta_kpi(
+                "Aceleración Alternativas",
+                f"{sp_alt:.1f}x",
+                "DP Memo vs. Recursión pura",
+                ft.Icons.PSYCHOLOGY,
+                COLOR_EXITO,
+            ),
+            crear_tarjeta_kpi(
+                "Memoria Heap Activa",
+                f"{mem_mb:.2f} MB",
+                "Estructuras en memoria",
+                ft.Icons.MEMORY,
+                COLOR_PRIMARIO,
+            ),
         ]
 
         self.memoria_mb = mem_mb
         self.filas_medidas = [
-            ("1. Catálogo (Búsqueda)", t_busq_base, t_busq_opt, sp_busq, "Estructura: Hash O(1) e índice invertido con caché LRU."),
-            ("2. Top-N Productos", t_top_base, t_top_opt, sp_top, "Algoritmo: heapq.nlargest O(N log k) frente a sort O(N log N)."),
-            ("3. Preparación de Pedidos", t_ped_base, t_ped_opt, sp_ped, "Concurrencia: ProcessPoolExecutor. Evaluar overhead IPC."),
-            ("4. Combinaciones Sustitutas", t_alt_base, t_alt_opt, sp_alt, f"Memoización DP: {res_alt_memo.hits_memo} subproblemas reutilizados en O(N·P)."),
+            (
+                "1. Catálogo (Búsqueda)",
+                t_busq_base,
+                t_busq_opt,
+                sp_busq,
+                "Estructura: Hash O(1) e índice invertido con caché LRU.",
+            ),
+            (
+                "2. Top-N Productos",
+                t_top_base,
+                t_top_opt,
+                sp_top,
+                "Algoritmo: heapq.nlargest O(N log k) frente a sort O(N log N).",
+            ),
+            (
+                "3. Preparación de Pedidos",
+                t_ped_base,
+                t_ped_opt,
+                sp_ped,
+                "Concurrencia: ProcessPoolExecutor. Evaluar overhead IPC.",
+            ),
+            (
+                "4. Combinaciones Sustitutas",
+                t_alt_base,
+                t_alt_opt,
+                sp_alt,
+                f"Memoización DP: {res_alt_memo.hits_memo} subproblemas reutilizados en O(N·P).",
+            ),
         ]
 
         self._aplicar_ordenamiento()
@@ -239,7 +308,9 @@ class PantallaComparacion(ft.Container):
             resultado_negocio="Comparativa experimental completada con éxito",
         )
         actualizar_control(self)
-        self.notificar("Comparativa experimental finalizada exitosamente.", icono=ft.Icons.CHECK_CIRCLE)
+        self.notificar(
+            "Comparativa experimental finalizada exitosamente.", icono=ft.Icons.CHECK_CIRCLE
+        )
 
     def _renderizar_tabla(self):
         filas_widgets = []
@@ -258,7 +329,12 @@ class PantallaComparacion(ft.Container):
                         controls=[
                             ft.Row(
                                 controls=[
-                                    ft.Text(operacion, size=13.5, weight=ft.FontWeight.BOLD, color=COLOR_TEXTO_PRIMARIO),
+                                    ft.Text(
+                                        operacion,
+                                        size=13.5,
+                                        weight=ft.FontWeight.BOLD,
+                                        color=COLOR_TEXTO_PRIMARIO,
+                                    ),
                                     ft.Container(expand=True),
                                     ft.Container(
                                         content=ft.Text(
@@ -282,8 +358,17 @@ class PantallaComparacion(ft.Container):
                                 ],
                                 spacing=6,
                             ),
-                            ft.Text(texto_memoria, size=12, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_PRIMARIO),
-                            ft.Text(f"Observación: {observacion}", size=11, color=COLOR_TEXTO_SECUNDARIO),
+                            ft.Text(
+                                texto_memoria,
+                                size=12,
+                                weight=ft.FontWeight.W_600,
+                                color=COLOR_TEXTO_PRIMARIO,
+                            ),
+                            ft.Text(
+                                f"Observación: {observacion}",
+                                size=11,
+                                color=COLOR_TEXTO_SECUNDARIO,
+                            ),
                         ],
                         spacing=6,
                     ),

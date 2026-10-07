@@ -7,7 +7,9 @@ Verifica:
 """
 
 from __future__ import annotations
+
 from pathlib import Path
+
 import pytest
 
 from src.datos.cargador import cargar_dataset
@@ -89,8 +91,12 @@ class TestEquivalenciaEscalaMediana:
         cat = productos[0].categoria
 
         # Comparar con candidatos limitados a 12 para evitar tiempo excesivo en recursión pura
-        res_puro = buscador.buscar_alternativas(cat, 25000.0, usar_memoizacion=False, max_combinaciones=5, max_candidatos=12)
-        res_memo = buscador.buscar_alternativas(cat, 25000.0, usar_memoizacion=True, max_combinaciones=5, max_candidatos=12)
+        res_puro = buscador.buscar_alternativas(
+            cat, 25000.0, usar_memoizacion=False, max_combinaciones=5, max_candidatos=12
+        )
+        res_memo = buscador.buscar_alternativas(
+            cat, 25000.0, usar_memoizacion=True, max_combinaciones=5, max_candidatos=12
+        )
 
         assert len(res_puro.combinaciones) == len(res_memo.combinaciones)
         for c_puro, c_memo in zip(res_puro.combinaciones, res_memo.combinaciones):

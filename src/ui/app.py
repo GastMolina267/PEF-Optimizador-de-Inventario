@@ -12,11 +12,21 @@ y las 7 pantallas del sistema:
 """
 
 from __future__ import annotations
+
 import multiprocessing
 from pathlib import Path
+
 import flet as ft
 
 from src.motor.motor_inventario import MotorInventario
+from src.ui.componentes.panel_estado import PanelEstado
+from src.ui.pantallas.agrupacion import PantallaAgrupacion
+from src.ui.pantallas.alternativas import PantallaAlternativas
+from src.ui.pantallas.catalogo import PantallaCatalogo
+from src.ui.pantallas.comparacion import PantallaComparacion
+from src.ui.pantallas.inicio import PantallaInicio
+from src.ui.pantallas.pedidos import PantallaPedidos
+from src.ui.pantallas.top_productos import PantallaTopProductos
 from src.ui.tema import (
     COLOR_FONDO_APP,
     COLOR_MARCA,
@@ -28,14 +38,6 @@ from src.ui.tema import (
     COLOR_TARJETA,
     crear_dialogo_explicativo_modos,
 )
-from src.ui.componentes.panel_estado import PanelEstado
-from src.ui.pantallas.inicio import PantallaInicio
-from src.ui.pantallas.catalogo import PantallaCatalogo
-from src.ui.pantallas.pedidos import PantallaPedidos
-from src.ui.pantallas.agrupacion import PantallaAgrupacion
-from src.ui.pantallas.top_productos import PantallaTopProductos
-from src.ui.pantallas.alternativas import PantallaAlternativas
-from src.ui.pantallas.comparacion import PantallaComparacion
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"
@@ -73,7 +75,9 @@ def main(page: ft.Page) -> None:
         motor.cargar_dataset(ruta_inicial)
 
     # 2. Función auxiliar de notificaciones amigable
-    def notificar(mensaje: str, icono: str = ft.Icons.INFO_OUTLINE, color: str | None = None) -> None:
+    def notificar(
+        mensaje: str, icono: str = ft.Icons.INFO_OUTLINE, color: str | None = None
+    ) -> None:
         sb = ft.SnackBar(
             content=ft.Row(
                 controls=[
@@ -136,11 +140,15 @@ def main(page: ft.Page) -> None:
             dlg.open = True
             page.update()
 
-
     def al_conmutar_estrategia(nueva_estrategia: str) -> None:
         motor.cambiar_estrategia(nueva_estrategia)
-        actualizar_panel(estrategia=nueva_estrategia, resultado_negocio=f"Estrategia conmutada a {nueva_estrategia.upper()}")
-        notificar(f"Estrategia global cambiada a '{nueva_estrategia.upper()}'.", ft.Icons.SWAP_HORIZ)
+        actualizar_panel(
+            estrategia=nueva_estrategia,
+            resultado_negocio=f"Estrategia conmutada a {nueva_estrategia.upper()}",
+        )
+        notificar(
+            f"Estrategia global cambiada a '{nueva_estrategia.upper()}'.", ft.Icons.SWAP_HORIZ
+        )
         # Notificar a las pantallas cacheadas para sincronizar su estado
         for v in vistas.values():
             if hasattr(v, "al_cambiar_estrategia_global"):
@@ -287,4 +295,3 @@ if __name__ == "__main__":
         ft.app(target=main)
     else:
         ft.run(main)
-

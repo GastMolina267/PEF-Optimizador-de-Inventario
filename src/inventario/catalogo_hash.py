@@ -7,8 +7,10 @@ Mantiene exactamente la misma API pública que CatalogoLineal para permitir la s
 """
 
 from __future__ import annotations
+
 import re
-from typing import Sequence
+from collections.abc import Sequence
+
 from src.modelos.producto import Producto
 
 
@@ -108,9 +110,7 @@ class CatalogoHash:
 
         # Fallback de coincidencia general por subcadena sobre el universo
         return [
-            prod
-            for prod in self._productos_por_id.values()
-            if texto_norm in prod.nombre.lower()
+            prod for prod in self._productos_por_id.values() if texto_norm in prod.nombre.lower()
         ]
 
     def buscar_por_categoria(self, categoria: str) -> list[Producto]:

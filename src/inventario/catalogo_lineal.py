@@ -7,7 +7,9 @@ Sirve como línea base (baseline) para el desafío experimental frente a la tabl
 """
 
 from __future__ import annotations
-from typing import Sequence
+
+from collections.abc import Sequence
+
 from src.modelos.producto import Producto
 
 

@@ -12,10 +12,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 1. Validar sintaxis YAML
 try:
     import yaml
+
     for rel_path in [".github/workflows/verify.yml", ".github/workflows/compile.yml"]:
         full_path = BASE_DIR / rel_path
         assert full_path.exists(), f"Falta el archivo {rel_path}"
-        with open(full_path, "r", encoding="utf-8") as f:
+        with open(full_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         name = data.get("name")
         jobs = list(data.get("jobs", {}).keys())
@@ -28,6 +29,7 @@ pyproject_path = BASE_DIR / "pyproject.toml"
 assert pyproject_path.exists(), "Falta pyproject.toml"
 try:
     import tomllib
+
     with open(pyproject_path, "rb") as f:
         toml_data = tomllib.load(f)
     print(f"✓ pyproject.toml válido. Proyecto: {toml_data.get('project', {}).get('name')}")

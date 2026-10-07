@@ -9,12 +9,14 @@ Permite generar los escenarios de prueba estándar:
 """
 
 from __future__ import annotations
+
 import argparse
 import random
 from pathlib import Path
-from src.modelos.producto import Producto
-from src.modelos.pedido import Pedido, LineaPedido
+
 from src.datos.cargador import guardar_dataset_json
+from src.modelos.pedido import LineaPedido, Pedido
+from src.modelos.producto import Producto
 
 # Categorías realistas para los productos sintéticos
 CATEGORIAS = [
@@ -28,40 +30,96 @@ CATEGORIAS = [
 
 NOMBRES_BASE = {
     "Ferretería y Herramientas": [
-        "Taladro percutor", "Amoladora angular", "Sierra caladora", "Juego de llaves",
-        "Martillo galponero", "Destornillador Phillips", "Pinza universal", "Nivel de mano",
-        "Cinta métrica", "Caja de herramientas", "Arco de sierra", "Lijadora orbital"
+        "Taladro percutor",
+        "Amoladora angular",
+        "Sierra caladora",
+        "Juego de llaves",
+        "Martillo galponero",
+        "Destornillador Phillips",
+        "Pinza universal",
+        "Nivel de mano",
+        "Cinta métrica",
+        "Caja de herramientas",
+        "Arco de sierra",
+        "Lijadora orbital",
     ],
     "Electricidad e Iluminación": [
-        "Cable unipolar 2.5mm", "Cable unipolar 4mm", "Foco LED 12W", "Foco LED 9W",
-        "Disyuntor diferencial", "Llave térmica 16A", "Llave térmica 25A", "Toma corriente",
-        "Caja de paso", "Cinta aisladora", "Plafón LED redondo", "Canaleta adhesiva"
+        "Cable unipolar 2.5mm",
+        "Cable unipolar 4mm",
+        "Foco LED 12W",
+        "Foco LED 9W",
+        "Disyuntor diferencial",
+        "Llave térmica 16A",
+        "Llave térmica 25A",
+        "Toma corriente",
+        "Caja de paso",
+        "Cinta aisladora",
+        "Plafón LED redondo",
+        "Canaleta adhesiva",
     ],
     "Pinturas y Adhesivos": [
-        "Pintura látex interior", "Pintura látex exterior", "Esmalte sintético brillante",
-        "Sellador de silicona", "Adhesivo de montaje", "Rodillo antigoteo", "Pincel de cerda",
-        "Bandeja para pintar", "Lija al agua grano 180", "Aguarrás mineral", "Masilla para yeso"
+        "Pintura látex interior",
+        "Pintura látex exterior",
+        "Esmalte sintético brillante",
+        "Sellador de silicona",
+        "Adhesivo de montaje",
+        "Rodillo antigoteo",
+        "Pincel de cerda",
+        "Bandeja para pintar",
+        "Lija al agua grano 180",
+        "Aguarrás mineral",
+        "Masilla para yeso",
     ],
     "Seguridad Industrial": [
-        "Guantes de nitrilo", "Guantes de vaqueta", "Casco de protección", "Lentes de seguridad",
-        "Protector auditivo de copa", "Máscara antipolvo", "Calzado de seguridad", "Arnés de sujeción",
-        "Chaleco reflectivo", "Cono de señalización"
+        "Guantes de nitrilo",
+        "Guantes de vaqueta",
+        "Casco de protección",
+        "Lentes de seguridad",
+        "Protector auditivo de copa",
+        "Máscara antipolvo",
+        "Calzado de seguridad",
+        "Arnés de sujeción",
+        "Chaleco reflectivo",
+        "Cono de señalización",
     ],
     "Plomería y Grifería": [
-        "Caño PVC 110mm", "Codo PVC 110mm", "Curva PVC 90°", "Adhesivo para PVC",
-        "Canilla monocomando", "Flexible mallado 1/2", "Cinta teflón 3/4", "Sifón extensible",
-        "Válvula esférica 1/2", "Flotante para tanque", "Rejilla de piso"
+        "Caño PVC 110mm",
+        "Codo PVC 110mm",
+        "Curva PVC 90°",
+        "Adhesivo para PVC",
+        "Canilla monocomando",
+        "Flexible mallado 1/2",
+        "Cinta teflón 3/4",
+        "Sifón extensible",
+        "Válvula esférica 1/2",
+        "Flotante para tanque",
+        "Rejilla de piso",
     ],
     "Bulonería y Tornillería": [
-        "Tornillo autoperforante 10x1", "Tornillo autoperforante 10x2", "Tarugo con tope N°8",
-        "Tarugo sin tope N°6", "Tuerca hexagonal 1/4", "Arandela plana 1/4", "Arandela grower 1/4",
-        "Varilla roscada 3/8", "Remache de aluminio 4x12", "Pitón cerrado cincado"
+        "Tornillo autoperforante 10x1",
+        "Tornillo autoperforante 10x2",
+        "Tarugo con tope N°8",
+        "Tarugo sin tope N°6",
+        "Tuerca hexagonal 1/4",
+        "Arandela plana 1/4",
+        "Arandela grower 1/4",
+        "Varilla roscada 3/8",
+        "Remache de aluminio 4x12",
+        "Pitón cerrado cincado",
     ],
 }
 
 MODIFICADORES = [
-    "Premium", "Industrial", "Económico", "Reforzado", "Estándar",
-    "Alta Resistencia", "Profesional", "Inoxidable", "Cincado", "Especial"
+    "Premium",
+    "Industrial",
+    "Económico",
+    "Reforzado",
+    "Estándar",
+    "Alta Resistencia",
+    "Profesional",
+    "Inoxidable",
+    "Cincado",
+    "Especial",
 ]
 
 
@@ -79,12 +137,16 @@ def crear_dataset_demo_oral() -> tuple[list[Producto], list[Pedido]]:
         Producto(2, "Amoladora Angular 115mm", "Ferretería y Herramientas", 10, 38000.0),
         Producto(3, "Juego de Destornilladores x6", "Ferretería y Herramientas", 25, 12000.0),
         Producto(4, "Martillo Galponero 500g", "Ferretería y Herramientas", 30, 9500.0),
-        Producto(5, "Sierra Caladora 600W", "Ferretería y Herramientas", 0, 32000.0),  # Agotado deliberado
+        Producto(
+            5, "Sierra Caladora 600W", "Ferretería y Herramientas", 0, 32000.0
+        ),  # Agotado deliberado
         Producto(6, "Cable Unipolar 2.5mm 100m", "Electricidad e Iluminación", 40, 28000.0),
         Producto(7, "Foco LED 12W Luz Fría", "Electricidad e Iluminación", 120, 1800.0),
         Producto(8, "Foco LED 9W Luz Cálida", "Electricidad e Iluminación", 80, 1500.0),
         Producto(9, "Disyuntor Diferencial 25A", "Electricidad e Iluminación", 20, 31000.0),
-        Producto(10, "Llave Térmica Bipolar 16A", "Electricidad e Iluminación", 0, 8500.0),  # Agotado deliberado
+        Producto(
+            10, "Llave Térmica Bipolar 16A", "Electricidad e Iluminación", 0, 8500.0
+        ),  # Agotado deliberado
         Producto(11, "Pintura Látex Interior 20L", "Pinturas y Adhesivos", 18, 52000.0),
         Producto(12, "Pintura Látex Interior 10L", "Pinturas y Adhesivos", 22, 29000.0),
         Producto(13, "Pintura Látex Interior 4L", "Pinturas y Adhesivos", 35, 14000.0),
@@ -95,8 +157,12 @@ def crear_dataset_demo_oral() -> tuple[list[Producto], list[Pedido]]:
         Producto(18, "Codo PVC 110mm a 90°", "Plomería y Grifería", 45, 2800.0),
         Producto(19, "Adhesivo para PVC 250cc", "Plomería y Grifería", 30, 5100.0),
         Producto(20, "Canilla Monocomando Cocina", "Plomería y Grifería", 12, 42000.0),
-        Producto(21, "Flexible Mallado 1/2 x 40cm", "Plomería y Grifería", 2, 3400.0),  # Stock bajo
-        Producto(22, "Tornillo Autoperforante 10x1 (x100)", "Bulonería y Tornillería", 100, 3200.0),
+        Producto(
+            21, "Flexible Mallado 1/2 x 40cm", "Plomería y Grifería", 2, 3400.0
+        ),  # Stock bajo
+        Producto(
+            22, "Tornillo Autoperforante 10x1 (x100)", "Bulonería y Tornillería", 100, 3200.0
+        ),
         Producto(23, "Tornillo Autoperforante 10x2 (x100)", "Bulonería y Tornillería", 90, 4100.0),
         Producto(24, "Tarugo con Tope N°8 (x100)", "Bulonería y Tornillería", 150, 2100.0),
         Producto(25, "Tuerca Hexagonal 1/4 (x100)", "Bulonería y Tornillería", 80, 1900.0),
@@ -104,7 +170,9 @@ def crear_dataset_demo_oral() -> tuple[list[Producto], list[Pedido]]:
         Producto(27, "Guantes de Nitrilo Talle L", "Seguridad Industrial", 75, 3100.0),
         Producto(28, "Casco de Seguridad Amarillo", "Seguridad Industrial", 15, 9800.0),
         Producto(29, "Cinta Métrica 5m Antichoque", "Ferretería y Herramientas", 40, 4900.0),
-        Producto(30, "Sellador de Silicona Neutra 280ml", "Pinturas y Adhesivos", 0, 6200.0),  # Agotado deliberado
+        Producto(
+            30, "Sellador de Silicona Neutra 280ml", "Pinturas y Adhesivos", 0, 6200.0
+        ),  # Agotado deliberado
     ]
 
     pedidos = [
@@ -227,7 +295,7 @@ def generar_todos_los_datasets(directorio_destino: str | Path, semilla: int = 42
         else:
             prods, peds = generar_dataset_sintetico(
                 total_productos=n_prods,  # type: ignore
-                total_pedidos=n_peds,     # type: ignore
+                total_pedidos=n_peds,  # type: ignore
                 semilla=semilla,
             )
             metadatos = {
@@ -243,7 +311,9 @@ def generar_todos_los_datasets(directorio_destino: str | Path, semilla: int = 42
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generador de datasets para el Optimizador de Inventario.")
+    parser = argparse.ArgumentParser(
+        description="Generador de datasets para el Optimizador de Inventario."
+    )
     parser.add_argument(
         "--salida",
         type=str,

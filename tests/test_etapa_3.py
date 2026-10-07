@@ -11,22 +11,23 @@ Cierre general de la Etapa 3: alternancia dinámica de estrategias sobre los mis
 """
 
 from __future__ import annotations
+
 from pathlib import Path
 
-from src.modelos.producto import Producto
-from src.inventario.catalogo_lineal import CatalogoLineal
+from src.cache.cache_consultas import GestorCacheConsultas
+from src.datos.cargador import cargar_dataset_json
 from src.inventario.catalogo_hash import CatalogoHash
+from src.inventario.catalogo_lineal import CatalogoLineal
+from src.modelos.producto import Producto
+from src.motor.motor_inventario import MotorInventario
+from src.pedidos.agrupador import agrupar_pedidos_batch
+from src.pedidos.combinaciones import BuscadorAlternativas
+from src.pedidos.procesador_concurrente import procesar_pedidos_concurrente
+from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
 from src.ranking.top_productos import (
     calcular_top_solicitados_heap,
     calcular_top_solicitados_lineal,
 )
-from src.pedidos.agrupador import agrupar_pedidos_batch
-from src.pedidos.combinaciones import BuscadorAlternativas
-from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
-from src.pedidos.procesador_concurrente import procesar_pedidos_concurrente
-from src.cache.cache_consultas import GestorCacheConsultas
-from src.datos.cargador import cargar_dataset_json
-from src.motor.motor_inventario import MotorInventario
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"

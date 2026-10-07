@@ -224,9 +224,7 @@ def inspeccionar_funcion(raiz: Path, spec: FuncionFundamental) -> tuple[Evidenci
     arbol = ast.parse(fuente, filename=str(ruta))
     funcion = _localizar_funcion(arbol, spec.nombre_calificado)
     if funcion is None:
-        raise FileNotFoundError(
-            f"No se encontró {spec.nombre_calificado} en {spec.ruta_relativa}"
-        )
+        raise FileNotFoundError(f"No se encontró {spec.nombre_calificado} en {spec.ruta_relativa}")
     visitante = _VisitanteCuerpo(funcion.name)
     for sentencia in funcion.body:
         visitante.visit(sentencia)
@@ -284,8 +282,10 @@ def derivar_complejidad(spec: FuncionFundamental, ev: EvidenciaAST) -> InformeCo
             "tamaño `k` hace un sift-down O(log k) por cada una de las N claves, "
             "de modo que la selección es O(N log k) y no O(N log N)."
         )
-    elif ev.llamadas_sorted and ev.bucles_anidados_pedido_linea and not any(
-        "acumulador" in a for a in ev.accesos_hash
+    elif (
+        ev.llamadas_sorted
+        and ev.bucles_anidados_pedido_linea
+        and not any("acumulador" in a for a in ev.accesos_hash)
     ):
         mejor, promedio, peor = "Ω(L + N)", "Θ(L + N log N)", "O(L + N log N)"
         espacial = "O(N)"
@@ -304,8 +304,16 @@ def derivar_complejidad(spec: FuncionFundamental, ev: EvidenciaAST) -> InformeCo
             "escala a O(P · L · n) y el optimizado a O(P · L)."
         )
     elif ev.bucles_anidados_pedido_linea:
-        extra_sort = " Tras la pasada se ordenan los U productos únicos (O(U log U))." if ev.llamadas_sorted else ""
-        mejor, promedio, peor = "Ω(L)", "Θ(L + U)", "O(L + U log U)" if ev.llamadas_sorted else "O(L + U)"
+        extra_sort = (
+            " Tras la pasada se ordenan los U productos únicos (O(U log U))."
+            if ev.llamadas_sorted
+            else ""
+        )
+        mejor, promedio, peor = (
+            "Ω(L)",
+            "Θ(L + U)",
+            "O(L + U log U)" if ev.llamadas_sorted else "O(L + U)",
+        )
         espacial = "O(U)"
         justificacion = (
             "Doble bucle sobre pedidos y líneas con acumulación en un diccionario "
@@ -321,9 +329,7 @@ def derivar_complejidad(spec: FuncionFundamental, ev: EvidenciaAST) -> InformeCo
             "El caso típico es O(k) con k ≪ n; si el índice no filtra, el fallback "
             "recorre el universo y vuelve a O(n)."
         )
-    elif ev.recorre_lista_productos or (
-        ev.profundidad_bucles >= 1 and not ev.accesos_hash
-    ):
+    elif ev.recorre_lista_productos or (ev.profundidad_bucles >= 1 and not ev.accesos_hash):
         factor_texto = " · m" if "nombre" in spec.nombre_calificado else ""
         mejor = "Ω(1)" if "id" in spec.nombre_calificado else f"Ω(n{factor_texto})"
         promedio, peor = f"Θ(n{factor_texto})", f"O(n{factor_texto})"
@@ -365,9 +371,7 @@ def derivar_complejidad(spec: FuncionFundamental, ev: EvidenciaAST) -> InformeCo
         )
 
     if ev.docstring_complejidad:
-        justificacion += (
-            f" Comentario del grupo (docstring): {ev.docstring_complejidad}"
-        )
+        justificacion += f" Comentario del grupo (docstring): {ev.docstring_complejidad}"
 
     return InformeComplejidad(
         funcion=spec,

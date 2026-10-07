@@ -27,6 +27,7 @@ def verificar_pyinstaller() -> bool:
     """Comprueba si PyInstaller está disponible en el entorno."""
     try:
         import PyInstaller  # noqa: F401
+
         return True
     except ImportError:
         return False

@@ -1,8 +1,11 @@
 """Pantalla de Exploración y Búsqueda del Catálogo de Productos."""
 
 from __future__ import annotations
+
 import time
+
 import flet as ft
+
 from src.motor.motor_inventario import MotorInventario
 from src.ui.tema import (
     COLOR_ADVERTENCIA,
@@ -23,8 +26,8 @@ from src.ui.tema import (
     actualizar_control,
     borde_all,
     borde_only,
-    crear_banner_explicativo,
     crear_badge_tiempo,
+    crear_banner_explicativo,
     crear_barra_herramientas,
     crear_dropdown,
     crear_encabezado,
@@ -48,7 +51,6 @@ class PantallaCatalogo(ft.Container):
         self.padding = padding_symmetric(horizontal=16, vertical=12)
         self.productos_actuales = []
         self.orden_ascendente = True
-
 
         # Campo de búsqueda por texto o ID
         self.input_busqueda = ft.TextField(
@@ -83,12 +85,16 @@ class PantallaCatalogo(ft.Container):
             content=ft.Row(
                 controls=[
                     ft.Icon(
-                        ft.Icons.BOLT_ROUNDED if self.motor.es_optimizado else ft.Icons.LIST_ALT_ROUNDED,
+                        ft.Icons.BOLT_ROUNDED
+                        if self.motor.es_optimizado
+                        else ft.Icons.LIST_ALT_ROUNDED,
                         size=15,
                         color=COLOR_EXITO if self.motor.es_optimizado else COLOR_ADVERTENCIA,
                     ),
                     ft.Text(
-                        "Búsqueda Hash O(1) con LRU" if self.motor.es_optimizado else "Búsqueda Lineal O(n)",
+                        "Búsqueda Hash O(1) con LRU"
+                        if self.motor.es_optimizado
+                        else "Búsqueda Lineal O(n)",
                         size=12,
                         weight=ft.FontWeight.BOLD,
                         color=COLOR_EXITO if self.motor.es_optimizado else COLOR_ADVERTENCIA,
@@ -102,7 +108,6 @@ class PantallaCatalogo(ft.Container):
             border_radius=8,
             border=borde_all(1, COLOR_EXITO if self.motor.es_optimizado else COLOR_ADVERTENCIA),
         )
-
 
         self.btn_buscar = ft.FilledButton(
             "Buscar",
@@ -138,10 +143,14 @@ class PantallaCatalogo(ft.Container):
         )
 
         # Diagnóstico de la consulta
-        self.txt_tiempo_busqueda = ft.Text("Tiempo: 0.000 ms", size=13, color=COLOR_PRIMARIO, weight=ft.FontWeight.BOLD)
+        self.txt_tiempo_busqueda = ft.Text(
+            "Tiempo: 0.000 ms", size=13, color=COLOR_PRIMARIO, weight=ft.FontWeight.BOLD
+        )
         self.contenedor_badge_tiempo = ft.Row(spacing=6)
         self.txt_estado_cache = ft.Text("Caché: --", size=13, color=COLOR_TEXTO_MUTED)
-        self.txt_resultados_count = ft.Text("Total: -- productos", size=13, color=COLOR_TEXTO_SECUNDARIO)
+        self.txt_resultados_count = ft.Text(
+            "Total: -- productos", size=13, color=COLOR_TEXTO_SECUNDARIO
+        )
 
         self.col_productos = ft.ListView(spacing=0, expand=True, padding=0)
 
@@ -163,14 +172,17 @@ class PantallaCatalogo(ft.Container):
                     complejidad_opt="Búsqueda Hash O(1) amortizado",
                     por_que_importa="En catálogos de 10.000+ artículos, la búsqueda O(1) reduce el tiempo de varios milisegundos a fracciones de milisegundo (speedup > 2000x).",
                 ),
-                crear_barra_herramientas([
-                    self.input_busqueda,
-                    self.input_id,
-                    self.btn_buscar,
-                    self.btn_limpiar,
-                    self.dropdown_orden,
-                    self.btn_sentido_orden,
-                ], wrap=False),
+                crear_barra_herramientas(
+                    [
+                        self.input_busqueda,
+                        self.input_id,
+                        self.btn_buscar,
+                        self.btn_limpiar,
+                        self.dropdown_orden,
+                        self.btn_sentido_orden,
+                    ],
+                    wrap=False,
+                ),
                 ft.Row(
                     controls=[
                         self.txt_resultados_count,
@@ -185,10 +197,34 @@ class PantallaCatalogo(ft.Container):
                     encabezado=ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Text("ID", size=12, weight=ft.FontWeight.W_700, color=COLOR_TEXTO_MUTED, width=48),
-                                ft.Text("Producto", size=12, weight=ft.FontWeight.W_700, color=COLOR_TEXTO_MUTED, expand=True),
-                                ft.Text("Precio", size=12, weight=ft.FontWeight.W_700, color=COLOR_TEXTO_MUTED, width=90),
-                                ft.Text("Stock", size=12, weight=ft.FontWeight.W_700, color=COLOR_TEXTO_MUTED, width=180),
+                                ft.Text(
+                                    "ID",
+                                    size=12,
+                                    weight=ft.FontWeight.W_700,
+                                    color=COLOR_TEXTO_MUTED,
+                                    width=48,
+                                ),
+                                ft.Text(
+                                    "Producto",
+                                    size=12,
+                                    weight=ft.FontWeight.W_700,
+                                    color=COLOR_TEXTO_MUTED,
+                                    expand=True,
+                                ),
+                                ft.Text(
+                                    "Precio",
+                                    size=12,
+                                    weight=ft.FontWeight.W_700,
+                                    color=COLOR_TEXTO_MUTED,
+                                    width=90,
+                                ),
+                                ft.Text(
+                                    "Stock",
+                                    size=12,
+                                    weight=ft.FontWeight.W_700,
+                                    color=COLOR_TEXTO_MUTED,
+                                    width=180,
+                                ),
                             ],
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
@@ -201,7 +237,6 @@ class PantallaCatalogo(ft.Container):
             expand=True,
         )
 
-
     def al_recargar_dataset(self) -> None:
         """Callback al cargar un nuevo dataset desde la pantalla Inicio."""
         self._mostrar_todos()
@@ -209,11 +244,11 @@ class PantallaCatalogo(ft.Container):
     def al_cambiar_estrategia_global(self, nueva_estrategia: str) -> None:
         """Sincroniza el switch local y el badge cuando cambia la estrategia global."""
         if hasattr(self, "switch_estrategia_local") and self.switch_estrategia_local:
-            self.switch_estrategia_local.value = (nueva_estrategia == "optimizado")
+            self.switch_estrategia_local.value = nueva_estrategia == "optimizado"
             actualizar_control(self.switch_estrategia_local)
 
         if hasattr(self, "badge_estrategia") and self.badge_estrategia:
-            es_opt = (nueva_estrategia == "optimizado")
+            es_opt = nueva_estrategia == "optimizado"
             color_badge = COLOR_EXITO if es_opt else COLOR_ADVERTENCIA
             self.badge_estrategia.content = ft.Row(
                 controls=[
@@ -235,12 +270,13 @@ class PantallaCatalogo(ft.Container):
             self.badge_estrategia.border = borde_all(1, color_badge)
             actualizar_control(self.badge_estrategia)
 
-
     def _al_cambiar_switch(self, e):
         nueva = "optimizado" if self.switch_estrategia_local.value else "baseline"
         self.motor.cambiar_estrategia(nueva)
         self.on_actualizar_panel(
-            dataset=self.motor.obtener_estadisticas()["categorias"][0] if self.motor.catalogo else "dataset",
+            dataset=self.motor.obtener_estadisticas()["categorias"][0]
+            if self.motor.catalogo
+            else "dataset",
             n_productos=len(self.motor.catalogo),
             n_pedidos=len(self.motor.pedidos),
             estrategia=nueva,
@@ -250,15 +286,23 @@ class PantallaCatalogo(ft.Container):
 
     def _alternar_sentido_orden(self):
         self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = ft.Icons.ARROW_UPWARD_ROUNDED if self.orden_ascendente else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        self.btn_sentido_orden.tooltip = "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
+        self.btn_sentido_orden.icon = (
+            ft.Icons.ARROW_UPWARD_ROUNDED
+            if self.orden_ascendente
+            else ft.Icons.ARROW_DOWNWARD_ROUNDED
+        )
+        self.btn_sentido_orden.tooltip = (
+            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
+        )
         actualizar_control(self.btn_sentido_orden)
         self._aplicar_ordenamiento()
 
     def _aplicar_ordenamiento(self):
         criterio = self.dropdown_orden.value or "id"
         if criterio == "nombre":
-            self.productos_actuales.sort(key=lambda p: p.nombre.lower(), reverse=not self.orden_ascendente)
+            self.productos_actuales.sort(
+                key=lambda p: p.nombre.lower(), reverse=not self.orden_ascendente
+            )
         elif criterio == "precio":
             self.productos_actuales.sort(key=lambda p: p.precio, reverse=not self.orden_ascendente)
         elif criterio == "stock":
@@ -312,7 +356,7 @@ class PantallaCatalogo(ft.Container):
         duracion_ms = (time.perf_counter() - inicio) * 1000.0
 
         hits_despues = self._hits_cache_busquedas()
-        fue_hit = (hits_despues > hits_antes)
+        fue_hit = hits_despues > hits_antes
 
         self.txt_tiempo_busqueda.value = f"Tiempo: {formatear_tiempo_ms(duracion_ms)}"
         self.contenedor_badge_tiempo.controls = [crear_badge_tiempo(duracion_ms)]
@@ -382,18 +426,40 @@ class PantallaCatalogo(ft.Container):
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Text(f"#{p.id}", size=12, weight=ft.FontWeight.W_600, color=COLOR_SECUNDARIO, width=48),
+                            ft.Text(
+                                f"#{p.id}",
+                                size=12,
+                                weight=ft.FontWeight.W_600,
+                                color=COLOR_SECUNDARIO,
+                                width=48,
+                            ),
                             ft.Column(
                                 controls=[
-                                    ft.Text(p.nombre, size=13, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_PRIMARIO),
+                                    ft.Text(
+                                        p.nombre,
+                                        size=13,
+                                        weight=ft.FontWeight.W_600,
+                                        color=COLOR_TEXTO_PRIMARIO,
+                                    ),
                                     ft.Text(p.categoria, size=11, color=COLOR_TEXTO_MUTED),
                                 ],
                                 expand=True,
                                 spacing=1,
                             ),
-                            ft.Text(f"${p.precio:,.2f}", size=13, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_PRIMARIO, width=90),
+                            ft.Text(
+                                f"${p.precio:,.2f}",
+                                size=13,
+                                weight=ft.FontWeight.W_600,
+                                color=COLOR_TEXTO_PRIMARIO,
+                                width=90,
+                            ),
                             ft.Container(
-                                content=ft.Text(stock_texto, size=11, weight=ft.FontWeight.W_600, color=stock_color),
+                                content=ft.Text(
+                                    stock_texto,
+                                    size=11,
+                                    weight=ft.FontWeight.W_600,
+                                    color=stock_color,
+                                ),
                                 bgcolor=stock_fondo,
                                 padding=padding_symmetric(horizontal=8, vertical=3),
                                 border_radius=8,
@@ -424,7 +490,9 @@ class PantallaCatalogo(ft.Container):
         if not items:
             items.append(
                 ft.Container(
-                    content=ft.Text("No hay productos en el catálogo.", size=13, color=COLOR_TEXTO_MUTED),
+                    content=ft.Text(
+                        "No hay productos en el catálogo.", size=13, color=COLOR_TEXTO_MUTED
+                    ),
                     padding=24,
                 )
             )
@@ -432,5 +500,3 @@ class PantallaCatalogo(ft.Container):
         self.col_productos.controls = items
         actualizar_control(self.col_productos)
         actualizar_control(self)
-
-

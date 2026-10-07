@@ -10,10 +10,11 @@ Genera:
 """
 
 from __future__ import annotations
+
 import cProfile
 import io
-from pathlib import Path
 import pstats
+from pathlib import Path
 
 from src.motor.motor_inventario import MotorInventario
 
@@ -44,7 +45,9 @@ def ejecutar_flujo_completo(ruta_dataset: Path, estrategia: str = "optimizado") 
 
     # 4. Alternativas con memoización
     if prods:
-        _ = motor.buscar_alternativas(prods[0].categoria, 35000.0, max_combinaciones=10, max_candidatos=15)
+        _ = motor.buscar_alternativas(
+            prods[0].categoria, 35000.0, max_combinaciones=10, max_candidatos=15
+        )
 
     # 5. Procesamiento de pedidos sin mutar stock
     _ = motor.procesar_pedidos(descontar_stock=False)

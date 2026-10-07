@@ -1,6 +1,7 @@
 """Módulo de definición del modelo Producto."""
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 
@@ -26,15 +27,21 @@ class Producto:
     def __post_init__(self) -> None:
         """Valida la integridad de los datos del producto."""
         if not isinstance(self.id, int) or self.id <= 0:
-            raise ValueError(f"El identificador del producto debe ser un entero positivo, recibido: {self.id}")
+            raise ValueError(
+                f"El identificador del producto debe ser un entero positivo, recibido: {self.id}"
+            )
         if not isinstance(self.nombre, str) or not self.nombre.strip():
             raise ValueError("El nombre del producto no puede estar vacío.")
         if not isinstance(self.categoria, str) or not self.categoria.strip():
             raise ValueError("La categoría del producto no puede estar vacía.")
         if not isinstance(self.stock, int) or self.stock < 0:
-            raise ValueError(f"El stock del producto debe ser un entero mayor o igual a 0, recibido: {self.stock}")
+            raise ValueError(
+                f"El stock del producto debe ser un entero mayor o igual a 0, recibido: {self.stock}"
+            )
         if not isinstance(self.precio, (int, float)) or self.precio < 0.0:
-            raise ValueError(f"El precio del producto debe ser mayor o igual a 0.0, recibido: {self.precio}")
+            raise ValueError(
+                f"El precio del producto debe ser mayor o igual a 0.0, recibido: {self.precio}"
+            )
         # Normalizar precio a float
         object.__setattr__(self, "precio", float(self.precio))
         object.__setattr__(self, "nombre", self.nombre.strip())

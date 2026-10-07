@@ -19,6 +19,8 @@ from automations.analizar_complejidad import (
     MARCA_FIN,
     MARCA_INICIO,
     analizar_repositorio,
+)
+from automations.analizar_complejidad import (
     ejecutar as ejecutar_complejidad,
 )
 from automations.inventario_funciones import (
@@ -27,9 +29,11 @@ from automations.inventario_funciones import (
     resolver_raiz,
 )
 from automations.proponer_mejoras import (
-    recoger_hotspots,
-    escribir_informe,
     ejecutar as ejecutar_propuestas,
+)
+from automations.proponer_mejoras import (
+    escribir_informe,
+    recoger_hotspots,
 )
 
 BASE_DIR = resolver_raiz(Path(__file__))
@@ -119,8 +123,7 @@ class TestDerivacionAST:
         inf = _informe_por_nombre("CatalogoHash.buscar_por_id")
         assert inf.justificacion
         assert any(
-            token in inf.justificacion.lower()
-            for token in ("hash", "dict", "get", "bucle")
+            token in inf.justificacion.lower() for token in ("hash", "dict", "get", "bucle")
         )
 
 
@@ -153,16 +156,10 @@ class TestPropuestasHotspots:
         hotspots = recoger_hotspots(BASE_DIR)
         origenes = {h.origen for h in hotspots}
         assert "cProfile" in origenes or "line_profiler" in origenes
-        assert any(
-            "buscar_por_id" in h.simbolo or "CreateProcess" in h.simbolo
-            for h in hotspots
-        )
+        assert any("buscar_por_id" in h.simbolo or "CreateProcess" in h.simbolo for h in hotspots)
 
     def test_escribe_informe_sin_tocar_src(self, repo_temporal):
-        huellas = {
-            ruta: ruta.stat().st_mtime
-            for ruta in (repo_temporal / "src").rglob("*.py")
-        }
+        huellas = {ruta: ruta.stat().st_mtime for ruta in (repo_temporal / "src").rglob("*.py")}
         ruta, _hotspots, propuestas = escribir_informe(repo_temporal)
         assert ruta == repo_temporal / "docs" / "propuestas-mejora.md"
         texto = ruta.read_text(encoding="utf-8")
@@ -193,8 +190,6 @@ class TestArtefactosOrigin:
             assert "español" in contenido.lower() or "Español" in contenido
 
     def test_prompts_prohíben_aplicar_codigo(self):
-        prompt = (DOCS / "prompts-origin" / "hotspots-propuestas.txt").read_text(
-            encoding="utf-8"
-        )
+        prompt = (DOCS / "prompts-origin" / "hotspots-propuestas.txt").read_text(encoding="utf-8")
         assert "NO apliques" in prompt or "No apliques" in prompt
         assert "src/" in prompt

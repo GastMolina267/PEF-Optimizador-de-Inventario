@@ -1,9 +1,12 @@
 """Pantalla de Inicio y Selección de Escenarios / Datasets."""
 
 from __future__ import annotations
-from pathlib import Path
+
 import time
+from pathlib import Path
+
 import flet as ft
+
 from src.motor.motor_inventario import MotorInventario
 from src.ui.tema import (
     COLOR_BORDE,
@@ -17,9 +20,8 @@ from src.ui.tema import (
     COLOR_TEXTO_SECUNDARIO,
     actualizar_control,
     borde_all,
-    padding_symmetric,
-    crear_banner_explicativo,
     crear_badge_tiempo,
+    crear_banner_explicativo,
     crear_barra_herramientas,
     crear_encabezado,
     crear_tarjeta_kpi,
@@ -27,6 +29,7 @@ from src.ui.tema import (
     envolver_metricas,
     estilo_boton_primario,
     formatear_tiempo_ms,
+    padding_symmetric,
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
@@ -36,7 +39,9 @@ DATASETS_DIR = BASE_DIR / "data" / "datasets"
 class PantallaInicio(ft.Container):
     """Vista principal de bienvenida, carga de datos y ejecución global de escenarios."""
 
-    def __init__(self, motor: MotorInventario, on_actualizar_panel, notificar, on_dataset_cambiado=None) -> None:
+    def __init__(
+        self, motor: MotorInventario, on_actualizar_panel, notificar, on_dataset_cambiado=None
+    ) -> None:
         super().__init__()
         self.motor = motor
         self.on_actualizar_panel = on_actualizar_panel
@@ -50,10 +55,18 @@ class PantallaInicio(ft.Container):
         self.dropdown_datasets = ft.Dropdown(
             label="Dataset empaquetado",
             options=[
-                ft.dropdown.Option("demo_oral.json", "demo_oral.json (30 productos, 8 pedidos - Oral)"),
-                ft.dropdown.Option("pequeno.json", "pequeno.json (100 productos, 20 pedidos - Rápido)"),
-                ft.dropdown.Option("mediano.json", "mediano.json (1.000 productos, 200 pedidos - Medio)"),
-                ft.dropdown.Option("grande.json", "grande.json (10.000 productos, 2.000 pedidos - Grande)"),
+                ft.dropdown.Option(
+                    "demo_oral.json", "demo_oral.json (30 productos, 8 pedidos - Oral)"
+                ),
+                ft.dropdown.Option(
+                    "pequeno.json", "pequeno.json (100 productos, 20 pedidos - Rápido)"
+                ),
+                ft.dropdown.Option(
+                    "mediano.json", "mediano.json (1.000 productos, 200 pedidos - Medio)"
+                ),
+                ft.dropdown.Option(
+                    "grande.json", "grande.json (10.000 productos, 2.000 pedidos - Grande)"
+                ),
             ],
             value="demo_oral.json",
             border_color=COLOR_BORDE,
@@ -102,18 +115,22 @@ class PantallaInicio(ft.Container):
                     complejidad_opt="Flujo integral hash y sub-lineal O(1) a O(L)",
                     por_que_importa="Permite auditar el impacto marginal de cada técnica algorítmica sobre el mismo volumen de datos.",
                 ),
-                crear_barra_herramientas([
-                    self.dropdown_datasets,
-                    self.btn_cargar,
-                    self.btn_ejecutar_escenario,
-                ]),
+                crear_barra_herramientas(
+                    [
+                        self.dropdown_datasets,
+                        self.btn_cargar,
+                        self.btn_ejecutar_escenario,
+                    ]
+                ),
                 envolver_metricas(self.fila_kpis),
                 ft.Container(
                     content=ft.Column(
                         controls=[
                             ft.Row(
                                 controls=[
-                                    crear_titulo_seccion("Diagnóstico y Ejecución Global del Escenario"),
+                                    crear_titulo_seccion(
+                                        "Diagnóstico y Ejecución Global del Escenario"
+                                    ),
                                     ft.Container(expand=True),
                                     self.fila_tiempo_escenario,
                                 ],
@@ -234,8 +251,14 @@ class PantallaInicio(ft.Container):
             # Renderizar resumen compacto
             items_resumen = [
                 ft.ListTile(
-                    leading=ft.Icon(ft.Icons.SHOPPING_CART_CHECKOUT, color=COLOR_PRIMARIO, size=18),
-                    title=ft.Text(f"Preparación de Pedidos: {res_pedidos.pedidos_procesados} pedidos", size=13, weight=ft.FontWeight.BOLD),
+                    leading=ft.Icon(
+                        ft.Icons.SHOPPING_CART_CHECKOUT, color=COLOR_PRIMARIO, size=18
+                    ),
+                    title=ft.Text(
+                        f"Preparación de Pedidos: {res_pedidos.pedidos_procesados} pedidos",
+                        size=13,
+                        weight=ft.FontWeight.BOLD,
+                    ),
                     subtitle=ft.Text(
                         f"Cubiertos: {res_pedidos.pedidos_cubiertos} | Parciales: {res_pedidos.pedidos_parciales} | "
                         f"Imposibles: {res_pedidos.pedidos_imposibles} ({formatear_tiempo_ms(res_pedidos.tiempo_ejecucion_ms)})",
@@ -246,7 +269,11 @@ class PantallaInicio(ft.Container):
                 ),
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.ALL_INBOX, color=COLOR_SECUNDARIO, size=18),
-                    title=ft.Text(f"Batch Picking Consolidado: {picking.total_productos_distintos} productos únicos", size=13, weight=ft.FontWeight.BOLD),
+                    title=ft.Text(
+                        f"Batch Picking Consolidado: {picking.total_productos_distintos} productos únicos",
+                        size=13,
+                        weight=ft.FontWeight.BOLD,
+                    ),
                     subtitle=ft.Text(
                         f"Total unidades a recolectar: {picking.total_unidades} en {picking.total_pedidos} pedidos.",
                         size=11,
@@ -256,9 +283,13 @@ class PantallaInicio(ft.Container):
                 ),
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.LEADERBOARD, color=COLOR_EXITO, size=18),
-                    title=ft.Text("Productos Top-3 más solicitados", size=13, weight=ft.FontWeight.BOLD),
+                    title=ft.Text(
+                        "Productos Top-3 más solicitados", size=13, weight=ft.FontWeight.BOLD
+                    ),
                     subtitle=ft.Text(
-                        ", ".join(f"{p.nombre} ({c} Unidades)" for p, c in top_5[:3]) if top_5 else "Sin demanda",
+                        ", ".join(f"{p.nombre} ({c} Unidades)" for p, c in top_5[:3])
+                        if top_5
+                        else "Sin demanda",
                         size=11,
                         color=COLOR_TEXTO_SECUNDARIO,
                     ),
@@ -270,7 +301,11 @@ class PantallaInicio(ft.Container):
                 items_resumen.append(
                     ft.ListTile(
                         leading=ft.Icon(ft.Icons.SWAP_HORIZ, color="#F59E0B", size=18),
-                        title=ft.Text(f"Alternativas para Pedido #{pedido_faltante.id_pedido}", size=13, weight=ft.FontWeight.BOLD),
+                        title=ft.Text(
+                            f"Alternativas para Pedido #{pedido_faltante.id_pedido}",
+                            size=13,
+                            weight=ft.FontWeight.BOLD,
+                        ),
                         subtitle=ft.Text(
                             f"{res_alternativas.total_combinaciones} combinaciones en {res_alternativas.categoria} ({formatear_tiempo_ms(res_alternativas.tiempo_ejecucion_ms)}).",
                             size=11,
@@ -290,6 +325,9 @@ class PantallaInicio(ft.Container):
                 resultado_negocio=f"Escenario ejecutado: {res_pedidos.pedidos_cubiertos}/{res_pedidos.pedidos_procesados} cubiertos",
             )
             actualizar_control(self)
-            self.notificar(f"Escenario completo ejecutado en {formatear_tiempo_ms(duracion_total_ms)}.", ft.Icons.DONE_ALL)
+            self.notificar(
+                f"Escenario completo ejecutado en {formatear_tiempo_ms(duracion_total_ms)}.",
+                ft.Icons.DONE_ALL,
+            )
         except Exception as err:
             self.notificar(f"Error en ejecución de escenario: {err}", ft.Icons.ERROR)

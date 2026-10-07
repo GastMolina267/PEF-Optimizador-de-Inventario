@@ -9,11 +9,19 @@ Verifica:
 """
 
 from __future__ import annotations
+
 from pathlib import Path
-import pytest
+
 import flet as ft
+import pytest
 
 from src.motor.motor_inventario import MotorInventario
+from src.ui.pantallas.agrupacion import PantallaAgrupacion
+from src.ui.pantallas.alternativas import PantallaAlternativas
+from src.ui.pantallas.catalogo import PantallaCatalogo
+from src.ui.pantallas.comparacion import PantallaComparacion
+from src.ui.pantallas.pedidos import PantallaPedidos
+from src.ui.pantallas.top_productos import PantallaTopProductos
 from src.ui.tema import (
     crear_badge_tiempo,
     crear_banner_explicativo,
@@ -21,12 +29,6 @@ from src.ui.tema import (
     crear_dropdown,
     formatear_tiempo_ms,
 )
-from src.ui.pantallas.catalogo import PantallaCatalogo
-from src.ui.pantallas.pedidos import PantallaPedidos
-from src.ui.pantallas.agrupacion import PantallaAgrupacion
-from src.ui.pantallas.top_productos import PantallaTopProductos
-from src.ui.pantallas.alternativas import PantallaAlternativas
-from src.ui.pantallas.comparacion import PantallaComparacion
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"
@@ -238,4 +240,3 @@ def test_puntos_de_entrada_llaman_freeze_support():
     bloque_main = main_txt.split('if __name__ == "__main__":', 1)[1]
     assert "freeze_support()" in bloque_main
     assert bloque_main.index("freeze_support()") < bloque_main.index("run()")
-

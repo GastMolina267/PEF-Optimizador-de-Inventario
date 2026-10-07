@@ -18,8 +18,8 @@ if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 import flet as ft  # noqa: E402
-from src.ui.app import main as app_main  # noqa: E402
 
+from src.ui.app import main as app_main  # noqa: E402
 
 
 def run() -> None:

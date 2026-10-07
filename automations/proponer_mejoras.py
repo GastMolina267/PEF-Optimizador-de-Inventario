@@ -204,7 +204,11 @@ def _parsear_memoria(ruta: Path) -> list[EntradaPerfil]:
         if "Catálogo Hash" in linea or "Catálogo Lineal" in linea:
             pico = re.search(r"Pico\s*=\s*([\d.,]+)\s*KB", linea)
             if pico:
-                valor = float(pico.group(1).replace(".", "").replace(",", ".")) if "." in pico.group(1) and "," in pico.group(1) else float(pico.group(1).replace(",", "."))
+                valor = (
+                    float(pico.group(1).replace(".", "").replace(",", "."))
+                    if "." in pico.group(1) and "," in pico.group(1)
+                    else float(pico.group(1).replace(",", "."))
+                )
                 entradas.append(
                     EntradaPerfil(
                         "memory_profiler",
@@ -281,7 +285,12 @@ def construir_propuestas(raiz: Path, hotspots: list[EntradaPerfil]) -> list[Prop
     prep = [h for h in speedups_bajos if "Preparación" in h.simbolo]
     prep_grande = next((h for h in prep if "grande.json" in h.simbolo), None)
 
-    if "CreateProcess" in textos or "WaitForSingleObject" in textos or "pickle" in textos.lower() or prep:
+    if (
+        "CreateProcess" in textos
+        or "WaitForSingleObject" in textos
+        or "pickle" in textos.lower()
+        or prep
+    ):
         detalle_tabla = ""
         if prep_grande:
             detalle_tabla = (
@@ -350,7 +359,11 @@ def construir_propuestas(raiz: Path, hotspots: list[EntradaPerfil]) -> list[Prop
             )
         )
 
-    if any("Hash" in h.simbolo or "índice" in h.detalle.lower() or "indice" in h.detalle.lower() for h in hotspots if h.origen == "memory_profiler"):
+    if any(
+        "Hash" in h.simbolo or "índice" in h.detalle.lower() or "indice" in h.detalle.lower()
+        for h in hotspots
+        if h.origen == "memory_profiler"
+    ):
         propuestas.append(
             PropuestaMejora(
                 titulo="Compactar el índice invertido en catálogos masivos",
@@ -373,8 +386,7 @@ def construir_propuestas(raiz: Path, hotspots: list[EntradaPerfil]) -> list[Prop
             PropuestaMejora(
                 titulo="Evitar el sort final del lote de picking si la UI no lo requiere",
                 hotspot="`agrupar_pedidos_batch` aparece en tottime de cProfile (grande: 0.020 s).",
-                evidencia="docs/mediciones/cprofile_resumen.txt — "
-                "src/pedidos/agrupador.py:70",
+                evidencia="docs/mediciones/cprofile_resumen.txt — src/pedidos/agrupador.py:70",
                 alternativa="La consolidación hash ya es O(L). El `sorted(..., reverse=True)` "
                 "añade O(U log U) solo para presentación. Diferir el orden a la "
                 "pantalla o usar `heapq.nlargest` si solo se muestran los U′ más demandados.",
@@ -436,15 +448,17 @@ def renderizar_markdown(
         lineas.append("|---|---|---|---:|---|")
         for h in _hotspots_para_informe(hotspots):
             detalle = h.detalle.replace("|", "\\|")[:140]
-            lineas.append(
-                f"| {h.origen} | `{h.simbolo}` | {h.metrica} | {h.valor} | {detalle} |"
-            )
+            lineas.append(f"| {h.origen} | `{h.simbolo}` | {h.metrica} | {h.valor} | {detalle} |")
     else:
         lineas.append("No se extrajeron filas numéricas de los informes.")
 
     lineas.extend(["", "## Propuestas (no aplicadas)", ""])
     for i, p in enumerate(propuestas, start=1):
-        cubierta = "Sí — ya existe baseline vs optimizado" if p.ya_cubierta else "No — queda a decisión del grupo"
+        cubierta = (
+            "Sí — ya existe baseline vs optimizado"
+            if p.ya_cubierta
+            else "No — queda a decisión del grupo"
+        )
         lineas.extend(
             [
                 f"### {i}. {p.titulo}",
