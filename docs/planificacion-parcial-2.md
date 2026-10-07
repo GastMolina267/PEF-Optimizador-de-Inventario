@@ -93,7 +93,7 @@ El segundo descuento falla en silencio (`descontar_stock` devuelve `False`), per
 - Importar a Sonar el `coverage.xml` y el reporte de ruff (`sonar.python.coverage.reportPaths`, `sonar.python.ruff.reportPaths`).
 - Corregir el CI: el paso que sube la cobertura exige `python-version == '3.11'`, pero la matriz solo tiene 3.14, así que nunca se ejecuta.
 - Medir la cobertura de los procesos hijos: `concurrency = ["multiprocessing"]` y `parallel = true` en `[tool.coverage.run]`.
-- Ruff: quitar `ignore = ["E501"]`, fijar la línea en 99 caracteres (PEP 8 permite hasta 99 por acuerdo del equipo), sumar las reglas `I`, `N`, `B`, `SIM`, `UP` y `C90`. Las reglas `D` (docstrings) se activan en F7.
+- Ruff: fijar la línea en 99 caracteres (PEP 8 permite hasta 99 por acuerdo del equipo) y sumar las reglas `I`, `N`, `B`, `SIM` y `UP`. Tres reglas se dejan para F7, porque activarlas antes rompe el CI sin que el formateador pueda resolverlas: `E501` (87 líneas largas en strings y comentarios), `C90` (7 funciones con complejidad mayor a 10) y `D` (docstrings).
 - Una pasada de `ruff format` y `ruff check --fix` en un **commit separado**, registrado en `.git-blame-ignore-revs`.
 - `pre-commit` con ruff (lint y formato).
 - Hacer que los tests no reescriban `docs/analisis.md` ni `docs/propuestas-mejora.md`: hoy cada `pytest` modifica sus cabeceras. Los tests de automatizaciones deben escribir en `tmp_path`.
@@ -229,11 +229,12 @@ El segundo descuento falla en silencio (`descontar_stock` devuelve `False`), per
 - **Docstrings** en las 106 clases y funciones públicas que no tienen. Estilo Google con secciones en español (`Argumentos`, `Retorna`, `Lanza`), que Sphinx interpreta en F8 con `napoleon_custom_sections`. Se activan las reglas `D` de ruff.
 - **Nombres:** se terminan los nombres mezclados (`lineas_satisfechas_count` → `cantidad_lineas_satisfechas`) y las abreviaturas (`p`, `ped`, `prod`, `e`, `rl`).
 - **Constantes con nombre** en lugar de números mágicos (73 casos).
-- **Complejidad:** partir las funciones D de radon que queden después de F4 (`derivar_complejidad` 30, `construir_propuestas` 29) y las C más altas (`buscar_alternativas` 19, `validar_dataset` 16).
+- **Líneas largas:** corregir a mano las 87 líneas que `ruff format` no puede partir y quitar `ignore = ["E501"]`.
+- **Complejidad:** activar `C90` y partir las funciones D de radon que queden después de F4 (`derivar_complejidad` 30, `construir_propuestas` 29) y las C más altas (`buscar_alternativas` 19, `validar_dataset` 16).
 - **Organización:** tipos explícitos en las fachadas (`catalogo: Catalogo` con un `Protocol` común a lineal y hash).
 - Sonar: llevar a cero los *code smells* críticos y mayores.
 
-**Cierre:** ruff sin errores con las reglas `D` activadas, ninguna función con complejidad D, Sonar sin smells críticos ni mayores.
+**Cierre:** ruff sin errores con `E501`, `C90` y `D` activadas, ninguna función con complejidad D, Sonar sin smells críticos ni mayores.
 
 ## F8 — Documentación con Sphinx
 
