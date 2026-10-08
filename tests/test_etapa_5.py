@@ -34,7 +34,8 @@ class TestEquivalenciaEscalaMediana:
     """Verifica equivalencia matemática y de negocio sobre mediano.json."""
 
     @pytest.fixture(scope="class")
-    def datos_mediano(self):
+    @classmethod
+    def datos_mediano(cls):
         ruta = DATASETS_DIR / "mediano.json"
         return cargar_dataset(ruta)
 
@@ -107,7 +108,8 @@ class TestEquivalenciaEscalaGrande:
     """Verifica operaciones a gran escala en grande.json (10.000 productos, 2.000 pedidos)."""
 
     @pytest.fixture(scope="class")
-    def datos_grande(self):
+    @classmethod
+    def datos_grande(cls):
         ruta = DATASETS_DIR / "grande.json"
         return cargar_dataset(ruta)
 
