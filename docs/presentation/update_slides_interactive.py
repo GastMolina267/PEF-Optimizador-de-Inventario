@@ -11,7 +11,7 @@ for s in data['slides']:
             "<div class='arch-node node-client' id='arch-node-client'>"
             "<span class='node-tag'>Capa Superior</span>"
             "<div class='node-title'>UI (Flet) / Benchmarks / Suite de Tests</div>"
-            "<div class='node-sub'>78 Tests Unitarios & Integración con 100% de Cobertura</div>"
+            "<div class='node-sub'>193 Tests Unitarios & Integración con 90% de Cobertura</div>"
             "</div>"
             "<div class='arch-connector-down' id='arch-connector-main'>⬇ Flujo de Consultas Unificado ⬇</div>"
             "<div class='arch-node node-gateway' id='arch-node-gateway'>"

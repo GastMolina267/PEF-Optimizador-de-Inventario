@@ -88,7 +88,7 @@ jobs:
         run: uv sync --locked --no-build --extra dev
 
       - name: Ejecutar suite de pruebas con cobertura (Pytest)
-        run: uv run --no-sync python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+        run: uv run --no-sync python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term --cov-fail-under=85
 
       # Lo consume el job de SonarQube. Antes la condición pedía Python 3.11,
       # que no está en la matriz, y el reporte nunca se subía.
@@ -243,7 +243,7 @@ jobs:
       - name: Instalar dependencias desde uv.lock (sin compilar paquetes desde fuente)
         run: uv sync --locked --no-build --extra docs
 
-      - name: Compilar documentación con Sphinx (-W: cero advertencias)
+      - name: "Compilar documentación con Sphinx (-W: cero advertencias)"
         run: uv run --no-sync sphinx-build -W -b html docs/sphinx docs/sphinx/_build/html
 
       - name: Subir artefacto para GitHub Pages

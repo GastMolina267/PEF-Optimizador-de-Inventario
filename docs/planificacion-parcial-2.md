@@ -315,6 +315,34 @@ El segundo descuento falla en silencio (`descontar_stock` devuelve `False`), per
 
 **Cierre:** todo en verde y la tabla antes/después completa para la oral.
 
+**Resultado**
+
+| Métrica | Base (F8 / Parcial 1) | F9 (Cierre Parcial 2) |
+|---|---|---|
+| Tests automatizados | 84 (P1) / 125 (F7) | **193 tests (0 fallos, 100% éxito)** |
+| Organización de la suite | Monolítica por etapas (`test_etapa_*.py`) | **11 subdirectorios modulares por dominio** |
+| Cobertura de código `src/` | 80% (P1) | **90%** (2.523 sentencias, 258 sin cubrir) |
+| Umbral CI de cobertura (`--cov-fail-under`) | 75% | **85%** (superado con 90%) |
+| Regresión continua de rendimiento | Manual | **`pytest-benchmark` integrado en tests de integración** |
+| Radon CC promedio | A (3.59) en P1 | **A (2.94)** sobre 455 bloques |
+| Funciones con complejidad D o peor | 3 en P1 | **0 funciones** (máxima CC ≤ 12) |
+| Duplicación de código Pylint (≥ 6 líneas) | 8 pares en P1 | **0 pares duplicados (puntuación 10.00/10)** |
+| Ruff configuración del repo | 19 errores en P1 | **0 errores (`All checks passed!`)** |
+| Documentación de línea base | `linea_base_parcial1` | **`linea_base_parcial2` con comparativa completa** |
+| Compilación Sphinx (`-W`) | 0 advertencias | **0 advertencias (build limpio y estricto)** |
+
+- **Suite modular en 11 paquetes:** `tests/modelos/`, `tests/inventario/`, `tests/pedidos/`, `tests/ranking/`, `tests/cache/`, `tests/datos/`, `tests/observabilidad/`, `tests/motor/`, `tests/ui/`, `tests/integracion/` y `tests/automations/`. Eliminación limpia de las pruebas monolíticas previas.
+- **Microbenchmarks con pytest-benchmark:** Operaciones de hashing en ~90 ns (11 Mops/s), Top-N heap en ~9.5 µs, combinaciones DP en ~22.5 µs, batch picking en ~32.9 µs y procesamiento de pedidos en ~31.6 µs.
+- **Automatizaciones y artefactos:** Actualización de `automations/inventario_funciones.py` con los nuevos módulos de dominio, regeneración de `docs/analisis.md` y `docs/propuestas-mejora.md`.
+- **Línea base comparativa Parcial 2:** Generación rigurosa en `docs/mediciones/linea_base_parcial2/` con los mismos 9 comandos de instrumentalización estática y dinámica utilizados en Parcial 1.
+- **Presentación oral actualizada:** Diapositivas en `docs/presentation/slides.json` y `app.js` sincronizadas con los 193 tests, 90% de cobertura, Segundo Parcial, y 0 símbolos `$` para compatibilidad total con renderizadores matemáticos.
+
+**Decisiones**
+
+- **Modularización exhaustiva de tests:** Cada módulo del dominio cuenta con su archivo de test espejo, desacoplando completamente el histórico de "etapas" del desarrollo original.
+- **Preservación estricta de la rama de trabajo:** Se consolidaron todos los cambios directamente sobre `parcial-2` sin crear ramas externas ni alterar la rama `main` hasta la orden explícita del usuario.
+
+
 ---
 
 ## Testing transversal

@@ -38,3 +38,17 @@
 3. **Top-N:** `heapq.nlargest` $O(N \log k)$ mantiene memoria acotada a $k$ elementos frente a la lista completa de ordenamiento $O(N \log N)$.
 4. **Sustitutos:** La memoización de estados DP convierte un árbol exponencial $O(2^N)$ en tiempo pseudo-polinomial $O(N \cdot P)$, permitiendo explorar cientos de combinaciones en milisegundos.
 5. **Concurrencia:** La fila de preparación usa el **mismo** `CatalogoHash` a ambos lados para no confundir IPC con la ganancia O(n)→O(1). En lotes chicos el overhead de procesos/pickle domina; el pool solo paga cuando P·L cubre ese costo fijo.
+
+---
+### Suite de Regresión Continua (Segundo Parcial)
+
+Con la integración de `pytest-benchmark` en la suite de pruebas automatizadas (`tests/integracion/test_benchmarks.py`), cada ejecución valida que las operaciones críticas mantengan sus órdenes de magnitud esperados:
+
+- **Búsqueda Hash:** ~90 ns (11,080,000 ops/s) frente a ~976 ns en búsqueda lineal (11x speedup directo en catálogo muestra).
+- **Ranking Top-N:** ~9.45 µs (105,700 ops/s).
+- **Combinaciones DP:** ~22.5 µs (44,400 ops/s).
+- **Batch Picking:** ~32.9 µs (30,300 ops/s).
+- **Procesamiento de Pedidos:** ~31.6 µs (31,600 ops/s).
+
+Para una comparativa detallada de métricas de calidad de código, cobertura y complejidad ciclomática entre el Primer y Segundo Parcial, consultar [Línea base Parcial 2](linea_base_parcial2/README.md).
+

@@ -3,7 +3,7 @@
 <!-- Bloque generado por la automatización de hotspots. -->
 <!-- No aplicar estos cambios de forma automática: el grupo decide y vuelve a medir. -->
 
-**Commit analizado:** `823bb18` · **Generado:** 2026-10-08 01:55 UTC
+**Commit analizado:** `ceeaca3` · **Generado:** 2026-10-08 21:18 UTC
 
 ## Fuentes consultadas
 
@@ -31,8 +31,12 @@
 | line_profiler | `procesar_pedidos_secuencial:52` | pct_tiempo | 90.8 | producto = catalogo.buscar_por_id(linea.id_producto) |
 | line_profiler | `CatalogoLineal.buscar_por_nombre:57` | pct_tiempo | 62.6 | if texto_norm in producto.nombre.lower(): |
 | line_profiler | `CatalogoLineal.buscar_por_id:45` | pct_tiempo | 50.4 | if producto.id == id_producto: |
-| Scalene | `benchmarks/perfilar_scalene.py:80` | cpu_sys_ipc_pct | 88.13 | py=0.0% c=3.2% sys=88.1% peak=0.0MB \| _ = procesar_pedidos_concurrente( |
-| Scalene | `benchmarks/perfilar_scalene.py:80` | cpu_sys_ipc_pct | 95.99 | py=0.0% c=4.0% sys=96.0% peak=0.0MB \| _ = procesar_pedidos_concurrente( |
+| Scalene | `src/pedidos/procesador_concurrente.py:103` | cpu_sys_ipc_pct | 13.07 | py=0.0% c=8.6% sys=13.1% peak=0.0MB \| return [resultado for futuro in futuros for resultado in futuro.result()] |
+| Scalene | `src/pedidos/procesador_concurrente.py:88` | cpu_python_pct | 3.5 | py=3.5% c=3.4% sys=1.4% peak=1.0MB \| lineas = tuple((linea.id_producto, linea.cantidad) for linea in pedido.lineas) |
+| Scalene | `src/pedidos/evaluador.py:57` | cpu_python_pct | 2.55 | py=2.5% c=0.0% sys=0.2% peak=0.0MB \| def stock_desde_catalogo(id_producto: int) -\u003e int: |
+| Scalene | `src/pedidos/agrupador.py:115` | cpu_python_pct | 2.23 | py=2.2% c=0.3% sys=0.0% peak=0.0MB \| acumulador.values(), key=lambda it: it.cantidad_total, reverse=True |
+| Scalene | `src/pedidos/evaluador.py:73` | cpu_python_pct | 1.51 | py=1.5% c=0.7% sys=0.0% peak=0.0MB \| def evaluar_lineas( |
+| Scalene | `src/pedidos/evaluador.py:96` | cpu_python_pct | 1.25 | py=1.2% c=0.0% sys=0.0% peak=0.0MB \| lineas_con_asignacion += 1 |
 | tabla_comparativa | `demo_oral.json / **Ranking Top-N (k=5)**` | speedup | 0.41 | base=0.032 ms · opt=0.078 ms |
 | tabla_comparativa | `demo_oral.json / **Batch Picking Consolidado**` | speedup | 0.29 | base=0.079 ms · opt=0.273 ms |
 | tabla_comparativa | `demo_oral.json / **Combinaciones Sustitutas**` | speedup | 0.81 | base=0.278 ms · opt=0.342 ms |

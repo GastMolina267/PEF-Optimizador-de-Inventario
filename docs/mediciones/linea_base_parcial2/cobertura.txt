@@ -1,0 +1,107 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-8.4.2, pluggy-1.6.0
+benchmark: 5.3.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: c:\Users\edgar\OneDrive\Escritorio\UBP\PEF\Parcial
+configfile: pyproject.toml
+plugins: anyio-4.15.1, flet-1.0.3, hypothesis-6.168.5, platformdirs-4.12.4, benchmark-5.3.0, cov-5.0.0, typeguard-2.13.3
+collected 193 items
+
+tests\automations\test_analizar_complejidad.py .........                 [  4%]
+tests\automations\test_artefactos_origin.py ..                           [  5%]
+tests\automations\test_proponer_mejoras.py ......                        [  8%]
+tests\cache\test_cache_consultas.py ...                                  [ 10%]
+tests\datos\test_cargador.py ....                                        [ 12%]
+tests\datos\test_generador_archivos.py ...                               [ 13%]
+tests\datos\test_procesador_lotes_paralelo.py .......                    [ 17%]
+tests\datos\test_streaming.py ..................                         [ 26%]
+tests\datos\test_validador.py ......                                     [ 30%]
+tests\integracion\test_artefactos.py ...........                         [ 35%]
+tests\integracion\test_benchmarks.py ......                              [ 38%]
+tests\integracion\test_equivalencia.py ......                            [ 41%]
+tests\integracion\test_propiedades_hypothesis.py ....                    [ 44%]
+tests\inventario\test_catalogo_hash.py .....                             [ 46%]
+tests\inventario\test_catalogo_lineal.py ......                          [ 49%]
+tests\inventario\test_protocolo.py ..                                    [ 50%]
+tests\modelos\test_pedido.py .....                                       [ 53%]
+tests\modelos\test_producto.py ....                                      [ 55%]
+tests\motor\test_motor_inventario.py ..........                          [ 60%]
+tests\observabilidad\test_apm.py ...........                             [ 66%]
+tests\pedidos\test_agrupador.py ..                                       [ 67%]
+tests\pedidos\test_combinaciones.py ....                                 [ 69%]
+tests\pedidos\test_evaluador.py .......                                  [ 73%]
+tests\pedidos\test_gestor_pool.py ...                                    [ 74%]
+tests\pedidos\test_procesador_concurrente.py .......                     [ 78%]
+tests\pedidos\test_procesador_secuencial.py ..                           [ 79%]
+tests\ranking\test_top_productos.py ....                                 [ 81%]
+tests\ui\test_app.py ..                                                  [ 82%]
+tests\ui\test_panel_estado.py ..                                         [ 83%]
+tests\ui\test_pantallas.py .........................                     [ 96%]
+tests\ui\test_tema.py .......                                            [100%]
+
+---------- coverage: platform win32, python 3.14.6-final-0 -----------
+Name                                     Stmts   Miss  Cover   Missing
+----------------------------------------------------------------------
+src\__init__.py                              0      0   100%
+src\cache\__init__.py                        2      0   100%
+src\cache\cache_consultas.py                93      2    98%   41, 109
+src\datos\__init__.py                        6      0   100%
+src\datos\cargador.py                       26      0   100%
+src\datos\generador_archivos.py             34      0   100%
+src\datos\procesador_lotes_paralelo.py      82      1    99%   64
+src\datos\streaming.py                      96      5    95%   87, 127, 130-131, 223
+src\datos\validador.py                      89     10    89%   53, 59, 61, 73, 75, 79, 83, 122-123, 143
+src\inventario\__init__.py                   4      0   100%
+src\inventario\catalogo_hash.py             77     14    82%   44-49, 88, 105, 110, 138, 144, 152-153, 161
+src\inventario\catalogo_lineal.py           62      8    87%   96, 102-103, 114-117, 125
+src\inventario\protocolo.py                 13      0   100%
+src\modelos\__init__.py                      3      0   100%
+src\modelos\pedido.py                       72      0   100%
+src\modelos\producto.py                     31      0   100%
+src\motor\__init__.py                        2      0   100%
+src\motor\motor_inventario.py              163      1    99%   120
+src\observabilidad\__init__.py               2      0   100%
+src\observabilidad\apm.py                  108      6    94%   97, 158, 187, 222, 234-235
+src\pedidos\__init__.py                      7      0   100%
+src\pedidos\agrupador.py                    51      0   100%
+src\pedidos\combinaciones.py               108      2    98%   242-243
+src\pedidos\evaluador.py                    81      1    99%   211
+src\pedidos\gestor_pool.py                  55      1    98%   31
+src\pedidos\procesador_concurrente.py       66      5    92%   107-112
+src\pedidos\procesador_secuencial.py        21      0   100%
+src\ranking\__init__.py                      2      0   100%
+src\ranking\top_productos.py                43      2    95%   44, 91
+src\ui\__init__.py                           0      0   100%
+src\ui\app.py                              128     41    68%   109-127, 197-200, 243-244, 248-250, 258-268, 295, 299-310, 319-325
+src\ui\componentes\__init__.py               2      0   100%
+src\ui\componentes\panel_estado.py          60      5    92%   141-142, 180, 212-213
+src\ui\pantallas\__init__.py                 9      0   100%
+src\ui\pantallas\agrupacion.py              57      4    93%   37, 129, 133, 249
+src\ui\pantallas\alternativas.py            93     27    71%   153-162, 166-168, 177-185, 194-196, 208-212, 250-251, 339
+src\ui\pantallas\base.py                    38      1    97%   67
+src\ui\pantallas\catalogo.py               154     17    89%   245, 250-251, 277-288, 293, 299, 306-307, 310-311, 334, 339-340, 475
+src\ui\pantallas\comparacion.py            106     11    90%   120-123, 139-143, 153-156
+src\ui\pantallas\inicio.py                  99     43    57%   173, 176-244, 274, 398-399
+src\ui\pantallas\pedidos.py                150     21    86%   229-230, 234, 290-293, 300, 467-471, 474-485, 525, 545-546
+src\ui\pantallas\top_productos.py           76     14    82%   150, 154-156, 165-171, 180-181, 303
+src\ui\tema.py                             152     16    89%   60, 72, 79, 85-87, 93, 243-244, 335, 727-733
+----------------------------------------------------------------------
+TOTAL                                     2523    258    90%
+Coverage XML written to file c:\Users\edgar\OneDrive\Escritorio\UBP\PEF\Parcial\docs\mediciones\linea_base_parcial2\coverage.xml
+
+
+
+----------------------------------------------------------------------------------------------------------- benchmark: 6 tests ----------------------------------------------------------------------------------------------------------
+Name (time in ns)                                Min                       Max                   Mean                 StdDev                 Median                   IQR            Outliers  OPS (Kops/s)            Rounds  Iterations
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_benchmark_busqueda_hash_id              80.0000 (1.0)          1,302.0000 (1.0)          90.2486 (1.0)          15.7911 (1.0)          90.0000 (1.0)          7.0000 (1.0)     1383;2018   11,080.5030 (1.0)      108696         100
+test_benchmark_busqueda_lineal_id           799.9988 (10.00)       67,200.0024 (51.61)       976.6171 (10.82)       419.1179 (26.54)     1,000.0003 (11.11)      100.0008 (14.29)     146;483    1,023.9428 (0.09)     131579           1
+test_benchmark_top_n_heap                 8,899.9950 (111.25)      38,900.0052 (29.88)     9,455.0461 (104.77)    1,076.3609 (68.16)     9,299.9981 (103.33)     400.0030 (57.14)       39;56      105.7636 (0.01)       2596           1
+test_benchmark_combinaciones_dp          19,999.9995 (250.00)     181,499.9996 (139.40)   22,491.5832 (249.22)    6,220.1935 (393.91)   21,299.9948 (236.67)     800.0061 (114.29)    175;903       44.4611 (0.00)       5893           1
+test_benchmark_procesamiento_pedidos     28,300.0045 (353.75)     212,200.0005 (162.98)   31,637.7386 (350.56)    6,792.2477 (430.13)   30,400.0059 (337.78)   1,499.9969 (214.29)    250;721       31.6078 (0.00)      10215           1
+test_benchmark_batch_picking             28,500.0060 (356.25)   8,486,099.9996 (>1000.0)  32,911.1341 (364.67)   58,962.9642 (>1000.0)  29,700.0006 (330.00)   2,200.0022 (314.29)   122;2231       30.3849 (0.00)      21277           1
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Legend:
+  Outliers: 1 Standard Deviation from Mean; 1.5 IQR (InterQuartile Range) from 1st Quartile and 3rd Quartile.
+  OPS: Operations Per Second, computed as 1 / Mean
+============================ 193 passed in 26.11s =============================

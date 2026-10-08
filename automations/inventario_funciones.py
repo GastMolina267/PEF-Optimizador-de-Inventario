@@ -25,23 +25,39 @@ class FuncionFundamental:
 # Módulos del motor que analizan las automatizaciones (rutas relativas al repositorio).
 RUTA_CATALOGO_LINEAL = "src/inventario/catalogo_lineal.py"
 RUTA_CATALOGO_HASH = "src/inventario/catalogo_hash.py"
+RUTA_PROTOCOLO = "src/inventario/protocolo.py"
 RUTA_AGRUPADOR = "src/pedidos/agrupador.py"
 RUTA_COMBINACIONES = "src/pedidos/combinaciones.py"
 RUTA_PROCESADOR_SECUENCIAL = "src/pedidos/procesador_secuencial.py"
 RUTA_PROCESADOR_CONCURRENTE = "src/pedidos/procesador_concurrente.py"
+RUTA_EVALUADOR = "src/pedidos/evaluador.py"
+RUTA_GESTOR_POOL = "src/pedidos/gestor_pool.py"
 RUTA_TOP_PRODUCTOS = "src/ranking/top_productos.py"
 RUTA_CACHE = "src/cache/cache_consultas.py"
+RUTA_STREAMING = "src/datos/streaming.py"
+RUTA_PROCESADOR_LOTES = "src/datos/procesador_lotes_paralelo.py"
+RUTA_GENERADOR_ARCHIVOS = "src/datos/generador_archivos.py"
+RUTA_MOTOR = "src/motor/motor_inventario.py"
+RUTA_APM = "src/observabilidad/apm.py"
 
-# Solo código del motor.
+# Solo código del motor y dominio fundamental.
 MODULOS_FUNDAMENTALES: tuple[str, ...] = (
     RUTA_CATALOGO_LINEAL,
     RUTA_CATALOGO_HASH,
+    RUTA_PROTOCOLO,
     RUTA_AGRUPADOR,
     RUTA_COMBINACIONES,
     RUTA_PROCESADOR_SECUENCIAL,
     RUTA_PROCESADOR_CONCURRENTE,
+    RUTA_EVALUADOR,
+    RUTA_GESTOR_POOL,
     RUTA_TOP_PRODUCTOS,
     RUTA_CACHE,
+    RUTA_STREAMING,
+    RUTA_PROCESADOR_LOTES,
+    RUTA_GENERADOR_ARCHIVOS,
+    RUTA_MOTOR,
+    RUTA_APM,
 )
 
 # Operaciones del enunciado / rúbrica. El analizador recorre el cuerpo de cada una.

@@ -16,7 +16,7 @@ import pytest
 from src.motor.motor_inventario import MotorInventario
 from src.observabilidad import apm
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parents[2]
 DEMO_ORAL = BASE_DIR / "data" / "datasets" / "demo_oral.json"
 
 

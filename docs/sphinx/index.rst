@@ -27,6 +27,8 @@ masivos de datos (streaming, buffering y procesamiento por lotes).
    :caption: Mediciones y Benchmarking
 
    mediciones/tabla_comparativa
+   mediciones/linea_base_parcial1
+   mediciones/linea_base_parcial2
    mediciones/archivos_grandes
    mediciones/resumen_scalene
    mediciones/comandos_profiling
