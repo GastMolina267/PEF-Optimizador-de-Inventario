@@ -23,7 +23,7 @@ from pathlib import Path
 
 from line_profiler import LineProfiler
 
-from src.datos.cargador import cargar_dataset
+from src.datos.cargador import cargar_dataset_json
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
 from src.pedidos.agrupador import agrupar_pedidos_batch
@@ -42,7 +42,7 @@ MEDICIONES_DIR = BASE_DIR / "docs" / "mediciones"
 def main():
     MEDICIONES_DIR.mkdir(parents=True, exist_ok=True)
     ruta_dataset = DATASETS_DIR / "mediano.json"
-    productos, pedidos = cargar_dataset(ruta_dataset)
+    productos, pedidos = cargar_dataset_json(ruta_dataset)
 
     cat_lineal = CatalogoLineal(productos)
     cat_hash = CatalogoHash(productos)

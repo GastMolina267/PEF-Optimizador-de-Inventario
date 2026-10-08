@@ -20,7 +20,7 @@ import tracemalloc
 from pathlib import Path
 from typing import Any
 
-from src.datos.cargador import cargar_dataset
+from src.datos.cargador import cargar_dataset_json
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
 from src.motor.motor_inventario import MotorInventario
@@ -83,7 +83,7 @@ def ejecutar_benchmarks_dataset(nombre_archivo: str) -> list[dict[str, Any]]:
     if not ruta.is_file():
         raise FileNotFoundError(f"No se encontró el dataset en {ruta}")
 
-    productos, pedidos = cargar_dataset(ruta)
+    productos, pedidos = cargar_dataset_json(ruta)
     n_prods = len(productos)
     n_peds = len(pedidos)
 

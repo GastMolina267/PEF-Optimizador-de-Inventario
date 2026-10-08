@@ -45,7 +45,7 @@ def cargar_dataset_json(ruta: str | Path) -> tuple[list[Producto], list[Pedido]]
     return validar_dataset(contenido)
 
 
-# Alias de conveniencia
+# Alias para retrocompatibilidad (estandarizado en cargar_dataset_json)
 cargar_dataset = cargar_dataset_json
 
 

@@ -20,7 +20,7 @@ import tracemalloc
 from pathlib import Path
 
 from src.cache.cache_consultas import GestorCacheConsultas
-from src.datos.cargador import cargar_dataset
+from src.datos.cargador import cargar_dataset_json
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
 from src.pedidos.combinaciones import BuscadorAlternativas
@@ -153,7 +153,7 @@ def main():
 
     for ds_nombre in datasets:
         ruta_ds = DATASETS_DIR / ds_nombre
-        prods, peds = cargar_dataset(ruta_ds)
+        prods, peds = cargar_dataset_json(ruta_ds)
         print(f"\n---> Analizando huella de memoria para {ds_nombre}...")
 
         cat_lin = CatalogoLineal(prods)

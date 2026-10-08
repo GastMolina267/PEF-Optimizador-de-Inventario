@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from src.cache.cache_consultas import GestorCacheConsultas
-from src.datos.cargador import cargar_dataset
+from src.datos.cargador import cargar_dataset_json
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
 from src.modelos.pedido import LineaPedido, Pedido
@@ -48,22 +48,22 @@ def clonar_pedidos(pedidos: list[Pedido]) -> list[Pedido]:
 
 @pytest.fixture(scope="session")
 def _raw_demo_oral() -> tuple[list[Producto], list[Pedido]]:
-    return cargar_dataset(DATASETS_DIR / "demo_oral.json")
+    return cargar_dataset_json(DATASETS_DIR / "demo_oral.json")
 
 
 @pytest.fixture(scope="session")
 def _raw_pequeno() -> tuple[list[Producto], list[Pedido]]:
-    return cargar_dataset(DATASETS_DIR / "pequeno.json")
+    return cargar_dataset_json(DATASETS_DIR / "pequeno.json")
 
 
 @pytest.fixture(scope="session")
 def _raw_mediano() -> tuple[list[Producto], list[Pedido]]:
-    return cargar_dataset(DATASETS_DIR / "mediano.json")
+    return cargar_dataset_json(DATASETS_DIR / "mediano.json")
 
 
 @pytest.fixture(scope="session")
 def _raw_grande() -> tuple[list[Producto], list[Pedido]]:
-    return cargar_dataset(DATASETS_DIR / "grande.json")
+    return cargar_dataset_json(DATASETS_DIR / "grande.json")
 
 
 # =========================================================================

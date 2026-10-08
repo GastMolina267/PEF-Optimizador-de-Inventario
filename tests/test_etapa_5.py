@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from src.datos.cargador import cargar_dataset
+from src.datos.cargador import cargar_dataset_json
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
 from src.pedidos.agrupador import agrupar_pedidos_batch
@@ -37,7 +37,7 @@ class TestEquivalenciaEscalaMediana:
     @classmethod
     def datos_mediano(cls):
         ruta = DATASETS_DIR / "mediano.json"
-        return cargar_dataset(ruta)
+        return cargar_dataset_json(ruta)
 
     def test_equivalencia_busquedas_id_y_nombre(self, datos_mediano):
         productos, _ = datos_mediano
@@ -111,7 +111,7 @@ class TestEquivalenciaEscalaGrande:
     @classmethod
     def datos_grande(cls):
         ruta = DATASETS_DIR / "grande.json"
-        return cargar_dataset(ruta)
+        return cargar_dataset_json(ruta)
 
     def test_top_n_en_dataset_grande(self, datos_grande):
         productos, pedidos = datos_grande
