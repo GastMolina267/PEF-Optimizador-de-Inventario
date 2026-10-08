@@ -8,8 +8,6 @@ este test pasará como 'xpass', obligando al desarrollador a retirar la marca xf
 
 from __future__ import annotations
 
-import pytest
-
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
 from src.modelos.pedido import EstadoPedido, LineaPedido, Pedido
@@ -18,10 +16,6 @@ from src.pedidos.procesador_concurrente import procesar_pedidos_concurrente
 from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="El procesador concurrente no respeta consumo secuencial de stock entre pedidos (se corrige en F4)",
-)
 def test_concurrencia_respeta_descuento_de_stock():
     """El procesamiento concurrente con descuento de stock debe ser idéntico al secuencial.
 
