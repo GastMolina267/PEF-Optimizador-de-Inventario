@@ -10,13 +10,17 @@ import time
 from collections.abc import Sequence
 
 from src.modelos.pedido import (
-    EstadoPedido,
     Pedido,
     PoliticaDescuento,
     ResultadoPedido,
     ResumenProcesamiento,
 )
-from src.pedidos.evaluador import debe_descontar, evaluar_pedido
+from src.pedidos.evaluador import (
+    ContadorEstados,
+    crear_consulta_stock,
+    debe_descontar,
+    evaluar_pedido,
+)
 
 
 def procesar_pedidos_secuencial(
@@ -40,35 +44,28 @@ def procesar_pedidos_secuencial(
     inicio = time.perf_counter()
 
     resultados: list[ResultadoPedido] = []
-    cubiertos = 0
-    parciales = 0
-    imposibles = 0
+    contador = ContadorEstados()
+    # La consulta lee el catálogo en cada llamada, así que ve los descuentos ya hechos.
+    stock_de = crear_consulta_stock(catalogo)
 
     for pedido in pedidos:
-        resultado_pedido = evaluar_pedido(pedido, catalogo)
+        resultado_pedido = evaluar_pedido(pedido, stock_de=stock_de)
         resultados.append(resultado_pedido)
+        contador.registrar(resultado_pedido.estado)
 
-        if resultado_pedido.estado == EstadoPedido.CUBIERTO:
-            cubiertos += 1
-        elif resultado_pedido.estado == EstadoPedido.IMPOSIBLE:
-            imposibles += 1
-        else:
-            parciales += 1
-
-        # Aplicación de descuentos de stock si fue solicitado
+        # Descuento inmediato: el pedido siguiente ya ve el stock actualizado.
         if descontar_stock and debe_descontar(resultado_pedido.estado, politica_descuento):
-            todas_lineas = resultado_pedido.lineas_cubiertas + resultado_pedido.lineas_faltantes
-            for rl in todas_lineas:
-                if rl.cantidad_asignada > 0:
-                    catalogo.descontar_stock(rl.id_producto, rl.cantidad_asignada)
+            for linea in resultado_pedido.lineas_cubiertas + resultado_pedido.lineas_faltantes:
+                if linea.cantidad_asignada > 0:
+                    catalogo.descontar_stock(linea.id_producto, linea.cantidad_asignada)
 
     tiempo_total_ms = (time.perf_counter() - inicio) * 1000.0
 
     return ResumenProcesamiento(
         pedidos_procesados=len(pedidos),
-        pedidos_cubiertos=cubiertos,
-        pedidos_parciales=parciales,
-        pedidos_imposibles=imposibles,
+        pedidos_cubiertos=contador.cubiertos,
+        pedidos_parciales=contador.parciales,
+        pedidos_imposibles=contador.imposibles,
         tiempo_ejecucion_ms=tiempo_total_ms,
         resultados=resultados,
         estrategia="baseline_secuencial",
