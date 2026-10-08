@@ -1,19 +1,26 @@
 """Procesador concurrente de pedidos con multiprocessing (ProcessPoolExecutor).
 
-Justificación técnica académica y Propuesta Origin 1:
-1. Separar evaluación de asignación:
-   Los workers ejecutan la evaluación de factibilidad en paralelo sobre la instantánea
-   de stock. La asignación/descuento de inventario se ejecuta de forma atómica en el proceso
-   principal respetando el orden de los pedidos, garantizando consistencia absoluta
-   con el procesamiento secuencial y evitando condiciones de carrera.
-2. Reducir overhead de IPC:
-   El envío y retorno de datos utiliza tuplas compactas primitivas (id, cantidad, asignada, faltante)
-   en lugar de dataclasses pesadas, reduciendo drásticamente el tamaño del payload en el canal IPC.
-3. Eliminar trabajo redundante:
-   Los futuros se despachan y consumen en orden contiguo, eliminando ordenamientos innecesarios.
-4. Gestión del ciclo de vida:
-   El pool es encapsulado por `GestorPool` para controlar inicio, reutilización, reinicio
-   y cierre ordenado sin fugas de descriptores en Windows.
+Justificación técnica y propuesta Origin 1 (reducir el overhead de IPC):
+
+1. Qué se paraleliza: la evaluación de factibilidad de pedidos independientes contra
+   una foto del stock. Es trabajo CPU-bound, por eso se usan procesos y no hilos (GIL).
+2. Menos datos por el canal IPC:
+   - Los pedidos viajan como tuplas de enteros, no como dataclasses.
+   - Cada fragmento lleva solo el stock de los productos que referencia, no el
+     catálogo completo. Con 10.000 productos y fragmentos de 500 pedidos, el payload
+     de stock baja de 10.000 entradas a unas pocas centenas.
+   - Los resultados vuelven como tuplas compactas (ver ``src/pedidos/evaluador.py``).
+3. Sin trabajo redundante: los fragmentos son contiguos y los futuros se consumen en
+   orden de envío, así que el resultado sale ordenado sin un ``sort`` final.
+4. Descuento de stock: cada pedido debe ver el stock que dejó el anterior, así que el
+   descuento es intrínsecamente secuencial. En ese caso no se usa el pool (pagaría
+   IPC para un resultado que igual habría que recalcular en orden) y se delega en el
+   procesador secuencial, que garantiza el mismo resultado.
+5. Ciclo de vida: el pool persistente lo administra ``GestorPool``.
+
+Cuándo conviene: la evaluación de un pedido en memoria es un lookup O(1) por línea,
+más barato que serializarlo. Por eso el motor usa el procesador secuencial por defecto
+y este módulo queda como opción explícita (y como contraste medible para la oral).
 """
 
 from __future__ import annotations
@@ -21,70 +28,84 @@ from __future__ import annotations
 import os
 import time
 from collections.abc import Sequence
+from concurrent.futures import Executor
 from concurrent.futures.process import BrokenProcessPool
 
 from src.modelos.pedido import (
-    EstadoPedido,
     Pedido,
     PoliticaDescuento,
-    ResultadoLinea,
     ResultadoPedido,
     ResumenProcesamiento,
 )
-from src.pedidos.evaluador import debe_descontar, evaluar_pedido
+from src.pedidos.evaluador import (
+    ContadorEstados,
+    ResultadoCompacto,
+    crear_consulta_stock,
+    evaluar_pedido_compacto,
+    resultado_desde_compacto,
+)
 from src.pedidos.gestor_pool import pool_pedidos
+from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
 
-# Alias de retrocompatibilidad
+ESTRATEGIA = "optimizado_concurrente"
+
+PedidoCompacto = tuple[int, tuple[tuple[int, int], ...]]
+"""``(id_pedido, ((id_producto, cantidad), ...))``."""
+
+FragmentoCompacto = tuple[list[PedidoCompacto], dict[int, int]]
+"""Pedidos del fragmento y stock de los productos que referencian."""
+
+# Alias de retrocompatibilidad (tests y UI del parcial 1).
 _cerrar_executor = pool_pedidos.cerrar
 
 
 def _evaluar_fragmento_compacto(
-    fragmento_pedidos: list[tuple[int, tuple[tuple[int, int], ...]]],
-    mapa_stock: dict[int, int],
-) -> list[tuple[int, int, tuple[tuple[int, int, int, int], ...]]]:
-    """Evalúa un fragmento de pedidos contra el mapa de stock provisto.
+    pedidos_fragmento: list[PedidoCompacto],
+    stock_fragmento: dict[int, int],
+) -> list[ResultadoCompacto]:
+    """Evalúa un fragmento de pedidos dentro de un worker.
 
-    Tanto la entrada como la salida son tuplas compactas con tipos primitivos,
-    minimizando el tamaño del buffer y el tiempo de serialización (pickle) en IPC.
+    Función de nivel de módulo para que sea serializable con ``spawn`` (Windows).
     """
-    resultados: list[tuple[int, int, tuple[tuple[int, int, int, int], ...]]] = []
-    for id_pedido, lineas in fragmento_pedidos:
-        lineas_cubiertas: list[tuple[int, int, int, int]] = []
-        lineas_faltantes: list[tuple[int, int, int, int]] = []
-        total_lineas = len(lineas)
-        satisfechas_count = 0
-        con_algo_count = 0
+    stock_de = crear_consulta_stock(stock_fragmento)
+    return [
+        evaluar_pedido_compacto(id_pedido, lineas, stock_de)
+        for id_pedido, lineas in pedidos_fragmento
+    ]
 
-        for id_prod, cant in lineas:
-            stock_disp = mapa_stock.get(id_prod, 0)
-            if stock_disp >= cant:
-                asig = cant
-                falt = 0
-                satisfechas_count += 1
-                con_algo_count += 1
-            elif stock_disp > 0:
-                asig = stock_disp
-                falt = cant - stock_disp
-                con_algo_count += 1
-            else:
-                asig = 0
-                falt = cant
 
-            tupla_linea = (id_prod, cant, asig, falt)
-            if asig == cant:
-                lineas_cubiertas.append(tupla_linea)
-            else:
-                lineas_faltantes.append(tupla_linea)
+def _armar_fragmentos(
+    catalogo, pedidos: Sequence[Pedido], workers: int
+) -> list[FragmentoCompacto]:
+    """Parte los pedidos en fragmentos contiguos con su sub-mapa de stock."""
+    stock_de = crear_consulta_stock(catalogo)
+    tamano = max(1, -(-len(pedidos) // workers))  # división entera hacia arriba
+    fragmentos: list[FragmentoCompacto] = []
+    for inicio in range(0, len(pedidos), tamano):
+        compactos: list[PedidoCompacto] = []
+        stock_fragmento: dict[int, int] = {}
+        for pedido in pedidos[inicio : inicio + tamano]:
+            lineas = tuple((linea.id_producto, linea.cantidad) for linea in pedido.lineas)
+            compactos.append((pedido.id, lineas))
+            for id_producto, _ in lineas:
+                if id_producto not in stock_fragmento:
+                    stock_fragmento[id_producto] = stock_de(id_producto)
+        fragmentos.append((compactos, stock_fragmento))
+    return fragmentos
 
-        if satisfechas_count == total_lineas:
-            estado_val = EstadoPedido.CUBIERTO.value
-        elif con_algo_count == 0:
-            estado_val = EstadoPedido.IMPOSIBLE.value
-        else:
-            estado_val = EstadoPedido.PARCIAL.value
 
-        resultados.append((id_pedido, estado_val, tuple(lineas_cubiertas + lineas_faltantes)))
-    return resultados
+def _evaluar_en_pool(
+    executor: Executor, fragmentos: list[FragmentoCompacto], workers: int
+) -> list[ResultadoCompacto]:
+    """Envía los fragmentos al pool y junta los resultados en el orden original."""
+    try:
+        futuros = [executor.submit(_evaluar_fragmento_compacto, *frag) for frag in fragmentos]
+        return [resultado for futuro in futuros for resultado in futuro.result()]
+    except (BrokenProcessPool, RuntimeError):
+        # El pool quedó inutilizable (p. ej. un worker murió): se recrea una vez.
+        executor = pool_pedidos.reiniciar(max_workers=workers)
+        futuros = [executor.submit(_evaluar_fragmento_compacto, *frag) for frag in fragmentos]
+        return [resultado for futuro in futuros for resultado in futuro.result()]
 
 
 def procesar_pedidos_concurrente(
@@ -94,127 +115,47 @@ def procesar_pedidos_concurrente(
     descontar_stock: bool = False,
     politica_descuento: PoliticaDescuento | str = PoliticaDescuento.SOLO_CUBIERTOS,
 ) -> ResumenProcesamiento:
-    """Procesa un lote de pedidos en paralelo utilizando un pool de procesos independientes.
+    """Procesa un lote de pedidos en paralelo con un pool de procesos.
 
     Argumentos:
-        catalogo: Catálogo de productos (CatalogoHash o CatalogoLineal).
-        pedidos: Secuencia de pedidos a procesar.
-        max_workers: Cantidad de procesos trabajadores en paralelo.
-        descontar_stock: Si True, muta el stock en el catálogo en orden secuencial atómico.
-        politica_descuento: 'solo_cubiertos' o 'todo_lo_posible'.
+        catalogo: Catálogo de productos (``CatalogoHash`` o ``CatalogoLineal``).
+        pedidos: Pedidos a procesar.
+        max_workers: Procesos en paralelo (por defecto, núcleos disponibles).
+        descontar_stock: Si es True, se delega en el procesador secuencial, porque cada
+            pedido debe ver el stock que dejó el anterior.
+        politica_descuento: ``solo_cubiertos`` o ``todo_lo_posible``.
+
+    Retorna:
+        Resumen con los resultados en el mismo orden que ``pedidos``.
     """
-    inicio = time.perf_counter()
+    if descontar_stock:
+        resumen = procesar_pedidos_secuencial(
+            catalogo, pedidos, descontar_stock=True, politica_descuento=politica_descuento
+        )
+        resumen.estrategia = f"{ESTRATEGIA}_descuento_secuencial"
+        return resumen
 
     if not pedidos:
-        return ResumenProcesamiento(
-            pedidos_procesados=0,
-            pedidos_cubiertos=0,
-            pedidos_parciales=0,
-            pedidos_imposibles=0,
-            tiempo_ejecucion_ms=0.0,
-            resultados=[],
-            estrategia="optimizado_concurrente",
-        )
+        return ResumenProcesamiento(0, 0, 0, 0, 0.0, [], ESTRATEGIA)
 
-    # 1. Snapshot de stock para evaluación pura
-    mapa_stock = {p.id: p.stock for p in catalogo.obtener_todos()}
-
-    # 2. Conversión compacta para transmisión IPC ligera
-    pedidos_compactos = [
-        (p.id, tuple((lin.id_producto, lin.cantidad) for lin in p.lineas)) for p in pedidos
-    ]
-
+    inicio = time.perf_counter()
     workers = max_workers or min(os.cpu_count() or 4, len(pedidos))
-    tamano_chunk = max(1, (len(pedidos_compactos) + workers - 1) // workers)
-    fragmentos = [
-        pedidos_compactos[i : i + tamano_chunk]
-        for i in range(0, len(pedidos_compactos), tamano_chunk)
-    ]
-
-    # 3. Obtener executor administrado por GestorPool
+    fragmentos = _armar_fragmentos(catalogo, pedidos, workers)
     executor = pool_pedidos.obtener_executor(max_workers=workers)
 
-    tuplas_compactas: list[tuple[int, int, tuple[tuple[int, int, int, int], ...]]] = []
-    try:
-        futuros = [
-            executor.submit(_evaluar_fragmento_compacto, frag, mapa_stock) for frag in fragmentos
-        ]
-        for f in futuros:
-            tuplas_compactas.extend(f.result())
-    except (BrokenProcessPool, RuntimeError):
-        executor = pool_pedidos.reiniciar(max_workers=workers)
-        futuros = [
-            executor.submit(_evaluar_fragmento_compacto, frag, mapa_stock) for frag in fragmentos
-        ]
-        for f in futuros:
-            tuplas_compactas.extend(f.result())
-
-    # 4. Consolidación de resultados y descuento de stock (Separación de evaluación y asignación)
-    todos_resultados: list[ResultadoPedido] = []
-    cubiertos = 0
-    parciales = 0
-    imposibles = 0
-
-    if descontar_stock:
-        # Asignación atómica secuencial en el proceso principal sobre el inventario real
-        stock_actual = {p.id: p.stock for p in catalogo.obtener_todos()}
-        for pedido in pedidos:
-            res = evaluar_pedido(pedido, stock_actual)
-            if debe_descontar(res.estado, politica_descuento):
-                for rl in res.lineas_cubiertas + res.lineas_faltantes:
-                    if rl.cantidad_asignada > 0:
-                        stock_actual[rl.id_producto] -= rl.cantidad_asignada
-                        catalogo.descontar_stock(rl.id_producto, rl.cantidad_asignada)
-
-            if res.estado == EstadoPedido.CUBIERTO:
-                cubiertos += 1
-            elif res.estado == EstadoPedido.PARCIAL:
-                parciales += 1
-            else:
-                imposibles += 1
-            todos_resultados.append(res)
-    else:
-        # Reconstruir ResultadoPedido desde las tuplas compactas devueltas por los workers
-        for id_ped, estado_val, lineas_tupla in tuplas_compactas:
-            lineas_cub = []
-            lineas_fal = []
-            for id_prod, cant_sol, cant_asig, falt in lineas_tupla:
-                rl = ResultadoLinea(
-                    id_producto=id_prod,
-                    cantidad_solicitada=cant_sol,
-                    cantidad_asignada=cant_asig,
-                    faltante=falt,
-                )
-                if rl.satisfecha_completamente:
-                    lineas_cub.append(rl)
-                else:
-                    lineas_fal.append(rl)
-
-            estado = EstadoPedido(estado_val)
-            if estado == EstadoPedido.CUBIERTO:
-                cubiertos += 1
-            elif estado == EstadoPedido.PARCIAL:
-                parciales += 1
-            else:
-                imposibles += 1
-
-            todos_resultados.append(
-                ResultadoPedido(
-                    id_pedido=id_ped,
-                    estado=estado,
-                    lineas_cubiertas=lineas_cub,
-                    lineas_faltantes=lineas_fal,
-                )
-            )
-
-    tiempo_total_ms = (time.perf_counter() - inicio) * 1000.0
+    resultados: list[ResultadoPedido] = []
+    contador = ContadorEstados()
+    for compacto in _evaluar_en_pool(executor, fragmentos, workers):
+        resultado = resultado_desde_compacto(compacto)
+        contador.registrar(resultado.estado)
+        resultados.append(resultado)
 
     return ResumenProcesamiento(
         pedidos_procesados=len(pedidos),
-        pedidos_cubiertos=cubiertos,
-        pedidos_parciales=parciales,
-        pedidos_imposibles=imposibles,
-        tiempo_ejecucion_ms=tiempo_total_ms,
-        resultados=todos_resultados,
-        estrategia="optimizado_concurrente",
+        pedidos_cubiertos=contador.cubiertos,
+        pedidos_parciales=contador.parciales,
+        pedidos_imposibles=contador.imposibles,
+        tiempo_ejecucion_ms=(time.perf_counter() - inicio) * 1000.0,
+        resultados=resultados,
+        estrategia=ESTRATEGIA,
     )

@@ -4,10 +4,25 @@ from __future__ import annotations
 
 import atexit
 import contextlib
+import multiprocessing
 import os
 from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
 from typing import Any
+
+
+def _contexto_multiproceso() -> multiprocessing.context.BaseContext:
+    """Elige cómo se crean los workers.
+
+    ``fork`` (el default de Linux hasta Python 3.13) copia un proceso que puede tener
+    hilos activos (Flet, pytest) y Python lo desaconseja por riesgo de deadlock.
+    ``forkserver`` evita ese problema en Linux y macOS; Windows solo ofrece ``spawn``.
+    Así el comportamiento es el mismo en todas las plataformas: cada worker arranca
+    limpio e importa los módulos que necesita.
+    """
+    if "forkserver" in multiprocessing.get_all_start_methods():
+        return multiprocessing.get_context("forkserver")
+    return multiprocessing.get_context("spawn")
 
 
 class GestorPool:
@@ -63,6 +78,7 @@ class GestorPool:
         self._initargs = initargs
         self._executor = ProcessPoolExecutor(
             max_workers=workers,
+            mp_context=_contexto_multiproceso(),
             initializer=initializer,
             initargs=initargs,
         )
@@ -89,12 +105,17 @@ class GestorPool:
             self._initargs = ()
 
 
-# Instancia singleton predeterminada
+# Pool para evaluar pedidos ya cargados en memoria (procesador_concurrente).
 pool_pedidos = GestorPool()
+
+# Pool para procesar archivos JSONL por lotes. Es independiente porque lleva su propio
+# initializer (el mapa de stock del archivo) y no debe forzar el reinicio del anterior.
+pool_archivos = GestorPool()
 
 
 def _cerrar_pool_al_salir() -> None:
     pool_pedidos.cerrar(wait=True)
+    pool_archivos.cerrar(wait=True)
 
 
 atexit.register(_cerrar_pool_al_salir)
