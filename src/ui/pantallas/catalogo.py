@@ -130,11 +130,7 @@ class PantallaCatalogo(PantallaBase):
             on_change_callback=lambda _: self._aplicar_ordenamiento(),
         )
 
-        self.btn_sentido_orden = ft.IconButton(
-            icon=ft.Icons.ARROW_UPWARD_ROUNDED,
-            tooltip="Orden Ascendente (Clic para alternar a Descendente)",
-            on_click=lambda _: self._alternar_sentido_orden(),
-        )
+        self.btn_sentido_orden = self._crear_boton_sentido_orden()
 
         # Diagnóstico de la consulta
         self.txt_tiempo_busqueda = ft.Text(
@@ -277,19 +273,6 @@ class PantallaCatalogo(PantallaBase):
             resultado_negocio=f"Estrategia conmutada a {nueva.upper()}",
         )
         self._ejecutar_busqueda()
-
-    def _alternar_sentido_orden(self):
-        self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = (
-            ft.Icons.ARROW_UPWARD_ROUNDED
-            if self.orden_ascendente
-            else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        )
-        self.btn_sentido_orden.tooltip = (
-            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
-        )
-        actualizar_control(self.btn_sentido_orden)
-        self._aplicar_ordenamiento()
 
     def _aplicar_ordenamiento(self):
         criterio = self.dropdown_orden.value or "id"

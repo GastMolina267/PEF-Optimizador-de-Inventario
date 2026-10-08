@@ -362,13 +362,10 @@ class PantallaInicio(PantallaBase):
                 )
 
             self.col_resultado_escenario.controls = items_resumen
-            self.on_actualizar_panel(
-                dataset=self.dropdown_datasets.value,
-                n_productos=len(self.motor.catalogo),
-                n_pedidos=len(self.motor.pedidos),
-                estrategia=self.motor.estrategia,
+            self._publicar_resultado(
                 tiempo_ms=duracion_total_ms,
                 resultado_negocio=f"Escenario ejecutado: {res_pedidos.pedidos_cubiertos}/{res_pedidos.pedidos_procesados} cubiertos",
+                dataset=self.dropdown_datasets.value,
             )
             actualizar_control(self)
             self.notificar(

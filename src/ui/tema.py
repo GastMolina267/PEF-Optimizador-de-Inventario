@@ -159,6 +159,34 @@ def envolver_lista(lista: ft.ListView, encabezado: ft.Control | None = None) -> 
     )
 
 
+def crear_texto_id_producto(id_producto: int, ancho: int = 50) -> ft.Text:
+    """Texto ``#id`` destacado que encabeza las filas de productos."""
+    return ft.Text(
+        f"#{id_producto}",
+        size=12,
+        color=COLOR_PRIMARIO,
+        weight=ft.FontWeight.BOLD,
+        width=ancho,
+    )
+
+
+def crear_texto_nombre_producto(nombre: str) -> ft.Text:
+    """Nombre del producto que ocupa el espacio libre de la fila."""
+    return ft.Text(nombre, size=13, color=COLOR_TEXTO_PRIMARIO, expand=True)
+
+
+def crear_columna_titulo_detalle(titulo: str, detalle: str) -> ft.Column:
+    """Columna con un título en negrita y una línea de detalle en gris debajo."""
+    return ft.Column(
+        controls=[
+            ft.Text(titulo, size=13, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_PRIMARIO),
+            ft.Text(detalle, size=11, color=COLOR_TEXTO_MUTED),
+        ],
+        expand=True,
+        spacing=1,
+    )
+
+
 def crear_titulo_seccion(texto: str) -> ft.Text:
     """Etiqueta de lista o bloque."""
     return ft.Text(texto, size=TAM_ETIQUETA, weight=ft.FontWeight.W_600, color=COLOR_TEXTO_MUTED)

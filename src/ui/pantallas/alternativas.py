@@ -23,6 +23,8 @@ from src.ui.tema import (
     crear_dropdown,
     crear_encabezado,
     crear_tarjeta_kpi,
+    crear_texto_id_producto,
+    crear_texto_nombre_producto,
     crear_titulo_seccion,
     envolver_lista,
     envolver_metricas,
@@ -90,11 +92,7 @@ class PantallaAlternativas(PantallaBase):
             on_change_callback=lambda _: self._aplicar_ordenamiento(),
         )
 
-        self.btn_sentido_orden = ft.IconButton(
-            icon=ft.Icons.ARROW_UPWARD_ROUNDED,
-            tooltip="Orden Ascendente (Clic para alternar)",
-            on_click=lambda _: self._alternar_sentido_orden(),
-        )
+        self.btn_sentido_orden = self._crear_boton_sentido_orden()
 
         self.fila_kpis = ft.Row(spacing=0)
         self.col_combinaciones = ft.ListView(spacing=4, expand=True, padding=8)
@@ -155,19 +153,6 @@ class PantallaAlternativas(PantallaBase):
         self.switch_memo.value = nueva_estrategia == "optimizado"
         actualizar_control(self.switch_memo)
         self._ejecutar_busqueda()
-
-    def _alternar_sentido_orden(self):
-        self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = (
-            ft.Icons.ARROW_UPWARD_ROUNDED
-            if self.orden_ascendente
-            else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        )
-        self.btn_sentido_orden.tooltip = (
-            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
-        )
-        actualizar_control(self.btn_sentido_orden)
-        self._aplicar_ordenamiento()
 
     def _aplicar_ordenamiento(self):
         criterio = self.dropdown_orden.value or "precio"
@@ -248,11 +233,7 @@ class PantallaAlternativas(PantallaBase):
         self.combinaciones_actuales = list(resultado.combinaciones)
         self._aplicar_ordenamiento()
 
-        self.on_actualizar_panel(
-            dataset="activo",
-            n_productos=len(self.motor.catalogo),
-            n_pedidos=len(self.motor.pedidos),
-            estrategia=self.motor.estrategia,
+        self._publicar_resultado(
             tiempo_ms=resultado.tiempo_ejecucion_ms,
             resultado_negocio=f"{resultado.total_combinaciones} combinaciones en {categoria}",
         )
@@ -277,16 +258,8 @@ class PantallaAlternativas(PantallaBase):
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Text(
-                                    f"#{p.id}",
-                                    size=12,
-                                    color=COLOR_PRIMARIO,
-                                    weight=ft.FontWeight.BOLD,
-                                    width=50,
-                                ),
-                                ft.Text(
-                                    p.nombre, size=13, color=COLOR_TEXTO_PRIMARIO, expand=True
-                                ),
+                                crear_texto_id_producto(p.id),
+                                crear_texto_nombre_producto(p.nombre),
                                 ft.Text(
                                     f"Stock: {p.stock} Unidades",
                                     size=12,

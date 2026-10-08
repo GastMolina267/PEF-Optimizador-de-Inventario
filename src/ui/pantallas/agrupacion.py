@@ -21,6 +21,7 @@ from src.ui.tema import (
     borde_all,
     crear_banner_explicativo,
     crear_barra_herramientas,
+    crear_columna_titulo_detalle,
     crear_dropdown,
     crear_encabezado,
     crear_tarjeta_kpi,
@@ -64,11 +65,7 @@ class PantallaAgrupacion(PantallaBase):
             on_change_callback=lambda _: self._aplicar_ordenamiento(),
         )
 
-        self.btn_sentido_orden = ft.IconButton(
-            icon=ft.Icons.ARROW_DOWNWARD_ROUNDED,
-            tooltip="Orden Descendente (Clic para alternar)",
-            on_click=lambda _: self._alternar_sentido_orden(),
-        )
+        self.btn_sentido_orden = self._crear_boton_sentido_orden()
 
         self.fila_kpis = ft.Row(spacing=0)
         self.col_items_picking = ft.ListView(spacing=0, expand=True, padding=0)
@@ -112,19 +109,6 @@ class PantallaAgrupacion(PantallaBase):
     def al_cambiar_estrategia_global(self, nueva_estrategia: str) -> None:
         """Sincroniza cuando cambia la estrategia."""
         self._ejecutar_agrupacion()
-
-    def _alternar_sentido_orden(self):
-        self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = (
-            ft.Icons.ARROW_UPWARD_ROUNDED
-            if self.orden_ascendente
-            else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        )
-        self.btn_sentido_orden.tooltip = (
-            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
-        )
-        actualizar_control(self.btn_sentido_orden)
-        self._aplicar_ordenamiento()
 
     def _aplicar_ordenamiento(self):
         criterio = self.dropdown_orden.value or "cantidad"
@@ -186,11 +170,7 @@ class PantallaAgrupacion(PantallaBase):
         self.items_consolidados_actuales = list(lote.items)
         self._aplicar_ordenamiento()
 
-        self.on_actualizar_panel(
-            dataset="activo",
-            n_productos=len(self.motor.catalogo),
-            n_pedidos=len(self.motor.pedidos),
-            estrategia=self.motor.estrategia,
+        self._publicar_resultado(
             tiempo_ms=duracion_ms,
             resultado_negocio=f"Batch Picking: {lote.total_unidades} Unidades en {lote.total_productos_distintos} productos",
         )
@@ -227,22 +207,9 @@ class PantallaAgrupacion(PantallaBase):
                                 ),
                                 width=50,
                             ),
-                            ft.Column(
-                                controls=[
-                                    ft.Text(
-                                        nombre,
-                                        size=13,
-                                        weight=ft.FontWeight.W_600,
-                                        color=COLOR_TEXTO_PRIMARIO,
-                                    ),
-                                    ft.Text(
-                                        f"{categoria} | {item.total_pedidos_solicitantes} pedidos solicitantes",
-                                        size=11,
-                                        color=COLOR_TEXTO_MUTED,
-                                    ),
-                                ],
-                                expand=True,
-                                spacing=1,
+                            crear_columna_titulo_detalle(
+                                nombre,
+                                f"{categoria} | {item.total_pedidos_solicitantes} pedidos solicitantes",
                             ),
                             ft.Column(
                                 controls=[

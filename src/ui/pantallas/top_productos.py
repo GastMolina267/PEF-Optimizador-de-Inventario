@@ -20,12 +20,12 @@ from src.ui.tema import (
     COLOR_SUPERFICIE,
     COLOR_TARJETA,
     COLOR_TEXTO_MUTED,
-    COLOR_TEXTO_PRIMARIO,
     actualizar_control,
     alineacion_center,
     borde_all,
     crear_banner_explicativo,
     crear_barra_herramientas,
+    crear_columna_titulo_detalle,
     crear_dropdown,
     crear_encabezado,
     crear_tarjeta_kpi,
@@ -87,11 +87,7 @@ class PantallaTopProductos(PantallaBase):
             on_change_callback=lambda _: self._aplicar_ordenamiento(),
         )
 
-        self.btn_sentido_orden = ft.IconButton(
-            icon=ft.Icons.ARROW_DOWNWARD_ROUNDED,
-            tooltip="Orden Descendente (Clic para alternar)",
-            on_click=lambda _: self._alternar_sentido_orden(),
-        )
+        self.btn_sentido_orden = self._crear_boton_sentido_orden()
 
         self.btn_calcular = ft.FilledButton(
             "Recalcular",
@@ -146,19 +142,6 @@ class PantallaTopProductos(PantallaBase):
         self.dropdown_metodo.value = "heap" if nueva_estrategia == "optimizado" else "sort"
         actualizar_control(self.dropdown_metodo)
         self._ejecutar_calculo()
-
-    def _alternar_sentido_orden(self):
-        self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = (
-            ft.Icons.ARROW_UPWARD_ROUNDED
-            if self.orden_ascendente
-            else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        )
-        self.btn_sentido_orden.tooltip = (
-            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
-        )
-        actualizar_control(self.btn_sentido_orden)
-        self._aplicar_ordenamiento()
 
     def _aplicar_ordenamiento(self):
         criterio = self.dropdown_orden.value or "demanda"
@@ -235,11 +218,7 @@ class PantallaTopProductos(PantallaBase):
         self.ranking_actual = list(resultados)
         self._aplicar_ordenamiento()
 
-        self.on_actualizar_panel(
-            dataset="activo",
-            n_productos=len(self.motor.catalogo),
-            n_pedidos=len(self.motor.pedidos),
-            estrategia=self.motor.estrategia,
+        self._publicar_resultado(
             tiempo_ms=duracion_ms,
             resultado_negocio=f"Top-{k} calculado con {metodo.upper()} en {formatear_tiempo_ms(duracion_ms)}",
         )
@@ -280,22 +259,9 @@ class PantallaTopProductos(PantallaBase):
                                         width=35,
                                         alignment=alineacion_center(),
                                     ),
-                                    ft.Column(
-                                        controls=[
-                                            ft.Text(
-                                                prod.nombre,
-                                                size=13,
-                                                weight=ft.FontWeight.W_600,
-                                                color=COLOR_TEXTO_PRIMARIO,
-                                            ),
-                                            ft.Text(
-                                                f"#{prod.id} | {prod.categoria} | Stock: {prod.stock} Unidades",
-                                                size=11,
-                                                color=COLOR_TEXTO_MUTED,
-                                            ),
-                                        ],
-                                        expand=True,
-                                        spacing=1,
+                                    crear_columna_titulo_detalle(
+                                        prod.nombre,
+                                        f"#{prod.id} | {prod.categoria} | Stock: {prod.stock} Unidades",
                                     ),
                                     ft.Column(
                                         controls=[
