@@ -49,19 +49,22 @@ python -m benchmarks.perfilar_memoria
 
 ---
 
-## 4. Perfilado de Alto Nivel con Scalene (CPU, Memoria y Tiempo Nativo C)
+## 4. Perfilado de Alto Nivel con Scalene (CPU, Memoria, IPC y Tiempo Nativo C)
 
-Scalene es un profiler de alta precisión que discrimina el tiempo invertido en código Python puro, código nativo C y operaciones de memoria.
+Scalene es un profiler de alta precisión que discrimina el tiempo invertido en código Python puro, código nativo C, llamadas al sistema/IPC (Windows) y consumo de memoria.
 
-### Ejecución en consola (CLI)
+### Ejecución directa del benchmark oficial de Scalene
 ```powershell
-scalene --cli benchmarks/comparar.py
+python -m scalene run -o docs/mediciones/scalene/scalene_despues.json benchmarks/perfilar_scalene.py
 ```
 
-### Generación de reporte interactivo HTML
+### Generación de reporte interactivo HTML autónomo (standalone)
 ```powershell
-scalene --html --outfile docs/mediciones/scalene_reporte.html benchmarks/comparar.py
+python -m scalene view --standalone docs/mediciones/scalene/scalene_despues.json
 ```
+- **Reportes JSON generados:** `docs/mediciones/scalene/scalene_antes.json` y `docs/mediciones/scalene/scalene_despues.json`.
+- **Reportes interactivos HTML:** `docs/mediciones/scalene/scalene_antes.html` y `docs/mediciones/scalene/scalene_despues.html`.
+- **Métricas:** Desglose exacto de `% Python`, `% C`, `% Sistema (IPC)` y asignación de memoria pico por línea.
 
 ---
 
