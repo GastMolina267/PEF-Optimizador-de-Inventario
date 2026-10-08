@@ -14,6 +14,7 @@ Permite alternar dinámicamente entre:
 from __future__ import annotations
 
 from collections.abc import Sequence
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,13 @@ from src.ranking.top_productos import (
 )
 
 
+class EstrategiaMotor(str, Enum):
+    """Estrategia algorítmica de ejecución del motor de inventario."""
+
+    BASELINE = "baseline"
+    OPTIMIZADO = "optimizado"
+
+
 class MotorInventario:
     """Controlador central del dominio de inventario y pedidos."""
 
@@ -40,20 +48,24 @@ class MotorInventario:
         self,
         productos: Sequence[Producto] | None = None,
         pedidos: Sequence[Pedido] | None = None,
-        estrategia: str = "baseline",
+        estrategia: EstrategiaMotor | str = EstrategiaMotor.BASELINE,
     ) -> None:
         """Inicializa el motor con una estrategia ('baseline' u 'optimizado')."""
-        self._estrategia = estrategia.lower()
+        self._estrategia = (
+            estrategia.value if isinstance(estrategia, EstrategiaMotor) else estrategia.lower()
+        )
         self._pedidos: list[Pedido] = list(pedidos) if pedidos else []
         self._cache = GestorCacheConsultas()
 
         lista_inicial = list(productos) if productos else []
-        if self._estrategia == "optimizado":
-            self._catalogo = CatalogoHash(lista_inicial)
-        else:
-            self._catalogo = CatalogoLineal(lista_inicial)
-
+        self._catalogo = self._crear_catalogo(lista_inicial)
         self._buscador_alternativas = BuscadorAlternativas(self._catalogo.obtener_todos())
+
+    def _crear_catalogo(self, productos: Sequence[Producto]) -> CatalogoHash | CatalogoLineal:
+        """Instancia la estructura de catálogo correspondiente a la estrategia activa."""
+        if self._estrategia == EstrategiaMotor.OPTIMIZADO:
+            return CatalogoHash(productos)
+        return CatalogoLineal(productos)
 
     @property
     def estrategia(self) -> str:
@@ -63,7 +75,7 @@ class MotorInventario:
     @property
     def es_optimizado(self) -> bool:
         """Indica si la estrategia activa es la optimizada."""
-        return self._estrategia == "optimizado"
+        return self._estrategia == EstrategiaMotor.OPTIMIZADO
 
     @property
     def catalogo(self):
@@ -80,10 +92,14 @@ class MotorInventario:
         """Acceso al gestor de caché inteligente."""
         return self._cache
 
-    def cambiar_estrategia(self, nueva_estrategia: str) -> None:
+    def cambiar_estrategia(self, nueva_estrategia: EstrategiaMotor | str) -> None:
         """Permite alternar entre 'baseline' y 'optimizado' conservando los datos cargados."""
-        estrategia_norm = nueva_estrategia.lower().strip()
-        if estrategia_norm not in ("baseline", "optimizado"):
+        if isinstance(nueva_estrategia, EstrategiaMotor):
+            estrategia_norm = nueva_estrategia.value
+        else:
+            estrategia_norm = nueva_estrategia.lower().strip()
+
+        if estrategia_norm not in (EstrategiaMotor.BASELINE, EstrategiaMotor.OPTIMIZADO):
             raise ValueError(
                 f"Estrategia inválida: '{nueva_estrategia}'. Debe ser 'baseline' u 'optimizado'."
             )
@@ -93,11 +109,7 @@ class MotorInventario:
 
         self._estrategia = estrategia_norm
         todos_prods = self._catalogo.obtener_todos()
-
-        if self._estrategia == "optimizado":
-            self._catalogo = CatalogoHash(todos_prods)
-        else:
-            self._catalogo = CatalogoLineal(todos_prods)
+        self._catalogo = self._crear_catalogo(todos_prods)
 
         self._cache.invalidar_todo()
         self._buscador_alternativas = BuscadorAlternativas(todos_prods)
@@ -113,11 +125,7 @@ class MotorInventario:
         """Carga datos directamente desde secuencias en memoria."""
         self._pedidos = list(pedidos)
         lista_prods = list(productos)
-
-        if self._estrategia == "optimizado":
-            self._catalogo = CatalogoHash(lista_prods)
-        else:
-            self._catalogo = CatalogoLineal(lista_prods)
+        self._catalogo = self._crear_catalogo(lista_prods)
 
         self._cache.invalidar_todo()
         self._buscador_alternativas = BuscadorAlternativas(lista_prods)
