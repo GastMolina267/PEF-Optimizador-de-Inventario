@@ -181,26 +181,31 @@ class MotorInventario:
 
         return resultados
 
-    UMBRAL_PEDIDOS_CONCURRENTE: int = 500
-
     def procesar_pedidos(
         self,
         pedidos: Sequence[Pedido] | None = None,
-        concurrente: bool | None = None,
+        concurrente: bool = False,
         descontar_stock: bool = False,
         politica_descuento: str = "solo_cubiertos",
     ) -> ResumenProcesamiento:
-        """Procesa un lote de pedidos según la estrategia configurada."""
+        """Procesa un lote de pedidos según la estrategia configurada.
+
+        El procesamiento es secuencial salvo que se pida ``concurrente=True``. Evaluar un
+        pedido en memoria es un lookup O(1) por línea y cuesta menos que serializarlo
+        hacia un worker: con ``grande.json`` el pool tarda más del doble que el
+        secuencial aun con el pool ya creado (ver ``docs/mediciones/archivos_grandes.md``,
+        sección 3). Por eso el pool queda como opción explícita (switch de la UI y
+        comparativa de la oral).
+
+        Argumentos:
+            pedidos: Pedidos a procesar (por defecto, los cargados en el motor).
+            concurrente: Si es True, usa el ProcessPoolExecutor.
+            descontar_stock: Si es True, descuenta del catálogo lo asignado.
+            politica_descuento: ``solo_cubiertos`` o ``todo_lo_posible``.
+        """
         lote = pedidos if pedidos is not None else self._pedidos
 
-        # El overhead de IPC en Windows solo se amortiza en lotes grandes o pesados.
-        es_concurrente = (
-            concurrente
-            if concurrente is not None
-            else (self.es_optimizado and len(lote) >= self.UMBRAL_PEDIDOS_CONCURRENTE)
-        )
-
-        if es_concurrente:
+        if concurrente:
             resumen = procesar_pedidos_concurrente(
                 catalogo=self._catalogo,
                 pedidos=lote,
