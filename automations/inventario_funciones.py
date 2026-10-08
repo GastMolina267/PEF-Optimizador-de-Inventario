@@ -7,6 +7,7 @@ handlers de UI y tests salvo que contengan el algoritmo.
 
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -150,3 +151,16 @@ def resolver_raiz(desde: Path | None = None) -> Path:
         if (directorio / "docs" / "project-planning.md").is_file():
             return directorio
     return Path.cwd().resolve()
+
+
+def sha_corto(raiz: Path) -> str:
+    """Hash corto del commit actual (``git rev-parse --short HEAD``) o ``desconocido``."""
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=raiz,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "desconocido"

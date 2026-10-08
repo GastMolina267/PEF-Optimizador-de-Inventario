@@ -71,11 +71,7 @@ class PantallaComparacion(PantallaBase):
             on_change_callback=lambda _: self._aplicar_ordenamiento(),
         )
 
-        self.btn_sentido_orden = ft.IconButton(
-            icon=ft.Icons.ARROW_DOWNWARD_ROUNDED,
-            tooltip="Orden Descendente (Clic para alternar)",
-            on_click=lambda _: self._alternar_sentido_orden(),
-        )
+        self.btn_sentido_orden = self._crear_boton_sentido_orden()
 
         self.fila_kpis = ft.Row(spacing=0)
         self.col_tabla_comparativa = ft.ListView(spacing=8, expand=True, padding=12)
@@ -120,19 +116,6 @@ class PantallaComparacion(PantallaBase):
 
     def al_cambiar_estrategia_global(self, nueva_estrategia: str) -> None:
         pass
-
-    def _alternar_sentido_orden(self):
-        self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = (
-            ft.Icons.ARROW_UPWARD_ROUNDED
-            if self.orden_ascendente
-            else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        )
-        self.btn_sentido_orden.tooltip = (
-            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
-        )
-        actualizar_control(self.btn_sentido_orden)
-        self._aplicar_ordenamiento()
 
     def _aplicar_ordenamiento(self):
         if not self.filas_medidas:

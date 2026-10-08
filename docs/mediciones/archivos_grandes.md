@@ -1,56 +1,59 @@
-# Medición de Archivos Grandes: Streaming, Buffering y Paralelismo (Fase F5)
+# Archivos grandes: streaming, buffering y paralelismo
 
-Este documento documenta las mediciones de rendimiento de la **Fase F5** (Programación Eficiente - Segundo Parcial), demostrando el comportamiento de la arquitectura de streaming, el buffering explícito de I/O y el procesamiento paralelo por lotes (chunking) frente a archivos masivos en formato JSON Lines (`.jsonl`).
+Generado por `python -m benchmarks.perfilar_archivos_grandes`. No editar a mano: volver
+a correr el script para actualizar los números.
 
----
+## Entorno y datos
 
-## 1. Contexto y Parámetros del Experimento
+- **Sistema:** Linux 6.18.44-fc-v80 · Python 3.13.16 · 2 núcleos lógicos · 2 workers.
+- **Archivos generados** (semilla 42, en `data/generados/`, fuera de git):
+  `productos.jsonl` con 5,000 productos (0.66 MB) y
+  `pedidos.jsonl` con 200,000 pedidos (20.96 MB).
+- **Metodología:** cada tiempo es la mediana de 5 corridas con el pool ya
+  creado. Tiempo y memoria se miden en corridas separadas, porque `tracemalloc` frena al
+  proceso principal pero no a los workers y eso inflaba el speedup del paralelo. La memoria
+  es el pico del proceso principal (no incluye los workers).
 
-- **Entorno:** Python en Windows (Arquitectura multicore).
-- **Archivos de prueba generados:**
-  - `productos.jsonl`: **5,000** productos (0.66 MB).
-  - `pedidos.jsonl`: **25,000** pedidos (2.63 MB).
-- **Generación determinista:** Semilla fija (`seed=42`) sin trackeo en Git (`data/generados/` ignorado por `.gitignore`).
+## 1. Lectura: carga completa vs streaming
 
----
+| Estrategia | Tiempo (ms) | Pico de memoria (MB) |
+|---|---:|---:|
+| Carga completa (`json.loads` de todas las líneas a una lista) | 849.5 | 195.59 |
+| Streaming (`leer_pedidos_streaming_jsonl`) | 696.5 | 1.02 |
 
-## 2. Experimento 1: Monolítico en Memoria vs. Streaming Línea por Línea
+El streaming usa un **99.5 % menos de memoria pico**: la memoria depende del tamaño de una línea, no del tamaño del archivo. Además fue más rápido, porque no tiene que hacer crecer una lista gigante.
 
-Se evaluó el consumo de memoria RAM pico y tiempo de lectura comparando la carga monolítica tradicional (`json.load` acumulando estructuras en listas de objetos) contra el generador lazy en streaming (`leer_pedidos_streaming_jsonl`).
+## 2. Procesamiento por lotes: secuencial vs paralelo
 
-| Estrategia | Tiempo de Lectura | Memoria Pico (RAM) | Memoria Final Retenida | Comportamiento |
-|---|---|---|---|---|
-| **Monolítico (`json.load`)** | 258.3 ms | 24.65 MB | 24.52 MB | $O(N)$ lineal con el tamaño del archivo |
-| **Streaming (`.jsonl` lazy)** | 369.6 ms | 1.03 MB | 0.00 MB | $O(1)$ constante (buffer acotado) |
+Cada lote se parsea, valida y evalúa con la misma función en ambas versiones. La versión
+paralela manda el stock una sola vez por worker (initializer) y mantiene como máximo dos
+lotes en vuelo por worker, así que su memoria no crece con el archivo.
 
-> **Hallazgo:** El generador de streaming logra un **ahorro de memoria pico del 95.8%**, garantizando que el sistema pueda procesar archivos de escala arbitraria sin agotar la memoria física del equipo.
+| Lote (líneas) | Secuencial (ms) | Paralelo (ms) | Speedup | Pico secuencial (MB) | Pico paralelo (MB) |
+|---:|---:|---:|---:|---:|---:|
+| 1,000 | 827.8 | 686.9 | **1.21×** | 1.68 | 3.05 |
+| 5,000 | 995.5 | 654.2 | **1.52×** | 3.93 | 8.36 |
+| 20,000 | 869.5 | 769.8 | **1.13×** | 12.03 | 30.41 |
+| 50,000 | 987.6 | 775.5 | **1.27×** | 28.19 | 86.05 |
 
----
+El paralelo superó al secuencial con lotes de 1,000, 5,000, 20,000, 50,000 líneas. El mejor resultado fue **1.52×** con lotes de 5,000. Con 2 workers el máximo teórico es 2×. La memoria del proceso principal crece con el tamaño de lote (hay hasta dos lotes por worker en vuelo), no con el tamaño del archivo.
 
-## 3. Experimento 2: Barrido de Tamaños de Lote (Break-Even Secuencial vs. Paralelo)
+## 3. Pedidos ya cargados en memoria (`grande.json`)
 
-Cada worker de proceso independiente deserializa, valida la existencia de IDs y evalúa la cobertura de demanda. Se varió el tamaño de lote ($B$) para determinar el punto óptimo donde el cómputo CPU supera el costo de serialización/IPC de Windows.
+| Pedidos | Secuencial (ms) | Pool de procesos (ms) | Speedup |
+|---:|---:|---:|---:|
+| 2,000 | 5.2 | 14.0 | **0.37×** |
 
-| Tamaño de Lote ($B$) | Secuencial (Tiempo) | Secuencial (Pico RAM) | Paralelo (Tiempo) | Paralelo (Pico RAM) | Speedup ($T_{sec} / T_{par}$) |
-|---|---|---|---|---|---|
-| 1,000 | 359.1 ms | 2.04 MB | 360.7 ms | 13.03 MB | **1.00×** |
-| 5,000 | 402.9 ms | 6.02 MB | 103.3 ms | 13.75 MB | **3.90×** |
-| 10,000 | 411.0 ms | 11.01 MB | 123.3 ms | 14.96 MB | **3.33×** |
-| 25,000 | 1020.6 ms | 15.38 MB | 570.2 ms | 20.47 MB | **1.79×** |
+Evaluar un pedido en memoria es un lookup O(1) por línea, más barato que serializarlo hacia
+un worker. Por eso `MotorInventario.procesar_pedidos` es secuencial por defecto y el pool
+queda como opción explícita. Con archivos (sección 2) el balance cambia porque cada worker
+además parsea y valida JSON.
 
-### Conclusiones del Paralelismo:
-1. **Compensación del IPC:** A diferencia de la evaluación individual sobre objetos preexistentes en memoria (donde el IPC no compensaba por la simplicidad de la búsqueda $O(1)$), en archivos `.jsonl` el lote incluye **parsing JSON**, **validación de integridad** y **evaluación algorítmica**.
-2. **Break-Even:** A partir de lotes de **5.000 pedidos**, el paralelismo supera consistentemente a la versión secuencial con un **speedup mayor a 1.0×**, alcanzando su mejor desempeño en lotes entre **5.000 y 10.000 pedidos**.
-3. **Control de Memoria:** El uso de tuplas compactas para devolver resultados y el despacho mediante generadores asegura que la memoria de ambos enfoques se mantenga contenida durante todo el ciclo.
+## 4. Exportación a CSV con buffer
 
----
+| Buffer | Tiempo (ms) |
+|---|---:|
+| Por defecto de Python | 52.4 |
+| Explícito de 1 MB | 48.9 |
 
-## 4. Experimento 3: Exportación con Buffering Explícito (1 MB) a CSV
-
-Se evaluó la exportación del reporte consolidado de picking hacia CSV (`exportar_picking_csv_con_buffer`):
-- **Registros consolidados exportados:** 3,190 filas.
-- **Tamaño del archivo:** 268.0 KB.
-- **Tiempo de serialización y escritura con buffer de 1 MB:** 252.72 ms.
-- **Pico de memoria asignada:** 1.15 MB.
-
-El buffer de 1 MB (`1 << 20 bytes`) minimiza las llamadas al sistema operativo (`write()` syscalls), agrupando los bytes en memoria antes de transferirlos al disco.
+Se exportaron 5,000 filas (434.9 KB). El buffer de 1 MB fue un 7 % más rápido: agrupa las escrituras en menos llamadas al sistema operativo.

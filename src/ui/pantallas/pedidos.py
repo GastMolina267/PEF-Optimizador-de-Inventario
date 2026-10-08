@@ -29,6 +29,8 @@ from src.ui.tema import (
     crear_dropdown,
     crear_encabezado,
     crear_tarjeta_kpi,
+    crear_texto_id_producto,
+    crear_texto_nombre_producto,
     crear_titulo_seccion,
     envolver_lista,
     envolver_metricas,
@@ -92,11 +94,7 @@ class PantallaPedidos(PantallaBase):
             on_change_callback=lambda _: self._aplicar_ordenamiento(),
         )
 
-        self.btn_sentido_orden = ft.IconButton(
-            icon=ft.Icons.ARROW_UPWARD_ROUNDED,
-            tooltip="Orden Ascendente (Clic para alternar a Descendente)",
-            on_click=lambda _: self._alternar_sentido_orden(),
-        )
+        self.btn_sentido_orden = self._crear_boton_sentido_orden()
 
         # Controles de paginación
         self.txt_info_pagina = ft.Text("Página 1", size=12, color=COLOR_TEXTO_MUTED)
@@ -176,19 +174,6 @@ class PantallaPedidos(PantallaBase):
     def al_cambiar_estrategia_global(self, nueva_estrategia: str) -> None:
         """Optimizado acelera con catálogo hash O(1). ProcessPool es opt-in (IPC)."""
         actualizar_control(self.switch_concurrente)
-
-    def _alternar_sentido_orden(self):
-        self.orden_ascendente = not self.orden_ascendente
-        self.btn_sentido_orden.icon = (
-            ft.Icons.ARROW_UPWARD_ROUNDED
-            if self.orden_ascendente
-            else ft.Icons.ARROW_DOWNWARD_ROUNDED
-        )
-        self.btn_sentido_orden.tooltip = (
-            "Orden Ascendente" if self.orden_ascendente else "Orden Descendente"
-        )
-        actualizar_control(self.btn_sentido_orden)
-        self._aplicar_ordenamiento()
 
     def _actualizar_kpis_iniciales(self):
         total_peds = len(self.motor.pedidos)
@@ -321,16 +306,8 @@ class PantallaPedidos(PantallaBase):
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Text(
-                                    f"#{linea.id_producto}",
-                                    size=12,
-                                    color=COLOR_PRIMARIO,
-                                    weight=ft.FontWeight.BOLD,
-                                    width=50,
-                                ),
-                                ft.Text(
-                                    nombre_p, size=13, color=COLOR_TEXTO_PRIMARIO, expand=True
-                                ),
+                                crear_texto_id_producto(linea.id_producto),
+                                crear_texto_nombre_producto(nombre_p),
                                 ft.Text(
                                     f"Pedido: {linea.cantidad} Unidades",
                                     size=12,
@@ -628,11 +605,7 @@ class PantallaPedidos(PantallaBase):
                 modo_txt = "Secuencial con hash O(1)"
             else:
                 modo_txt = "Secuencial con lista O(n)"
-            self.on_actualizar_panel(
-                dataset="activo",
-                n_productos=len(self.motor.catalogo),
-                n_pedidos=len(self.motor.pedidos),
-                estrategia=self.motor.estrategia,
+            self._publicar_resultado(
                 tiempo_ms=resumen.tiempo_ejecucion_ms,
                 resultado_negocio=f"Lote ({modo_txt}): {resumen.pedidos_cubiertos} cubiertos, {resumen.pedidos_parciales} parciales",
             )
