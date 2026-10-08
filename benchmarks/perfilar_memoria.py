@@ -82,7 +82,7 @@ def analizar_huella_memoizacion(productos) -> dict[str, float]:
     buscador = BuscadorAlternativas(productos)
 
     # Búsqueda pura recursiva
-    _, peak_puro, r_puro = medir_pico_tracemalloc(
+    _, peak_puro, _ = medir_pico_tracemalloc(
         buscador.buscar_alternativas,
         cat_ejemplo,
         35000.0,
