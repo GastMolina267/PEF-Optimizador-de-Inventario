@@ -46,8 +46,19 @@ def limpiar_directorios() -> None:
             spec_file.unlink()
 
 
+# Modo de empaquetado -> flag de PyInstaller. El comando solo recibe valores de esta
+# tabla, nunca el texto que llega por línea de comandos.
+FLAGS_MODO = {"onedir": "--onedir", "onefile": "--onefile"}
+
+
 def construir_comando(mode: str, debug: bool) -> list[str]:
-    """Genera la lista de argumentos para ejecutar PyInstaller."""
+    """Genera la lista de argumentos para ejecutar PyInstaller.
+
+    Lanza:
+        ValueError: Si ``mode`` no es ``onedir`` ni ``onefile``.
+    """
+    if mode not in FLAGS_MODO:
+        raise ValueError(f"Modo de empaquetado inválido: {mode!r}")
     sep = ";" if sys.platform.startswith("win") else ":"
 
     cmd = [
@@ -57,7 +68,7 @@ def construir_comando(mode: str, debug: bool) -> list[str]:
         "--noconfirm",
         "--name",
         APP_NAME,
-        f"--{mode}",
+        FLAGS_MODO[mode],
     ]
 
     # Modo sin consola en producción a menos que se active debug
@@ -117,7 +128,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--mode",
-        choices=["onedir", "onefile"],
+        choices=sorted(FLAGS_MODO),
         default="onedir",
         help="Modo de empaquetado: 'onedir' (recomendado) o 'onefile'.",
     )

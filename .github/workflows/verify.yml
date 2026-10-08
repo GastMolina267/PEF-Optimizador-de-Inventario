@@ -15,6 +15,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # uv usa el Python que instala actions/setup-python (no descarga otro).
+  UV_PYTHON_PREFERENCE: only-system
+
 jobs:
   # =========================================================================
   # 1. Chequeo de Sintaxis y Análisis Estático
@@ -30,28 +34,28 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-          cache: "pip"
 
-      - name: Instalar herramientas de análisis
-        run: |
-          python -m pip install --upgrade pip
-          pip install "ruff==0.16.10" "complexipy==8.0.1"
+      - name: Instalar uv (dependencias fijadas en uv.lock)
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Instalar dependencias desde uv.lock (sin compilar paquetes desde fuente)
+        run: uv sync --locked --no-build --extra dev
 
       - name: Compilación de sintaxis bytecode (Zero Syntax Errors)
-        run: |
-          python -m compileall -q src automations benchmarks tests scripts main.py
+        run: uv run --no-sync python -m compileall -q src automations benchmarks tests scripts main.py
 
-      - name: Análisis estático con Ruff (PEP 8, imports, nombres, bugbear)
-        run: |
-          ruff check .
+      - name: Análisis estático con Ruff (PEP 8, imports, nombres, docstrings, complejidad)
+        run: uv run --no-sync ruff check .
 
       - name: Formato con Ruff (sin cambios pendientes)
-        run: |
-          ruff format --check .
+        run: uv run --no-sync ruff format --check .
 
       - name: Complejidad cognitiva ≤ 15 por función (mismo umbral que SonarQube)
-        run: |
-          complexipy src automations benchmarks scripts main.py --max-complexity-allowed 15 --failed
+        run: >-
+          uv run --no-sync complexipy src automations benchmarks scripts main.py
+          --max-complexity-allowed 15 --failed
 
   # =========================================================================
   # 2. Matriz de Pruebas Unitarias y Cobertura (Linux & Windows)
@@ -74,17 +78,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
 
-      - name: Instalar dependencias
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+      - name: Instalar uv (dependencias fijadas en uv.lock)
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Instalar dependencias desde uv.lock (sin compilar paquetes desde fuente)
+        run: uv sync --locked --no-build --extra dev
 
       - name: Ejecutar suite de pruebas con cobertura (Pytest)
-        run: |
-          python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+        run: uv run --no-sync python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
 
       # Lo consume el job de SonarQube. Antes la condición pedía Python 3.11,
       # que no está en la matriz, y el reporte nunca se subía.
@@ -111,21 +115,21 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-          cache: "pip"
 
-      - name: Instalar dependencias del proyecto
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+      - name: Instalar uv (dependencias fijadas en uv.lock)
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Instalar dependencias desde uv.lock (sin compilar paquetes desde fuente)
+        run: uv sync --locked --no-build --extra dev
 
       - name: Ejecutar motor de análisis AST de complejidad
-        run: |
-          python -m automations.ejecutar
+        run: uv run --no-sync python -m automations.ejecutar
 
       - name: Validar integridad de datasets JSON
         run: |
-          python -c "
+          uv run --no-sync python -c "
           import sys
           if hasattr(sys.stdout, 'reconfigure'):
               sys.stdout.reconfigure(encoding='utf-8')
@@ -194,10 +198,13 @@ jobs:
         with:
           name: coverage-report
 
-      - name: Generar reporte de Ruff para SonarQube
-        run: |
-          pip install "ruff==0.16.10"
-          ruff check . --output-format=json --output-file=ruff-report.json --exit-zero
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Generar reporte de Ruff para SonarQube (versión de uv.lock)
+        run: >-
+          uv run --locked --no-build --extra dev ruff check .
+          --output-format=json --output-file=ruff-report.json --exit-zero
 
       - name: Aviso si falta el token
         if: env.SONAR_TOKEN == ''
@@ -206,4 +213,4 @@ jobs:
 
       - name: Análisis SonarQube Cloud
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@v8.3.0
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0

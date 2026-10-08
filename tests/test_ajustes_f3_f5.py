@@ -358,7 +358,7 @@ def test_conclusiones_del_benchmark_salen_de_los_datos():
 
 
 def test_resumir_scalene_rechaza_rutas_fuera_del_proyecto(tmp_path: Path):
-    from benchmarks.resumir_scalene import ruta_en_proyecto
+    from benchmarks.rutas import ruta_en_proyecto
 
     assert ruta_en_proyecto(Path("docs/mediciones/scalene/resumen.md")).is_relative_to(BASE_DIR)
     with pytest.raises(ValueError, match="fuera del proyecto"):

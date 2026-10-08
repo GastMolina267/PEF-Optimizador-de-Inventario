@@ -14,6 +14,7 @@ import argparse
 import random
 from pathlib import Path
 
+from benchmarks.rutas import ruta_en_proyecto
 from src.datos.cargador import guardar_dataset_json
 from src.modelos.pedido import LineaPedido, Pedido
 from src.modelos.producto import Producto
@@ -335,14 +336,18 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    print(f"Generando datasets estándar en '{args.salida}' con semilla={args.semilla}...")
-    generar_todos_los_datasets(args.salida, args.semilla)
+    try:
+        destino = ruta_en_proyecto(args.salida)
+    except ValueError as error:
+        parser.error(str(error))
+    print(f"Generando datasets estándar en '{destino}' con semilla={args.semilla}...")
+    generar_todos_los_datasets(destino, args.semilla)
 
     if args.incluir_masivo:
         print("Generando dataset masivo.json (100k productos / 10k pedidos)...")
         prods_m, peds_m = generar_dataset_sintetico(100000, 10000, semilla=args.semilla)
         guardar_dataset_json(
-            Path(args.salida) / "masivo.json",
+            destino / "masivo.json",
             prods_m,
             peds_m,
             {

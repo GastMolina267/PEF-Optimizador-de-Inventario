@@ -18,6 +18,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from benchmarks.rutas import ruta_en_proyecto
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 SCALENE_DIR = BASE_DIR / "docs" / "mediciones" / "scalene"
 CARPETAS_PROYECTO = ("/src/", "/benchmarks/")
@@ -55,21 +57,6 @@ def _ruta_relativa(archivo: str) -> str:
         if carpeta in normalizado:
             return carpeta.strip("/") + "/" + normalizado.split(carpeta, 1)[1]
     return normalizado.rsplit("/", 1)[-1]
-
-
-def ruta_en_proyecto(ruta: Path) -> Path:
-    """Resuelve ``ruta`` y exige que quede dentro del repositorio.
-
-    Los argumentos de línea de comandos no deben poder leer ni escribir archivos fuera
-    del proyecto (por ejemplo, con ``../../``).
-
-    Lanza:
-        ValueError: Si la ruta resuelta queda fuera del repositorio.
-    """
-    absoluta = (ruta if ruta.is_absolute() else BASE_DIR / ruta).resolve()
-    if not absoluta.is_relative_to(BASE_DIR.resolve()):
-        raise ValueError(f"La ruta {ruta} queda fuera del proyecto")
-    return absoluta
 
 
 def cargar_perfil(ruta: Path) -> Perfil:
