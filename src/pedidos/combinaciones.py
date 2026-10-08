@@ -4,6 +4,7 @@ Permite sugerir productos sustitutos cuando un producto de un pedido no tiene st
 respetando la misma categoría y un presupuesto máximo asignado.
 
 Compara:
+
 - Búsqueda recursiva exhaustiva sin memoización: O(2^N) en el peor caso (árbol combinatorio).
 - Búsqueda con Programación Dinámica y Memoización: O(N * P), donde N es la cantidad de candidatos
   y P es el presupuesto discretizado.

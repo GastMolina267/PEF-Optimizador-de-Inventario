@@ -8,3 +8,6 @@ pyinstaller>=6.4.0
 build>=1.1.0
 ruff>=0.4.0
 complexipy>=5.0
+sphinx>=8.0.0
+furo>=2024.8.6
+myst-parser>=4.0.0

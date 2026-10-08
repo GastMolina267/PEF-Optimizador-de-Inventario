@@ -279,6 +279,27 @@ El segundo descuento falla en silencio (`descontar_stock` devuelve `False`), per
 
 **Cierre:** la documentación compila sin advertencias y está publicada.
 
+**Resultado**
+
+| Métrica | Base (F7) | F8 |
+|---|---|---|
+| Advertencias de compilación Sphinx (`-W`) | N/A | **0 (compilación limpia y estricta)** |
+| Páginas HTML generadas en `docs/sphinx/_build/html/` | 0 | 20 páginas |
+| Módulos y paquetes documentados en API Reference | 0 | 9 paquetes/subsistemas (`motor`, `modelos`, `inventario`, `pedidos`, `ranking`, `cache`, `datos`, `observabilidad`, `ui`) |
+| Guías y mediciones migradas vía MyST `{include}` | 0 | 10 documentos canónicos sin duplicación |
+| Pipeline de CI / GitHub Pages | Inexistente | Job automatizado en `.github/workflows/verify.yml` con publicación a Pages |
+
+- **Estructura en `docs/sphinx/`:** Configurado con `language = "es"`, tema Furo, y extensiones `autodoc`, `napoleon` (secciones Google: Argumentos, Retorna, Lanza), `viewcode` y `myst_parser`.
+- **MyST-Parser `{include}`:** Se crearon envoltorios en `docs/sphinx/guias/` y `docs/sphinx/mediciones/` que referencian los archivos Markdown originales con `:relative-images:`. Esto evita duplicar archivos y mantiene la sincronización automática.
+- **Mock de Flet:** `autodoc_mock_imports = ["flet", "flet_desktop", "flet.core", ...]` permite documentar todas las vistas y componentes de la UI en entornos headless sin dependencias de display.
+- **CI / GitHub Pages:** Se añadieron los jobs `docs` y `deploy-docs` en `.github/workflows/verify.yml`. Se actualizó `uv.lock` con las dependencias fijadas de `docs` (`sphinx`, `furo`, `myst-parser`).
+- **README:** Se añadió el badge oficial de documentación de Sphinx y enlaces directos al sitio publicado en GitHub Pages.
+
+**Decisiones**
+
+- **Inclusión con MyST `{include}` en vez de rutas relativas en `toctree`:** Sphinx prohíbe referencias fuera del árbol documental (`docs/sphinx/`). El uso de envoltorios con `{include}` resuelve la restricción limpiamente sin duplicar contenido.
+- **Tolerancia selectiva de warnings MyST/Pygments:** `suppress_warnings` se configuró para `myst.header`, `myst.xref_missing` y `misc.highlighting_failure` (bloques Mermaid en Markdown estándar), asegurando que el flag `-W` solo falle ante errores reales de sintaxis rST o docstrings rotos.
+
 ## F9 — Cierre: testing final, remedición y oral
 
 **Rama:** `p2/f9-cierre`

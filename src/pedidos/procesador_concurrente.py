@@ -5,6 +5,7 @@ Justificación técnica y propuesta Origin 1 (reducir el overhead de IPC):
 1. Qué se paraleliza: la evaluación de factibilidad de pedidos independientes contra
    una foto del stock. Es trabajo CPU-bound, por eso se usan procesos y no hilos (GIL).
 2. Menos datos por el canal IPC:
+
    - Los pedidos viajan como tuplas de enteros, no como dataclasses.
    - Cada fragmento lleva solo el stock de los productos que referencia, no el
      catálogo completo. Con 10.000 productos y fragmentos de 500 pedidos, el payload

@@ -1,6 +1,7 @@
 # Optimizador de Inventario y Pedidos
 
 [![CI](https://github.com/GastMolina267/PEF-Optimizador-de-Inventario/actions/workflows/verify.yml/badge.svg)](https://github.com/GastMolina267/PEF-Optimizador-de-Inventario/actions/workflows/verify.yml)
+[![Documentación](https://img.shields.io/badge/docs-Sphinx%20%7C%20Furo-blue.svg)](https://gastmolina267.github.io/PEF-Optimizador-de-Inventario/)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
 [![Mantenibilidad](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
 [![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=coverage)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
@@ -13,6 +14,7 @@
 > [!TIP]
 > **Recursos Clave para la Defensa Oral:**
 > - 🖥️ **Presentación Interactiva (HTML + JSON + CSS):** [docs/presentation/index.html](docs/presentation/index.html)
+> - 📚 **Documentación Técnica Completa (Sphinx + Furo):** [gastmolina267.github.io/PEF-Optimizador-de-Inventario](https://gastmolina267.github.io/PEF-Optimizador-de-Inventario/)
 > - 📖 **Guía Canónica de Flujo de la Aplicación:** [docs/app-flow-explanation.md](docs/app-flow-explanation.md)
 > - 📊 **Enunciado y Rúbrica Oficial de Cátedra:** [docs/option-six-to-be-implemented.txt](docs/option-six-to-be-implemented.txt)
 
@@ -428,4 +430,30 @@ python scripts/compile.py --dry-run
 ```
 
 El binario compilado resultante se generará en la carpeta `dist/OptimizadorInventario/`.
+
+---
+
+## 15. Documentación Técnica del Proyecto (Sphinx)
+
+La documentación técnica del proyecto se genera automáticamente utilizando **Sphinx** con el tema **Furo**, soporte para docstrings estilo Google con **Napoleon** (secciones en español: *Argumentos*, *Retorna*, *Lanza*) y parseo de Markdown con **MyST-Parser**.
+
+### Construcción local
+
+```bash
+# 1. Instalar dependencias de desarrollo y documentación
+pip install -r requirements-dev.txt
+# o alternativamente con uv:
+# uv sync --extra docs
+
+# 2. Compilar la documentación en formato HTML (cero advertencias con -W)
+sphinx-build -W -b html docs/sphinx docs/sphinx/_build/html
+```
+
+Una vez compilada, abrir `docs/sphinx/_build/html/index.html` en el navegador.
+
+### Despliegue en GitHub Pages
+
+El pipeline de CI en `.github/workflows/verify.yml` compila la documentación con `-W` (las advertencias cortan el build) y publica automáticamente los artefactos en **GitHub Pages** en cada push a las ramas principales (`main` y `parcial-2`). La versión publicada se encuentra disponible en:
+👉 **[gastmolina267.github.io/PEF-Optimizador-de-Inventario](https://gastmolina267.github.io/PEF-Optimizador-de-Inventario/)**
+
 

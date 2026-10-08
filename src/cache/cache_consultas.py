@@ -1,6 +1,7 @@
 """Módulo de Caching Inteligente con desalojo LRU e invalidación reactiva.
 
 Diferenciación conceptual clave frente a la memoización:
+
 - Memoización: Guarda subestados algorítmicos dentro de una función pura (DP en combinaciones).
 - Caching Inteligente: Capa de persistencia en memoria para consultas repetitivas de lectura
   (búsquedas por texto, por categoría y rankings Top-N), con desalojo acotado (LRU) e

@@ -1,6 +1,7 @@
 """Módulo para el cálculo de productos más solicitados (Top-N).
 
 Permite comparar:
+
 - Algoritmo baseline: ordenamiento total de frecuencias O(N log N).
 - Algoritmo optimizado: montículo binario (Heap) con heapq.nlargest O(N log k).
 """
@@ -23,6 +24,7 @@ def calcular_top_solicitados_lineal(
     """Calcula los k productos más solicitados utilizando ordenamiento total (Baseline).
 
     Estrategia algorítmica:
+
     1. Agrega las cantidades demandadas de cada producto en un mapa de frecuencias.
     2. Ordena la totalidad de los pares (id_producto, frecuencia) en O(N log N).
     3. Corta los primeros k elementos.
@@ -66,12 +68,14 @@ def calcular_top_solicitados_heap(
     """Calcula los k productos más solicitados utilizando un Min/Max Heap (Optimizado).
 
     Estrategia algorítmica:
+
     1. Agrega las cantidades demandadas en un mapa hash O(1).
     2. Utiliza heapq.nlargest para mantener un montículo acotado de tamaño k.
        Para cada uno de los N elementos, la inserción/reemplazo en el heap cuesta O(log k).
     3. Resuelve los objetos Producto contra el catálogo (en O(1) si es CatalogoHash).
 
     Complejidad temporal: O(L + N log k + k * T_busqueda).
+
     Ventaja: Cuando k << N, O(N log k) reduce drásticamente las comparaciones
     frente a O(N log N) y solo almacena k elementos en la estructura de selección.
     """

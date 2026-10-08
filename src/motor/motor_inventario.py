@@ -4,6 +4,7 @@ Provee la interfaz común de alto nivel que consumen la interfaz gráfica Flet,
 los scripts de benchmarking y los tests automatizados.
 
 Permite alternar dinámicamente entre:
+
 - Estrategia 'baseline': Catálogo lineal O(n), ordenamiento completo O(n log n),
   procesamiento secuencial y búsqueda de combinaciones puramente recursiva sin caché.
 - Estrategia 'optimizado': Catálogo hash O(1), min/max heaps O(n log k),

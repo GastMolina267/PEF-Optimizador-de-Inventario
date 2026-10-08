@@ -31,9 +31,10 @@ mprofile_*.dat
 coverage.xml
 ruff-report.json
 
-# Compilación y Empaquetado (PyInstaller, Build, Wheels)
+# Compilación y Empaquetado (PyInstaller, Build, Wheels, Sphinx)
 build/
 dist/
+docs/sphinx/_build/
 *.spec
 *.egg-info/
 *.egg
