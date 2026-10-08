@@ -342,147 +342,171 @@ def analisis_estatico_si_faltan_informes(raiz: Path) -> list[str]:
     return avisos
 
 
+@dataclass(frozen=True)
+class _Evidencia:
+    """Hotspots y datos derivados que usan las reglas de propuestas."""
+
+    hotspots: list[EntradaPerfil]
+    textos: str
+    speedups_bajos: list[EntradaPerfil]
+
+    @classmethod
+    def desde(cls, hotspots: list[EntradaPerfil]) -> _Evidencia:
+        return cls(
+            hotspots=hotspots,
+            textos=" ".join(f"{h.simbolo} {h.detalle}" for h in hotspots),
+            speedups_bajos=[
+                h for h in hotspots if h.origen == "tabla_comparativa" and h.valor < 1.0
+            ],
+        )
+
+
+def _propuesta_ipc(ev: _Evidencia) -> PropuestaMejora | None:
+    prep = [h for h in ev.speedups_bajos if "Preparación" in h.simbolo]
+    hay_ipc = any(token in ev.textos for token in ("CreateProcess", "WaitForSingleObject"))
+    if not (hay_ipc or "pickle" in ev.textos.lower() or prep):
+        return None
+    prep_grande = next((h for h in prep if "grande.json" in h.simbolo), None)
+    detalle_tabla = ""
+    if prep_grande:
+        detalle_tabla = (
+            f" Tras aislar CatalogoHash, `{prep_grande.simbolo}` sigue en "
+            f"speedup {prep_grande.valor:.2f}× ({prep_grande.detalle}). "
+            "El 1.95× previo mezclaba búsqueda O(n) con el pool."
+        )
+    elif prep:
+        detalle_tabla = " " + "; ".join(f"{h.simbolo} {h.valor:.2f}×" for h in prep[:4])
+    return PropuestaMejora(
+        titulo="Reducir el overhead de IPC del pool de procesos",
+        hotspot="`_winapi.CreateProcess` / `WaitForSingleObject` / `pickle.dumps` "
+        "dominan tottime en cProfile; la tabla aislada muestra speedup < 1× "
+        "incluso en `grande.json`.",
+        evidencia="docs/mediciones/cprofile_resumen.txt (CreateProcess 0.364 s / 0.167 s) "
+        "y docs/mediciones/tabla_comparativa.md (fila Preparación, mismo CatalogoHash)."
+        + detalle_tabla,
+        alternativa="1) Por defecto procesar en secuencial. 2) Activar ProcessPool "
+        "solo si el trabajo por pedido es pesado (p. ej. DP de combinaciones) o "
+        "P es claramente mayor a 2.000. El umbral «P < 200» queda corto: con "
+        "catálogo O(1), 2.000 pedidos (~21 ms) no cubren el IPC. 3) Pool "
+        "persistente o `shared_memory` si se insiste en paralelizar.",
+        trade_off="Menos latencia de arranque a costa de más ramas de código. "
+        "En la oral conviene mostrar este negativo: no toda concurrencia escala.",
+        ya_cubierta=False,
+        prioridad="alta",
+    )
+
+
+def _propuesta_catalogo_lineal(ev: _Evidencia) -> PropuestaMejora | None:
+    if not any("CatalogoLineal.buscar_por_id" in h.simbolo for h in ev.hotspots):
+        return None
+    return PropuestaMejora(
+        titulo="No usar el catálogo lineal fuera del desafío experimental",
+        hotspot="`CatalogoLineal.buscar_por_id`: el `for` sobre `self._productos` "
+        "concentra ~99.7 % del tiempo de la función (line_profiler, 197 850 hits).",
+        evidencia="docs/mediciones/line_profiler_resumen.txt",
+        alternativa="En producción/demo dejar `estrategia='optimizado'`. Conservar "
+        "el lineal solo como baseline medible. Si se necesita un modo mixto, "
+        "cachear el último `buscar_por_id` con el LRU ya existente.",
+        trade_off="El baseline debe seguir existiendo para la rúbrica; no "
+        "borrarlo. La caché no cambia la cota O(n) de la primera consulta.",
+        ya_cubierta=True,
+        prioridad="media",
+    )
+
+
+def _propuesta_escala(ev: _Evidencia) -> PropuestaMejora | None:
+    speedups_bajos = ev.speedups_bajos
+    if not speedups_bajos:
+        return None
+    ejemplos = ", ".join(h.simbolo for h in speedups_bajos[:6])
+    muestras = "; ".join(f"{h.simbolo} {h.valor:.2f}× ({h.detalle})" for h in speedups_bajos[:4])
+    return PropuestaMejora(
+        titulo="No pagar concurrencia ni heap en escalas donde no ganan",
+        hotspot=f"Speedup < 1× en: {ejemplos}",
+        evidencia="docs/mediciones/tabla_comparativa.md — " + muestras,
+        alternativa="Selector automático: heap solo si N > 50 o k/N < 0.1; "
+        "pool de procesos solo si el trabajo por pedido no es un lookup O(1). "
+        "Documentar el umbral real (hoy el pool pierde hasta grande.json) en la oral.",
+        trade_off="Más ramas de código frente a una regla simple "
+        "(optimizado siempre). La claridad de la demo oral puede sufrir si "
+        "el selector oculta el contraste.",
+        ya_cubierta=False,
+        prioridad="alta",
+    )
+
+
+def _menciona_indice(h: EntradaPerfil) -> bool:
+    detalle = h.detalle.lower()
+    return "Hash" in h.simbolo or "índice" in detalle or "indice" in detalle
+
+
+def _propuesta_indice_invertido(ev: _Evidencia) -> PropuestaMejora | None:
+    if not any(_menciona_indice(h) for h in ev.hotspots if h.origen == "memory_profiler"):
+        return None
+    return PropuestaMejora(
+        titulo="Compactar el índice invertido en catálogos masivos",
+        hotspot="Catálogo hash en grande.json: pico ~5 MB frente a ~84 KB del lineal.",
+        evidencia="docs/mediciones/memoria_resumen.txt y columna Memoria Opt de la tabla.",
+        alternativa="Almacenar posting lists como arrays de ids (`array('I')`) "
+        "en lugar de `set[int]`; o un trie/prefijo si las búsquedas son por "
+        "comienzo de palabra. Para 100k SKUs evaluar un índice en disco "
+        "(SQLite FTS) en vez de RAM.",
+        trade_off="Menos memoria y peor latencia de mutación (alta/baja de "
+        "productos). El trade-off actual (tiempo por memoria) ya está "
+        "justificado para 10k productos.",
+        ya_cubierta=False,
+        prioridad="baja",
+    )
+
+
+def _propuesta_orden_picking(ev: _Evidencia) -> PropuestaMejora | None:
+    if "agrupar_pedidos_batch" not in ev.textos:
+        return None
+    return PropuestaMejora(
+        titulo="Evitar el sort final del lote de picking si la UI no lo requiere",
+        hotspot=("`agrupar_pedidos_batch` aparece en tottime de cProfile (grande: 0.020 s)."),
+        evidencia="docs/mediciones/cprofile_resumen.txt — src/pedidos/agrupador.py:70",
+        alternativa="La consolidación hash ya es O(L). El `sorted(..., reverse=True)` "
+        "añade O(U log U) solo para presentación. Diferir el orden a la "
+        "pantalla o usar `heapq.nlargest` si solo se muestran los U′ más demandados.",
+        trade_off="La tabla de agrupación dejaría de venir preordenada. "
+        "Impacto menor frente a la búsqueda lineal, pero es trabajo evitable.",
+        ya_cubierta=False,
+        prioridad="baja",
+    )
+
+
+def _propuesta_sin_informes(raiz: Path) -> PropuestaMejora:
+    avisos = analisis_estatico_si_faltan_informes(raiz)
+    detalle = " ".join(avisos) if avisos else "Sin informes en docs/mediciones/."
+    return PropuestaMejora(
+        titulo="Generar informes de profiler antes de proponer cambios",
+        hotspot="No hay evidencia empírica suficiente en este commit.",
+        evidencia=detalle,
+        alternativa="Correr `python -m benchmarks.comparar` y los scripts "
+        "`perfilar_*` sobre los mismos datasets, commitear `docs/mediciones/` "
+        "y re-ejecutar esta automatización.",
+        trade_off="Tiempo de medición frente a propuestas especulativas.",
+        ya_cubierta=False,
+        prioridad="media",
+    )
+
+
+# Reglas en el orden en que aparecen en el informe.
+_REGLAS_PROPUESTAS = (
+    _propuesta_ipc,
+    _propuesta_catalogo_lineal,
+    _propuesta_escala,
+    _propuesta_indice_invertido,
+    _propuesta_orden_picking,
+)
+
+
 def construir_propuestas(raiz: Path, hotspots: list[EntradaPerfil]) -> list[PropuestaMejora]:
     """Traduce evidencia empírica/estática a alternativas, sin aplicarlas."""
-    propuestas: list[PropuestaMejora] = []
-    textos = " ".join(f"{h.simbolo} {h.detalle}" for h in hotspots)
-
-    speedups_bajos = [h for h in hotspots if h.origen == "tabla_comparativa" and h.valor < 1.0]
-    prep = [h for h in speedups_bajos if "Preparación" in h.simbolo]
-    prep_grande = next((h for h in prep if "grande.json" in h.simbolo), None)
-
-    if (
-        "CreateProcess" in textos
-        or "WaitForSingleObject" in textos
-        or "pickle" in textos.lower()
-        or prep
-    ):
-        detalle_tabla = ""
-        if prep_grande:
-            detalle_tabla = (
-                f" Tras aislar CatalogoHash, `{prep_grande.simbolo}` sigue en "
-                f"speedup {prep_grande.valor:.2f}× ({prep_grande.detalle}). "
-                "El 1.95× previo mezclaba búsqueda O(n) con el pool."
-            )
-        elif prep:
-            detalle_tabla = " " + "; ".join(f"{h.simbolo} {h.valor:.2f}×" for h in prep[:4])
-        propuestas.append(
-            PropuestaMejora(
-                titulo="Reducir el overhead de IPC del pool de procesos",
-                hotspot="`_winapi.CreateProcess` / `WaitForSingleObject` / `pickle.dumps` "
-                "dominan tottime en cProfile; la tabla aislada muestra speedup < 1× "
-                "incluso en `grande.json`.",
-                evidencia="docs/mediciones/cprofile_resumen.txt (CreateProcess 0.364 s / 0.167 s) "
-                "y docs/mediciones/tabla_comparativa.md (fila Preparación, mismo CatalogoHash)."
-                + detalle_tabla,
-                alternativa="1) Por defecto procesar en secuencial. 2) Activar ProcessPool "
-                "solo si el trabajo por pedido es pesado (p. ej. DP de combinaciones) o "
-                "P es claramente mayor a 2.000. El umbral «P < 200» queda corto: con "
-                "catálogo O(1), 2.000 pedidos (~21 ms) no cubren el IPC. 3) Pool "
-                "persistente o `shared_memory` si se insiste en paralelizar.",
-                trade_off="Menos latencia de arranque a costa de más ramas de código. "
-                "En la oral conviene mostrar este negativo: no toda concurrencia escala.",
-                ya_cubierta=False,
-                prioridad="alta",
-            )
-        )
-
-    if any("CatalogoLineal.buscar_por_id" in h.simbolo for h in hotspots):
-        propuestas.append(
-            PropuestaMejora(
-                titulo="No usar el catálogo lineal fuera del desafío experimental",
-                hotspot="`CatalogoLineal.buscar_por_id`: el `for` sobre `self._productos` "
-                "concentra ~99.7 % del tiempo de la función (line_profiler, 197 850 hits).",
-                evidencia="docs/mediciones/line_profiler_resumen.txt",
-                alternativa="En producción/demo dejar `estrategia='optimizado'`. Conservar "
-                "el lineal solo como baseline medible. Si se necesita un modo mixto, "
-                "cachear el último `buscar_por_id` con el LRU ya existente.",
-                trade_off="El baseline debe seguir existiendo para la rúbrica; no "
-                "borrarlo. La caché no cambia la cota O(n) de la primera consulta.",
-                ya_cubierta=True,
-                prioridad="media",
-            )
-        )
-
-    if speedups_bajos:
-        ejemplos = ", ".join(h.simbolo for h in speedups_bajos[:6])
-        muestras = "; ".join(
-            f"{h.simbolo} {h.valor:.2f}× ({h.detalle})" for h in speedups_bajos[:4]
-        )
-        propuestas.append(
-            PropuestaMejora(
-                titulo="No pagar concurrencia ni heap en escalas donde no ganan",
-                hotspot=f"Speedup < 1× en: {ejemplos}",
-                evidencia="docs/mediciones/tabla_comparativa.md — " + muestras,
-                alternativa="Selector automático: heap solo si N > 50 o k/N < 0.1; "
-                "pool de procesos solo si el trabajo por pedido no es un lookup O(1). "
-                "Documentar el umbral real (hoy el pool pierde hasta grande.json) en la oral.",
-                trade_off="Más ramas de código frente a una regla simple "
-                "(optimizado siempre). La claridad de la demo oral puede sufrir si "
-                "el selector oculta el contraste.",
-                ya_cubierta=False,
-                prioridad="alta",
-            )
-        )
-
-    if any(
-        "Hash" in h.simbolo or "índice" in h.detalle.lower() or "indice" in h.detalle.lower()
-        for h in hotspots
-        if h.origen == "memory_profiler"
-    ):
-        propuestas.append(
-            PropuestaMejora(
-                titulo="Compactar el índice invertido en catálogos masivos",
-                hotspot="Catálogo hash en grande.json: pico ~5 MB frente a ~84 KB del lineal.",
-                evidencia="docs/mediciones/memoria_resumen.txt y columna Memoria Opt de la tabla.",
-                alternativa="Almacenar posting lists como arrays de ids (`array('I')`) "
-                "en lugar de `set[int]`; o un trie/prefijo si las búsquedas son por "
-                "comienzo de palabra. Para 100k SKUs evaluar un índice en disco "
-                "(SQLite FTS) en vez de RAM.",
-                trade_off="Menos memoria y peor latencia de mutación (alta/baja de "
-                "productos). El trade-off actual (tiempo por memoria) ya está "
-                "justificado para 10k productos.",
-                ya_cubierta=False,
-                prioridad="baja",
-            )
-        )
-
-    if "agrupar_pedidos_batch" in textos:
-        propuestas.append(
-            PropuestaMejora(
-                titulo="Evitar el sort final del lote de picking si la UI no lo requiere",
-                hotspot=(
-                    "`agrupar_pedidos_batch` aparece en tottime de cProfile (grande: 0.020 s)."
-                ),
-                evidencia="docs/mediciones/cprofile_resumen.txt — src/pedidos/agrupador.py:70",
-                alternativa="La consolidación hash ya es O(L). El `sorted(..., reverse=True)` "
-                "añade O(U log U) solo para presentación. Diferir el orden a la "
-                "pantalla o usar `heapq.nlargest` si solo se muestran los U′ más demandados.",
-                trade_off="La tabla de agrupación dejaría de venir preordenada. "
-                "Impacto menor frente a la búsqueda lineal, pero es trabajo evitable.",
-                ya_cubierta=False,
-                prioridad="baja",
-            )
-        )
-
-    if not propuestas:
-        avisos = analisis_estatico_si_faltan_informes(raiz)
-        detalle = " ".join(avisos) if avisos else "Sin informes en docs/mediciones/."
-        propuestas.append(
-            PropuestaMejora(
-                titulo="Generar informes de profiler antes de proponer cambios",
-                hotspot="No hay evidencia empírica suficiente en este commit.",
-                evidencia=detalle,
-                alternativa="Correr `python -m benchmarks.comparar` y los scripts "
-                "`perfilar_*` sobre los mismos datasets, commitear `docs/mediciones/` "
-                "y re-ejecutar esta automatización.",
-                trade_off="Tiempo de medición frente a propuestas especulativas.",
-                ya_cubierta=False,
-                prioridad="media",
-            )
-        )
-
-    return propuestas
+    evidencia = _Evidencia.desde(hotspots)
+    propuestas = [p for regla in _REGLAS_PROPUESTAS if (p := regla(evidencia)) is not None]
+    return propuestas or [_propuesta_sin_informes(raiz)]
 
 
 def renderizar_markdown(
