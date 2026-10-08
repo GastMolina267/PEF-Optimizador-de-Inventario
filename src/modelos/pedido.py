@@ -15,6 +15,13 @@ class EstadoPedido(str, Enum):
     IMPOSIBLE = "imposible"  # Ninguna línea pudo ser satisfecha por falta total de stock
 
 
+class PoliticaDescuento(str, Enum):
+    """Política de aplicación de descuento de stock sobre pedidos procesados."""
+
+    SOLO_CUBIERTOS = "solo_cubiertos"
+    TODO_LO_POSIBLE = "todo_lo_posible"
+
+
 @dataclass(slots=True)
 class LineaPedido:
     """Representa un renglón individual dentro de un pedido.

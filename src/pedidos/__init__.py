@@ -11,6 +11,7 @@ from src.pedidos.combinaciones import (
     CombinacionAlternativa,
     ResultadoAlternativas,
 )
+from src.pedidos.evaluador import debe_descontar, evaluar_pedido
 from src.pedidos.procesador_concurrente import procesar_pedidos_concurrente
 from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial
 
@@ -18,6 +19,8 @@ __all__ = [
     "procesar_pedidos_secuencial",
     "procesar_pedidos_concurrente",
     "agrupar_pedidos_batch",
+    "evaluar_pedido",
+    "debe_descontar",
     "DetalleDemandaPedido",
     "ItemPickingConsolidado",
     "LotePickingConsolidado",

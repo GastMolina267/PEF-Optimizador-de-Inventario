@@ -91,6 +91,7 @@ def construir_comando(mode: str, debug: bool) -> list[str]:
         "src.inventario.catalogo_lineal",
         "src.pedidos.procesador_concurrente",
         "src.pedidos.procesador_secuencial",
+        "src.pedidos.evaluador",
         "src.pedidos.agrupador",
         "src.pedidos.combinaciones",
         "src.ranking.top_productos",

@@ -31,10 +31,11 @@ from concurrent.futures.process import BrokenProcessPool
 from src.modelos.pedido import (
     EstadoPedido,
     Pedido,
-    ResultadoLinea,
+    PoliticaDescuento,
     ResultadoPedido,
     ResumenProcesamiento,
 )
+from src.pedidos.evaluador import debe_descontar, evaluar_pedido
 
 _executor: ProcessPoolExecutor | None = None
 _executor_workers: int | None = None
@@ -61,60 +62,7 @@ def _evaluar_fragmento_pedidos(
 
     Evalúa un subconjunto de pedidos contra un mapa estático de stock {id_producto: stock}.
     """
-    resultados_fragmento: list[ResultadoPedido] = []
-
-    for pedido in fragmento:
-        lineas_cubiertas: list[ResultadoLinea] = []
-        lineas_faltantes: list[ResultadoLinea] = []
-        total_lineas = len(pedido.lineas)
-        lineas_satisfechas_count = 0
-        lineas_con_algo_asignado_count = 0
-
-        for linea in pedido.lineas:
-            stock_disp = mapa_stock.get(linea.id_producto, 0)
-
-            if stock_disp >= linea.cantidad:
-                asignada = linea.cantidad
-                faltante = 0
-                lineas_satisfechas_count += 1
-                lineas_con_algo_asignado_count += 1
-            elif stock_disp > 0:
-                asignada = stock_disp
-                faltante = linea.cantidad - stock_disp
-                lineas_con_algo_asignado_count += 1
-            else:
-                asignada = 0
-                faltante = linea.cantidad
-
-            res_linea = ResultadoLinea(
-                id_producto=linea.id_producto,
-                cantidad_solicitada=linea.cantidad,
-                cantidad_asignada=asignada,
-                faltante=faltante,
-            )
-
-            if res_linea.satisfecha_completamente:
-                lineas_cubiertas.append(res_linea)
-            else:
-                lineas_faltantes.append(res_linea)
-
-        if lineas_satisfechas_count == total_lineas:
-            estado = EstadoPedido.CUBIERTO
-        elif lineas_con_algo_asignado_count == 0:
-            estado = EstadoPedido.IMPOSIBLE
-        else:
-            estado = EstadoPedido.PARCIAL
-
-        resultados_fragmento.append(
-            ResultadoPedido(
-                id_pedido=pedido.id,
-                estado=estado,
-                lineas_cubiertas=lineas_cubiertas,
-                lineas_faltantes=lineas_faltantes,
-            )
-        )
-
-    return resultados_fragmento
+    return [evaluar_pedido(pedido, mapa_stock) for pedido in fragmento]
 
 
 def procesar_pedidos_concurrente(
@@ -122,7 +70,7 @@ def procesar_pedidos_concurrente(
     pedidos: Sequence[Pedido],
     max_workers: int | None = None,
     descontar_stock: bool = False,
-    politica_descuento: str = "solo_cubiertos",
+    politica_descuento: PoliticaDescuento | str = PoliticaDescuento.SOLO_CUBIERTOS,
 ) -> ResumenProcesamiento:
     """Procesa un lote de pedidos en paralelo utilizando un pool de procesos independientes.
 
@@ -193,14 +141,7 @@ def procesar_pedidos_concurrente(
     # 5. Aplicar descuentos atómicos en el proceso principal si fue solicitado
     if descontar_stock:
         for res_pedido in todos_resultados:
-            debe_descontar = (
-                politica_descuento == "solo_cubiertos"
-                and res_pedido.estado == EstadoPedido.CUBIERTO
-            ) or (
-                politica_descuento == "todo_lo_posible"
-                and res_pedido.estado in (EstadoPedido.CUBIERTO, EstadoPedido.PARCIAL)
-            )
-            if debe_descontar:
+            if debe_descontar(res_pedido.estado, politica_descuento):
                 for rl in res_pedido.lineas_cubiertas + res_pedido.lineas_faltantes:
                     if rl.cantidad_asignada > 0:
                         catalogo.descontar_stock(rl.id_producto, rl.cantidad_asignada)
