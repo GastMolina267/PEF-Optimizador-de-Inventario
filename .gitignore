@@ -39,3 +39,8 @@ dist/
 *.egg
 .eggs/
 
+# Datasets masivos generados para benchmarks (F5)
+data/generados/
+*.jsonl
+
+
