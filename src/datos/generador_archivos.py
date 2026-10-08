@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import json
 import random
+from collections.abc import Iterator
 from pathlib import Path
 
 from src.datos.streaming import (
     TAMANO_BUFFER_DEFECTO,
     TAMANO_LOTE_DEFECTO,
-    en_lotes,
+    escribir_lineas_con_buffer,
 )
 
 CATEGORIAS_DISPONIBLES: tuple[str, ...] = (
@@ -39,10 +40,9 @@ SUFIJOS_PRODUCTOS: tuple[str, ...] = (
 )
 
 
-def generar_lineas_productos(n_productos: int, seed: int = 42) -> list[str]:
-    """Genera strings JSONL para productos con semilla determinista."""
+def generar_lineas_productos(n_productos: int, seed: int = 42) -> Iterator[str]:
+    """Genera strings JSONL para productos de forma lazy con semilla determinista."""
     rnd = random.Random(seed)
-    lineas = []
     for i in range(1, n_productos + 1):
         cat = rnd.choice(CATEGORIAS_DISPONIBLES)
         suf = rnd.choice(SUFIJOS_PRODUCTOS)
@@ -56,8 +56,7 @@ def generar_lineas_productos(n_productos: int, seed: int = 42) -> list[str]:
             "stock": stock,
             "precio": precio,
         }
-        lineas.append(json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n")
-    return lineas
+        yield json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n"
 
 
 def generar_lineas_pedidos(
@@ -65,10 +64,9 @@ def generar_lineas_pedidos(
     n_productos: int,
     lineas_por_pedido: int = 4,
     seed: int = 42,
-) -> list[str]:
-    """Genera strings JSONL para pedidos referenciando IDs válidos de productos."""
+) -> Iterator[str]:
+    """Genera strings JSONL para pedidos de forma lazy referenciando IDs válidos de productos."""
     rnd = random.Random(seed + 100)
-    lineas = []
     for id_ped in range(1, n_pedidos + 1):
         cant_lineas = rnd.randint(1, max(1, lineas_por_pedido))
         ids_elegidos = rnd.sample(range(1, n_productos + 1), k=cant_lineas)
@@ -76,8 +74,7 @@ def generar_lineas_pedidos(
             {"id_producto": id_p, "cantidad": rnd.randint(1, 15)} for id_p in ids_elegidos
         ]
         doc = {"id": id_ped, "lineas": lineas_doc}
-        lineas.append(json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n")
-    return lineas
+        yield json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n"
 
 
 def generar_archivos_grandes_jsonl(
@@ -88,7 +85,7 @@ def generar_archivos_grandes_jsonl(
     tamano_buffer: int = TAMANO_BUFFER_DEFECTO,
     tamano_lote: int = TAMANO_LOTE_DEFECTO,
 ) -> tuple[Path, Path]:
-    """Genera productos.jsonl y pedidos.jsonl de gran escala con buffer explícito.
+    """Genera productos.jsonl y pedidos.jsonl de gran escala con buffer explícito y memoria O(1).
 
     Retorna:
         (ruta_productos_jsonl, ruta_pedidos_jsonl)
@@ -99,16 +96,20 @@ def generar_archivos_grandes_jsonl(
     ruta_prods = dir_path / "productos.jsonl"
     ruta_peds = dir_path / "pedidos.jsonl"
 
-    # 1. Escribir productos con buffer
-    with open(ruta_prods, "w", encoding="utf-8", buffering=tamano_buffer) as f:
-        prods_lineas = generar_lineas_productos(n_productos, seed=seed)
-        for chunk in en_lotes(prods_lineas, tamano_lote):
-            f.writelines(chunk)
+    # 1. Escribir productos en streaming con buffer
+    escribir_lineas_con_buffer(
+        ruta_prods,
+        generar_lineas_productos(n_productos, seed=seed),
+        tamano_buffer=tamano_buffer,
+        tamano_lote=tamano_lote,
+    )
 
-    # 2. Escribir pedidos con buffer
-    with open(ruta_peds, "w", encoding="utf-8", buffering=tamano_buffer) as f:
-        peds_lineas = generar_lineas_pedidos(n_pedidos, n_productos, seed=seed)
-        for chunk in en_lotes(peds_lineas, tamano_lote):
-            f.writelines(chunk)
+    # 2. Escribir pedidos en streaming con buffer
+    escribir_lineas_con_buffer(
+        ruta_peds,
+        generar_lineas_pedidos(n_pedidos, n_productos, seed=seed),
+        tamano_buffer=tamano_buffer,
+        tamano_lote=tamano_lote,
+    )
 
     return ruta_prods, ruta_peds

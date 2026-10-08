@@ -20,8 +20,8 @@ Se evaluó el consumo de memoria RAM pico y tiempo de lectura comparando la carg
 
 | Estrategia | Tiempo de Lectura | Memoria Pico (RAM) | Memoria Final Retenida | Comportamiento |
 |---|---|---|---|---|
-| **Monolítico (`json.load`)** | 284.9 ms | 24.65 MB | 24.52 MB | $O(N)$ lineal con el tamaño del archivo |
-| **Streaming (`.jsonl` lazy)** | 412.9 ms | 1.03 MB | 0.00 MB | $O(1)$ constante (buffer acotado) |
+| **Monolítico (`json.load`)** | 258.3 ms | 24.65 MB | 24.52 MB | $O(N)$ lineal con el tamaño del archivo |
+| **Streaming (`.jsonl` lazy)** | 369.6 ms | 1.03 MB | 0.00 MB | $O(1)$ constante (buffer acotado) |
 
 > **Hallazgo:** El generador de streaming logra un **ahorro de memoria pico del 95.8%**, garantizando que el sistema pueda procesar archivos de escala arbitraria sin agotar la memoria física del equipo.
 
@@ -33,10 +33,10 @@ Cada worker de proceso independiente deserializa, valida la existencia de IDs y 
 
 | Tamaño de Lote ($B$) | Secuencial (Tiempo) | Secuencial (Pico RAM) | Paralelo (Tiempo) | Paralelo (Pico RAM) | Speedup ($T_{sec} / T_{par}$) |
 |---|---|---|---|---|---|
-| 1,000 | 398.4 ms | 2.04 MB | 416.3 ms | 13.03 MB | **0.96×** |
-| 5,000 | 476.8 ms | 6.02 MB | 120.4 ms | 13.76 MB | **3.96×** |
-| 10,000 | 506.2 ms | 11.01 MB | 426.6 ms | 14.96 MB | **1.19×** |
-| 25,000 | 2241.0 ms | 15.38 MB | 664.1 ms | 20.47 MB | **3.37×** |
+| 1,000 | 359.1 ms | 2.04 MB | 360.7 ms | 13.03 MB | **1.00×** |
+| 5,000 | 402.9 ms | 6.02 MB | 103.3 ms | 13.75 MB | **3.90×** |
+| 10,000 | 411.0 ms | 11.01 MB | 123.3 ms | 14.96 MB | **3.33×** |
+| 25,000 | 1020.6 ms | 15.38 MB | 570.2 ms | 20.47 MB | **1.79×** |
 
 ### Conclusiones del Paralelismo:
 1. **Compensación del IPC:** A diferencia de la evaluación individual sobre objetos preexistentes en memoria (donde el IPC no compensaba por la simplicidad de la búsqueda $O(1)$), en archivos `.jsonl` el lote incluye **parsing JSON**, **validación de integridad** y **evaluación algorítmica**.
@@ -50,7 +50,7 @@ Cada worker de proceso independiente deserializa, valida la existencia de IDs y 
 Se evaluó la exportación del reporte consolidado de picking hacia CSV (`exportar_picking_csv_con_buffer`):
 - **Registros consolidados exportados:** 3,190 filas.
 - **Tamaño del archivo:** 268.0 KB.
-- **Tiempo de serialización y escritura con buffer de 1 MB:** 56.57 ms.
+- **Tiempo de serialización y escritura con buffer de 1 MB:** 252.72 ms.
 - **Pico de memoria asignada:** 1.15 MB.
 
 El buffer de 1 MB (`1 << 20 bytes`) minimiza las llamadas al sistema operativo (`write()` syscalls), agrupando los bytes en memoria antes de transferirlos al disco.
