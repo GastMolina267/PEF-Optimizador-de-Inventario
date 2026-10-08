@@ -203,18 +203,20 @@ El segundo descuento falla en silencio (`descontar_stock` devuelve `False`), per
 
 **Incluye**
 
-- Módulo `src/observabilidad/apm.py`. Crea el `elasticapm.Client` **solo si** existen las variables `ELASTIC_APM_SERVER_URL` y `ELASTIC_APM_SECRET_TOKEN`. Sin ellas, todo funciona igual y no se envía nada (tests y CI incluidos).
-- **Transacciones** en las operaciones de la fachada `MotorInventario`: cargar dataset, buscar, top-N, agrupar, alternativas, procesar pedidos. También en la carga de archivos grandes (F5).
-- **Spans** internos: IPC del pool, lectura por lotes, validación, consolidación.
-- **Etiquetas** para filtrar en Kibana: estrategia, dataset, tamaño de lote, cantidad de workers, hits/misses de caché.
-- **Errores:** `capture_exception` en errores de carga y validación de datasets y en `BrokenProcessPool`. Logs estructurados con `ecs-logging`, correlacionados con la transacción.
-- **Infraestructura** en `infra/elastic/docker-compose.yml`: Elasticsearch, Kibana y APM Server en local. Alternativa: prueba gratuita de Elastic Cloud.
-- Capturas de Kibana (latencias por operación, baseline vs optimizado, errores) para la oral.
+- Módulo `src/observabilidad/apm.py`. Crea el `elasticapm.Client` **solo si** existe `ELASTIC_APM_SERVER_URL` (en el entorno o en `.env`). Sin ella todo funciona igual y no se envía nada (tests y CI incluidos).
+- **Transacciones** en las operaciones de la fachada `MotorInventario` (decorador `@medir`): cargar dataset JSON y JSONL, buscar, top-N, agrupar, exportar CSV, alternativas, procesar pedidos y procesar archivos por lotes. Si la operación corre dentro de otra transacción (por ejemplo, un escenario), aparece como span de esa transacción.
+- **Spans** internos: armado de fragmentos y espera del pool (`pool.armar_fragmentos`, `pool.evaluar`) y procesamiento de un archivo por lotes (`lotes.procesar_archivo`).
+- **Etiquetas** para filtrar en Kibana: estrategia, productos, pedidos, dataset, tamaño de lote, workers, concurrente, cubiertos y parciales.
+- **Errores:** las excepciones de las operaciones instrumentadas se envían solas (la transacción queda como `failure`), `BrokenProcessPool` se registra como error controlado y los registros de `logging` con nivel ERROR o superior se envían con `ManejadorErroresAPM`.
+- **Infraestructura:** proyecto serverless *Observability Complete* en Elastic Cloud (prueba gratuita). La alternativa local con Docker se descartó para no exigir Docker a todo el grupo.
+- `scripts/demo_apm.py`: genera actividad (baseline vs optimizado, secuencial vs pool) y un error de carga a propósito para la oral.
+- Guía de uso: `docs/observabilidad-apm.md`.
 
 **Implicancias**
 
 - Los workers del `ProcessPoolExecutor` no comparten el cliente APM: se instrumenta el lado del proceso principal (envío y recepción de lotes).
-- El token nunca va al repo. Hay un `.env.example` y `.env` está en `.gitignore`.
+- La API key nunca va al repo. Hay un `.env.example` y `.env` está en `.gitignore`.
+- La prueba de Elastic Cloud dura 14 días (creada el 8/10). Si la defensa es después, hay que crear otra prueba o pasar al stack local.
 - `elastic-apm` 6.26 declara soporte hasta Python 3.13. Es otro motivo para fijar 3.13 en el entorno del grupo.
 - El `.exe` de PyInstaller tiene que incluir el agente (revisar `scripts/compile.py`).
 
