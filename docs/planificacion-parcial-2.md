@@ -238,6 +238,33 @@ El segundo descuento falla en silencio (`descontar_stock` devuelve `False`), per
 
 **Cierre:** ruff sin errores con `E501`, `C90` y `D` activadas, ninguna función con complejidad D, Sonar sin smells críticos ni mayores.
 
+**Resultado**
+
+| Métrica | Base (F6) | F7 |
+|---|---|---|
+| Hallazgos de ruff con `E501`, `C90`, `D` y `PLR2004` | 149 (105 líneas largas, 18 docstrings, 21 números mágicos, 4 funciones complejas) | 0 |
+| Funciones con complejidad cognitiva > 15 (complexipy / Sonar S3776) | 14 (máx. 46, `main` de la UI) | 0 |
+| Funciones con complejidad ciclomática > 10 | 4 | 0 |
+| Tests | — | +11 (`tests/test_f7_refactor.py`) |
+
+- **UI:** `main` (complejidad 46) pasó a la clase `AplicacionInventario` y a una tupla `SECCIONES` que declara las siete pantallas.
+- **Automatizaciones:** `derivar_complejidad` y `construir_propuestas` pasaron a tablas de reglas (una función por caso). Se verificó que los informes generados son idénticos byte a byte.
+- **Refactors de lógica** (`combinaciones`, `catalogo_hash`, `validador`, `streaming`): se verificaron contra la versión anterior con los mismos datasets y 864 casos de alternativas. Las salidas son idénticas.
+- `Catalogo` es un `typing.Protocol` (`src/inventario/protocolo.py`) que cumplen `CatalogoLineal` y `CatalogoHash`.
+- **Seguridad del CI:**
+  - dependencias fijadas en `uv.lock` e instaladas con `uv sync --locked --no-build`;
+  - actions de terceros fijadas por SHA;
+  - permisos mínimos por job;
+  - inputs de `workflow_dispatch` pasados por variables de entorno y validados (sin inyección en scripts).
+
+**Decisiones**
+
+- **`D107` desactivada:** el docstring de la clase documenta el constructor (estilo Google).
+- **Tests sin `D1` ni `PLR2004`:** el nombre del test describe el caso, y los valores esperados literales son la forma más legible de un assert.
+- **complexipy en el CI y en pre-commit** con umbral 15, para que la complejidad cognitiva no dependa de que Sonar corra.
+- **`requirements*.txt` se mantienen** para quien instale con pip. `uv.lock` es la fuente de verdad del CI.
+- **S2245 (random no criptográfico) excluida solo en los generadores de datos de prueba,** donde la semilla fija es intencional.
+
 ## F8 — Documentación con Sphinx
 
 **Rama:** `p2/f8-sphinx`
@@ -279,7 +306,7 @@ Además de F2 y F9, **cada fase trae sus propios tests**:
 | F4 | Equivalencia secuencial vs concurrente **con** descuento de stock; ciclo de vida de `GestorPool` |
 | F5 | Lectura en streaming, lotes, archivo corrupto, archivo vacío, escritura con buffer |
 | F6 | El APM queda desactivado sin variables de entorno; el cliente se crea con variables simuladas |
-| F7 | Ninguno nuevo: el refactor no cambia el comportamiento |
+| F7 | El refactor no cambia el comportamiento (la suite existente pasa, salvo ajustes de firma e imports); tests de las piezas nuevas: `Protocol`, filas de picking, parsers, `AplicacionInventario` |
 | F8 | El build de Sphinx es el test |
 
 ## Decisiones pendientes del grupo

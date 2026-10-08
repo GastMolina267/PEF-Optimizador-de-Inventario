@@ -1,5 +1,10 @@
 # Optimizador de Inventario y Pedidos
 
+[![CI](https://github.com/GastMolina267/PEF-Optimizador-de-Inventario/actions/workflows/verify.yml/badge.svg)](https://github.com/GastMolina267/PEF-Optimizador-de-Inventario/actions/workflows/verify.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
+[![Mantenibilidad](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
+[![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=coverage)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
+
 **Primer Parcial – Programación Eficiente (Opción 6)**  
 *Universidad Blas Pascal (UBP)*  
 **Lenguaje:** Python 3  
@@ -277,6 +282,11 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
+Alternativa con [uv](https://docs.astral.sh/uv/), que instala exactamente las versiones fijadas en `uv.lock` (es lo que usa el CI):
+```bash
+uv sync --locked --extra dev
+```
+
 ### 3. Ejecutar la aplicación de escritorio (Flet)
 ```bash
 python -m src.ui.app
@@ -383,10 +393,13 @@ El proyecto cuenta con dos pipelines de integración y entrega continua configur
 
 ### 1. Pipeline de Verificación (`.github/workflows/verify.yml`)
 Garantiza la calidad de código e integridad del sistema en cada `push` o `pull_request` sobre las ramas principales:
-* **Compilación de Sintaxis y Linting:** Verifica que el 100% de los módulos Python compilen a bytecode sin errores de sintaxis (`compileall`) y analiza el código con `ruff`.
-* **Matriz de Pruebas Multiplataforma:** Ejecuta la suite completa de **78 pruebas automatizadas** en entornos **Linux** (`ubuntu-latest`) y **Windows** (`windows-latest`) sobre **Python 3.10, 3.11 y 3.12**.
+* **Dependencias fijadas:** cada job instala con `uv sync --locked --no-build` desde `uv.lock`, sin compilar paquetes desde fuente. Las actions de terceros están fijadas por SHA.
+* **Compilación de Sintaxis y Linting:** Verifica que el 100% de los módulos Python compilen a bytecode sin errores de sintaxis (`compileall`), analiza el código con `ruff` (PEP 8, imports, nombres, docstrings estilo Google, complejidad ciclomática ≤ 10 y números mágicos) y controla el formato con `ruff format --check`.
+* **Complejidad cognitiva:** `complexipy` falla si alguna función supera 15, el mismo umbral que la regla S3776 de SonarQube.
+* **Matriz de Pruebas Multiplataforma:** Ejecuta la suite completa de pruebas automatizadas en **Linux** (`ubuntu-latest`) y **Windows** (`windows-latest`) sobre **Python 3.14**.
 * **Reporte de Cobertura:** Genera métricas de cobertura de código con `pytest-cov` y almacena el artefacto `coverage.xml`.
 * **Integridad de Datos y AST:** Valida la consistencia de los datasets JSON en `data/datasets/`, ejecuta el motor de análisis de complejidad algorítmica AST (`python -m automations.ejecutar`) y confirma la validez de la presentación oral sin delimitadores residuales.
+* **SonarQube Cloud:** analiza el código con la cobertura y el reporte de `ruff`, y aplica el Quality Gate (ver el badge al inicio).
 
 ### 2. Pipeline de Compilación y Empaquetado (`.github/workflows/compile.yml`)
 Compila y distribuye la aplicación de escritorio de forma automatizada ante nuevas versiones o mediante ejecución manual (`workflow_dispatch`):
