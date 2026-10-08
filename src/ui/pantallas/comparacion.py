@@ -14,10 +14,10 @@ from src.ranking.top_productos import (
     calcular_top_solicitados_heap,
     calcular_top_solicitados_lineal,
 )
+from src.ui.pantallas.base import PantallaBase
 from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
-    COLOR_FONDO_APP,
     COLOR_PELIGRO,
     COLOR_PRIMARIO,
     COLOR_SECUNDARIO,
@@ -41,17 +41,11 @@ from src.ui.tema import (
 )
 
 
-class PantallaComparacion(ft.Container):
+class PantallaComparacion(PantallaBase):
     """Vista comparativa formal: Genera y exhibe la tabla de mediciones para la defensa oral."""
 
     def __init__(self, motor: MotorInventario, on_actualizar_panel, notificar) -> None:
-        super().__init__()
-        self.motor = motor
-        self.on_actualizar_panel = on_actualizar_panel
-        self.notificar = notificar
-        self.expand = True
-        self.bgcolor = COLOR_FONDO_APP
-        self.padding = padding_symmetric(horizontal=16, vertical=12)
+        super().__init__(motor, on_actualizar_panel, notificar)
 
         self.filas_medidas = []
         self.orden_ascendente = False

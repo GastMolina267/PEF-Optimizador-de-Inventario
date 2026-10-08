@@ -11,10 +11,10 @@ from src.ranking.top_productos import (
     calcular_top_solicitados_heap,
     calcular_top_solicitados_lineal,
 )
+from src.ui.pantallas.base import PantallaBase
 from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
-    COLOR_FONDO_APP,
     COLOR_PRIMARIO,
     COLOR_SECUNDARIO,
     COLOR_SUPERFICIE,
@@ -38,17 +38,11 @@ from src.ui.tema import (
 )
 
 
-class PantallaTopProductos(ft.Container):
+class PantallaTopProductos(PantallaBase):
     """Vista comparativa de Top-N: Min-Heap O(N log k) vs Ordenamiento Total O(N log N)."""
 
     def __init__(self, motor: MotorInventario, on_actualizar_panel, notificar) -> None:
-        super().__init__()
-        self.motor = motor
-        self.on_actualizar_panel = on_actualizar_panel
-        self.notificar = notificar
-        self.expand = True
-        self.bgcolor = COLOR_FONDO_APP
-        self.padding = padding_symmetric(horizontal=16, vertical=12)
+        super().__init__(motor, on_actualizar_panel, notificar)
 
         self.ranking_actual = []
         self.orden_ascendente = False

@@ -5,11 +5,11 @@ from __future__ import annotations
 import flet as ft
 
 from src.motor.motor_inventario import MotorInventario
+from src.ui.pantallas.base import PantallaBase
 from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
     COLOR_FONDO_ADVERTENCIA,
-    COLOR_FONDO_APP,
     COLOR_FONDO_EXITO,
     COLOR_FONDO_PELIGRO,
     COLOR_PELIGRO,
@@ -36,17 +36,11 @@ from src.ui.tema import (
 )
 
 
-class PantallaPedidos(ft.Container):
+class PantallaPedidos(PantallaBase):
     """Vista para procesar lotes de pedidos de forma secuencial o concurrente con despliegue línea por línea."""
 
     def __init__(self, motor: MotorInventario, on_actualizar_panel, notificar) -> None:
-        super().__init__()
-        self.motor = motor
-        self.on_actualizar_panel = on_actualizar_panel
-        self.notificar = notificar
-        self.expand = True
-        self.bgcolor = COLOR_FONDO_APP
-        self.padding = padding_symmetric(horizontal=16, vertical=12)
+        super().__init__(motor, on_actualizar_panel, notificar)
         self.pedidos_actuales = []
 
         self.resultados_ultimo_proceso = None

@@ -7,10 +7,10 @@ import time
 import flet as ft
 
 from src.motor.motor_inventario import MotorInventario
+from src.ui.pantallas.base import PantallaBase
 from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
-    COLOR_FONDO_APP,
     COLOR_PELIGRO,
     COLOR_PRIMARIO,
     COLOR_SECUNDARIO,
@@ -33,17 +33,11 @@ from src.ui.tema import (
 )
 
 
-class PantallaAgrupacion(ft.Container):
+class PantallaAgrupacion(PantallaBase):
     """Vista de consolidación de pedidos en una única lista de picking en tiempo O(L)."""
 
     def __init__(self, motor: MotorInventario, on_actualizar_panel, notificar) -> None:
-        super().__init__()
-        self.motor = motor
-        self.on_actualizar_panel = on_actualizar_panel
-        self.notificar = notificar
-        self.expand = True
-        self.bgcolor = COLOR_FONDO_APP
-        self.padding = padding_symmetric(horizontal=16, vertical=12)
+        super().__init__(motor, on_actualizar_panel, notificar)
 
         self.items_consolidados_actuales = []
         self.orden_ascendente = False

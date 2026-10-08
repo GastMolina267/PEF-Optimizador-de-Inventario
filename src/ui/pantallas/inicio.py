@@ -8,10 +8,10 @@ from pathlib import Path
 import flet as ft
 
 from src.motor.motor_inventario import MotorInventario
+from src.ui.pantallas.base import PantallaBase
 from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
-    COLOR_FONDO_APP,
     COLOR_PRIMARIO,
     COLOR_SECUNDARIO,
     COLOR_TARJETA,
@@ -36,20 +36,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"
 
 
-class PantallaInicio(ft.Container):
+class PantallaInicio(PantallaBase):
     """Vista principal de bienvenida, carga de datos y ejecución global de escenarios."""
 
     def __init__(
         self, motor: MotorInventario, on_actualizar_panel, notificar, on_dataset_cambiado=None
     ) -> None:
-        super().__init__()
-        self.motor = motor
-        self.on_actualizar_panel = on_actualizar_panel
-        self.notificar = notificar
+        super().__init__(motor, on_actualizar_panel, notificar)
         self.on_dataset_cambiado = on_dataset_cambiado
-        self.expand = True
-        self.bgcolor = COLOR_FONDO_APP
-        self.padding = padding_symmetric(horizontal=16, vertical=12)
 
         # Dropdown de datasets estándar
         self.dropdown_datasets = ft.Dropdown(
