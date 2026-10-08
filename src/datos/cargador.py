@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.datos.validador import ValidadorDataset
 from src.modelos.pedido import Pedido
 from src.modelos.producto import Producto
 
@@ -13,76 +14,9 @@ from src.modelos.producto import Producto
 def validar_dataset(datos: dict[str, Any]) -> tuple[list[Producto], list[Pedido]]:
     """Valida exhaustivamente la estructura e integridad referencial de un dataset.
 
-    Reglas de validación:
-    1. Debe contener las claves 'productos' y 'pedidos' como listas.
-    2. Cada producto debe tener id único (> 0), nombre, categoría, stock (>= 0) y precio (>= 0).
-    3. Cada pedido debe tener id único (> 0) y al menos una línea.
-    4. Cada línea de pedido debe referenciar un id_producto existente en el catálogo.
-    5. Cada cantidad de línea debe ser estrictamente mayor a 0.
-
-    Retorna:
-        Tupla (lista_productos, lista_pedidos).
-
-    Lanza:
-        ValueError: Ante cualquier incumplimiento de formato o integridad.
+    Delega al ValidadorDataset unificado.
     """
-    if not isinstance(datos, dict):
-        raise ValueError("El contenido raíz del dataset debe ser un objeto JSON (diccionario).")
-
-    if "productos" not in datos or not isinstance(datos["productos"], list):
-        raise ValueError(
-            "El dataset debe incluir una clave 'productos' con una lista de elementos."
-        )
-
-    if "pedidos" not in datos or not isinstance(datos["pedidos"], list):
-        raise ValueError("El dataset debe incluir una clave 'pedidos' con una lista de elementos.")
-
-    # 1. Validar productos y verificar unicidad de IDs
-    productos: list[Producto] = []
-    ids_productos: set[int] = set()
-
-    for idx, item in enumerate(datos["productos"]):
-        if not isinstance(item, dict):
-            raise ValueError(f"El producto en la posición {idx} no es un objeto JSON válido.")
-        try:
-            prod = Producto.desde_diccionario(item)
-        except Exception as e:
-            raise ValueError(
-                f"Error en datos de producto #{idx} (id={item.get('id')}): {e}"
-            ) from e
-
-        if prod.id in ids_productos:
-            raise ValueError(f"Identificador de producto duplicado en dataset: #{prod.id}")
-        ids_productos.add(prod.id)
-        productos.append(prod)
-
-    # 2. Validar pedidos, unicidad de IDs y referencia a productos existentes
-    pedidos: list[Pedido] = []
-    ids_pedidos: set[int] = set()
-
-    for idx, item in enumerate(datos["pedidos"]):
-        if not isinstance(item, dict):
-            raise ValueError(f"El pedido en la posición {idx} no es un objeto JSON válido.")
-        try:
-            ped = Pedido.desde_diccionario(item)
-        except Exception as e:
-            raise ValueError(f"Error en datos de pedido #{idx} (id={item.get('id')}): {e}") from e
-
-        if ped.id in ids_pedidos:
-            raise ValueError(f"Identificador de pedido duplicado en dataset: #{ped.id}")
-        ids_pedidos.add(ped.id)
-
-        # Validar integridad referencial de las líneas
-        for linea in ped.lineas:
-            if linea.id_producto not in ids_productos:
-                raise ValueError(
-                    f"Integridad rota en pedido #{ped.id}: el producto con id #{linea.id_producto} "
-                    "no existe en el catálogo."
-                )
-
-        pedidos.append(ped)
-
-    return productos, pedidos
+    return ValidadorDataset.validar_diccionario(datos)
 
 
 def cargar_dataset_json(ruta: str | Path) -> tuple[list[Producto], list[Pedido]]:
