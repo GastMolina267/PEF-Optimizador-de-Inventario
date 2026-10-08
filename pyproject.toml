@@ -86,6 +86,7 @@ select = [
     "SIM",  # flake8-simplify
     "UP",   # pyupgrade (sintaxis moderna para py310)
     "D",    # pydocstyle (docstrings)
+    "C90",  # mccabe (complejidad ciclomática)
     "PLR2004",  # números mágicos: usar constantes con nombre
 ]
 ignore = [
@@ -99,6 +100,9 @@ ignore = [
 # son literales a propósito.
 "tests/**" = ["D1", "PLR2004"]
 
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
 [tool.ruff.lint.pydocstyle]
 # Estilo Google con secciones en español (Argumentos, Retorna, Lanza): las interpreta
 # Sphinx con napoleon_custom_sections (fase F8).
@@ -110,3 +114,8 @@ known-first-party = ["src", "automations", "benchmarks", "scripts"]
 [tool.ruff.format]
 quote-style = "double"
 line-ending = "lf"
+
+[tool.complexipy]
+# Complejidad cognitiva máxima por función: el mismo umbral que usa SonarQube (S3776).
+paths = ["src", "automations", "benchmarks", "scripts", "main.py"]
+max-complexity-allowed = 15

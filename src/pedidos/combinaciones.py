@@ -12,7 +12,7 @@ Compara:
 from __future__ import annotations
 
 import time
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 from src.modelos.producto import Producto
@@ -58,6 +58,20 @@ class ResultadoAlternativas:
         return len(self.combinaciones)
 
 
+def _agregar_hasta_limite(
+    resultados: list[list[int]], nuevos: Iterable[list[int]], limite: int
+) -> None:
+    """Agrega combinaciones a ``resultados`` y se detiene al alcanzar ``limite``.
+
+    Como en la versión original, primero agrega y después compara: si ``resultados`` ya
+    tenía elementos, puede quedar con uno más que el límite.
+    """
+    for combo in nuevos:
+        resultados.append(combo)
+        if len(resultados) >= limite:
+            return
+
+
 class BuscadorAlternativas:
     """Motor de cálculo de combinaciones de sustitución con y sin memoización."""
 
@@ -100,81 +114,80 @@ class BuscadorAlternativas:
         inicio = time.perf_counter()
         self._contador_llamadas = 0
         self._contador_hits = 0
+        estrategia = "memoizado" if usar_memoizacion else "recursivo_puro"
 
-        # Filtrar candidatos de la categoría con stock disponible
-        cat_norm = categoria.lower().strip()
-        candidatos = [
-            p
-            for p in self._productos_disponibles
-            if p.categoria.lower().strip() == cat_norm
-            and (producto_original is None or p.id != producto_original.id)
-            and p.precio <= presupuesto_maximo
-        ]
-
-        # Ordenar candidatos por precio para podas de ramas tempranas
-        candidatos.sort(key=lambda p: p.precio)
-
-        # Si se especifica o si supera un límite seguro, acotar para evitar stack overflow
-        if max_candidatos is not None:
-            candidatos = candidatos[:max_candidatos]
-        elif not usar_memoizacion:
-            if len(candidatos) > MAX_CANDIDATOS_RECURSION:
-                candidatos = candidatos[:MAX_CANDIDATOS_RECURSION]
-        else:
-            # En modo memoizado, acotar a un conjunto seguro (ej. 40) para garantizar
-            # que la profundidad de recursión nunca exceda el límite del call stack de Python
-            if len(candidatos) > MAX_CANDIDATOS_MEMOIZACION:
-                candidatos = candidatos[:MAX_CANDIDATOS_MEMOIZACION]
-
-        presupuesto_centavos = int(round(presupuesto_maximo * 100))
-
-        if not candidatos or presupuesto_centavos <= 0:
-            tiempo_ms = (time.perf_counter() - inicio) * 1000.0
-            return ResultadoAlternativas(
-                id_producto_original=producto_original.id if producto_original else None,
-                categoria=categoria,
-                presupuesto_maximo=presupuesto_maximo,
-                combinaciones=[],
-                estrategia="memoizado" if usar_memoizacion else "recursivo_puro",
-                tiempo_ejecucion_ms=tiempo_ms,
-                total_llamadas_recursivas=0,
-                hits_memo=0,
+        if max_candidatos is None:
+            # Tope seguro para que la recursión no supere el límite de la pila de Python.
+            max_candidatos = (
+                MAX_CANDIDATOS_MEMOIZACION if usar_memoizacion else MAX_CANDIDATOS_RECURSION
             )
+        candidatos = self._filtrar_candidatos(
+            categoria, presupuesto_maximo, producto_original, max_candidatos
+        )
+        presupuesto_centavos = round(presupuesto_maximo * 100)
 
-        if usar_memoizacion:
-            self._memo_cache.clear()
-            combinaciones_indices = self._resolver_dp_memo(
-                candidatos, 0, presupuesto_centavos, max_combinaciones
-            )
-            estrategia = "memoizado"
-        else:
-            combinaciones_indices = self._resolver_recursivo_puro(
-                candidatos, 0, presupuesto_centavos, max_combinaciones
-            )
-            estrategia = "recursivo_puro"
-
-        tiempo_ms = (time.perf_counter() - inicio) * 1000.0
-
-        # Reconstruir combinaciones de objetos Producto
-        resultado_comb: list[CombinacionAlternativa] = []
-        for combo in combinaciones_indices:
-            prods_combo = [candidatos[idx] for idx in combo]
-            costo_total = sum(p.precio for p in prods_combo)
-            resultado_comb.append(CombinacionAlternativa(prods_combo, costo_total))
-
-        # Ordenar por costo total descendente (mejores opciones más cercanas al presupuesto)
-        resultado_comb.sort(key=lambda c: c.costo_total, reverse=True)
+        combinaciones: list[CombinacionAlternativa] = []
+        if candidatos and presupuesto_centavos > 0:
+            if usar_memoizacion:
+                self._memo_cache.clear()
+                resolver = self._resolver_dp_memo
+            else:
+                resolver = self._resolver_recursivo_puro
+            indices = resolver(candidatos, 0, presupuesto_centavos, max_combinaciones)
+            combinaciones = self._armar_combinaciones(candidatos, indices)[:max_combinaciones]
 
         return ResultadoAlternativas(
             id_producto_original=producto_original.id if producto_original else None,
             categoria=categoria,
             presupuesto_maximo=presupuesto_maximo,
-            combinaciones=resultado_comb[:max_combinaciones],
+            combinaciones=combinaciones,
             estrategia=estrategia,
-            tiempo_ejecucion_ms=tiempo_ms,
+            tiempo_ejecucion_ms=(time.perf_counter() - inicio) * 1000.0,
             total_llamadas_recursivas=self._contador_llamadas,
             hits_memo=self._contador_hits,
         )
+
+    def _filtrar_candidatos(
+        self,
+        categoria: str,
+        presupuesto_maximo: float,
+        producto_original: Producto | None,
+        max_candidatos: int,
+    ) -> list[Producto]:
+        """Productos de la categoría que entran en el presupuesto, del más barato al más caro.
+
+        Ordenar por precio permite podar ramas temprano; se excluye el producto original.
+        """
+        categoria_norm = categoria.lower().strip()
+        id_excluido = producto_original.id if producto_original else None
+        candidatos = sorted(
+            (
+                producto
+                for producto in self._productos_disponibles
+                if producto.categoria.lower().strip() == categoria_norm
+                and producto.id != id_excluido
+                and producto.precio <= presupuesto_maximo
+            ),
+            key=lambda producto: producto.precio,
+        )
+        return candidatos[:max_candidatos]
+
+    @staticmethod
+    def _armar_combinaciones(
+        candidatos: list[Producto], indices: list[list[int]]
+    ) -> list[CombinacionAlternativa]:
+        """Convierte índices en combinaciones, de la más cara a la más barata.
+
+        Las más caras aprovechan mejor el presupuesto disponible.
+        """
+        combinaciones = []
+        for combo in indices:
+            productos = [candidatos[indice] for indice in combo]
+            combinaciones.append(
+                CombinacionAlternativa(productos, sum(producto.precio for producto in productos))
+            )
+        combinaciones.sort(key=lambda combinacion: combinacion.costo_total, reverse=True)
+        return combinaciones
 
     def _resolver_recursivo_puro(
         self,
@@ -192,28 +205,20 @@ class BuscadorAlternativas:
         precio_actual = int(round(candidatos[indice].precio * 100))
         resultados: list[list[int]] = []
 
-        # Opción 1: Incluir el producto actual (si el presupuesto lo permite)
+        # Opción 1: incluir el producto actual (solo y combinado con los siguientes).
         if precio_actual <= presupuesto_restante:
-            # La combinación unitaria formada solo por este producto
             resultados.append([indice])
-            # Combinar con los subsiguientes
-            sub_combos = self._resolver_recursivo_puro(
+            con_actual = self._resolver_recursivo_puro(
                 candidatos, indice + 1, presupuesto_restante - precio_actual, limite
             )
-            for sc in sub_combos:
-                resultados.append([indice] + sc)
-                if len(resultados) >= limite:
-                    return resultados
+            _agregar_hasta_limite(resultados, ([indice, *combo] for combo in con_actual), limite)
 
-        # Opción 2: Excluir el producto actual y avanzar
+        # Opción 2: excluir el producto actual y avanzar.
         if len(resultados) < limite:
-            sub_combos_sin = self._resolver_recursivo_puro(
+            sin_actual = self._resolver_recursivo_puro(
                 candidatos, indice + 1, presupuesto_restante, limite
             )
-            for sc in sub_combos_sin:
-                resultados.append(sc)
-                if len(resultados) >= limite:
-                    break
+            _agregar_hasta_limite(resultados, sin_actual, limite)
 
         return resultados
 
@@ -239,26 +244,20 @@ class BuscadorAlternativas:
         precio_actual = int(round(candidatos[indice].precio * 100))
         resultados: list[list[int]] = []
 
-        # Opción 1: Incluir el producto actual
+        # Opción 1: incluir el producto actual (solo y combinado con los siguientes).
         if precio_actual <= presupuesto_restante:
             resultados.append([indice])
-            sub_combos = self._resolver_dp_memo(
+            con_actual = self._resolver_dp_memo(
                 candidatos, indice + 1, presupuesto_restante - precio_actual, limite
             )
-            for sc in sub_combos:
-                resultados.append([indice] + sc)
-                if len(resultados) >= limite:
-                    break
+            _agregar_hasta_limite(resultados, ([indice, *combo] for combo in con_actual), limite)
 
-        # Opción 2: Excluir el producto actual
+        # Opción 2: excluir el producto actual.
         if len(resultados) < limite:
-            sub_combos_sin = self._resolver_dp_memo(
+            sin_actual = self._resolver_dp_memo(
                 candidatos, indice + 1, presupuesto_restante, limite
             )
-            for sc in sub_combos_sin:
-                resultados.append(sc)
-                if len(resultados) >= limite:
-                    break
+            _agregar_hasta_limite(resultados, sin_actual, limite)
 
         # Guardar en la tabla de memoización para reusar en subárboles convergentes
         self._memo_cache[clave_estado] = [list(c) for c in resultados]

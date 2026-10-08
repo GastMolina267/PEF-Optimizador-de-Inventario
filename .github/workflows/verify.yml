@@ -35,7 +35,7 @@ jobs:
       - name: Instalar herramientas de análisis
         run: |
           python -m pip install --upgrade pip
-          pip install "ruff==0.16.10"
+          pip install "ruff==0.16.10" "complexipy==8.0.1"
 
       - name: Compilación de sintaxis bytecode (Zero Syntax Errors)
         run: |
@@ -48,6 +48,10 @@ jobs:
       - name: Formato con Ruff (sin cambios pendientes)
         run: |
           ruff format --check .
+
+      - name: Complejidad cognitiva ≤ 15 por función (mismo umbral que SonarQube)
+        run: |
+          complexipy src automations benchmarks scripts main.py --max-complexity-allowed 15 --failed
 
   # =========================================================================
   # 2. Matriz de Pruebas Unitarias y Cobertura (Linux & Windows)

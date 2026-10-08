@@ -34,6 +34,20 @@ from src.ui.tema import (
 )
 
 
+def _stock_de(item) -> int:
+    return item.producto.stock if item.producto else 0
+
+
+# Claves de orden de la tabla de picking según el criterio elegido.
+CLAVES_ORDEN_PICKING = {
+    "cantidad": lambda item: item.cantidad_total,
+    "nombre": lambda item: item.producto.nombre.lower() if item.producto else "",
+    "stock": _stock_de,
+    # 0 = faltante, 1 = cubierto.
+    "estado": lambda item: 1 if _stock_de(item) >= item.cantidad_total else 0,
+}
+
+
 class PantallaAgrupacion(PantallaBase):
     """Vista de consolidación de pedidos en una única lista de picking en tiempo O(L)."""
 
@@ -121,21 +135,7 @@ class PantallaAgrupacion(PantallaBase):
 
     def _aplicar_ordenamiento(self):
         criterio = self.dropdown_orden.value or "cantidad"
-
-        def clave(item):
-            prod = item.producto
-            if criterio == "cantidad":
-                return item.cantidad_total
-            elif criterio == "nombre":
-                return prod.nombre.lower() if prod else ""
-            elif criterio == "stock":
-                return prod.stock if prod else 0
-            elif criterio == "estado":
-                # Faltantes primero o cubiertos primero
-                stock_disp = prod.stock if prod else 0
-                return 1 if stock_disp >= item.cantidad_total else 0
-            return item.id_producto
-
+        clave = CLAVES_ORDEN_PICKING.get(criterio, lambda item: item.id_producto)
         self.items_consolidados_actuales.sort(key=clave, reverse=not self.orden_ascendente)
         self._renderizar_items()
 

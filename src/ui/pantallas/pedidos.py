@@ -41,6 +41,54 @@ from src.ui.tema import (
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
+# Orden de los estados al ordenar resultados por estado (otros valores van al final).
+ORDEN_ESTADOS = {"cubierto": 0, "parcial": 1, "imposible": 2}
+
+
+def _badge_disponibilidad(stock: int, cantidad: int) -> ft.Container:
+    """Chip que indica si el stock cubre la línea, la cubre en parte o no hay stock."""
+    if stock >= cantidad:
+        texto, color, fondo = f"Cubierta (Stock: {stock})", COLOR_EXITO, COLOR_FONDO_EXITO
+    elif stock > 0:
+        texto = f"Parcial (Stock: {stock} / Falta: {cantidad - stock})"
+        color, fondo = "#F59E0B", COLOR_FONDO_ADVERTENCIA
+    else:
+        texto, color, fondo = "Sin Stock en Almacén", COLOR_PELIGRO, COLOR_FONDO_PELIGRO
+    return ft.Container(
+        content=ft.Text(texto, size=11, color=color, weight=ft.FontWeight.BOLD),
+        bgcolor=fondo,
+        padding=padding_symmetric(horizontal=8, vertical=3),
+        border_radius=6,
+    )
+
+
+def _fila_linea_pendiente(linea, nombre: str, stock: int, subtotal: float) -> ft.Container:
+    """Fila de una línea de un pedido sin procesar."""
+    return ft.Container(
+        content=ft.Row(
+            controls=[
+                crear_texto_id_producto(linea.id_producto),
+                crear_texto_nombre_producto(nombre),
+                ft.Text(
+                    f"Pedido: {linea.cantidad} Unidades",
+                    size=12,
+                    color=COLOR_TEXTO_SECUNDARIO,
+                    width=140,
+                ),
+                ft.Text(
+                    f"${subtotal:,.2f}",
+                    size=12,
+                    color=COLOR_TEXTO_PRIMARIO,
+                    weight=ft.FontWeight.W_600,
+                    width=90,
+                ),
+                _badge_disponibilidad(stock, linea.cantidad),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        ),
+        padding=padding_symmetric(horizontal=8, vertical=4),
+    )
+
 
 class PantallaPedidos(PantallaBase):
     """Vista para procesar lotes de pedidos (secuencial o concurrente) y ver cada línea."""
@@ -210,181 +258,203 @@ class PantallaPedidos(PantallaBase):
 
     def _aplicar_ordenamiento(self):
         criterio = self.dropdown_orden.value or "id"
-
+        invertir = not self.orden_ascendente
         if self.resultados_ultimo_proceso:
-            # Ordenar resultados procesados
-            def clave_res(r):
-                if criterio == "estado":
-                    orden_estado = {"cubierto": 0, "parcial": 1, "imposible": 2}
-                    return orden_estado.get(r.estado.value.lower(), 3)
-                elif criterio == "lineas":
-                    return len(r.lineas_cubiertas) + len(r.lineas_faltantes)
-                elif criterio == "unidades":
-                    p = next((ped for ped in self.motor.pedidos if ped.id == r.id_pedido), None)
-                    return sum(lp.cantidad for lp in p.lineas) if p else 0
-                return r.id_pedido
-
-            self.resultados_ultimo_proceso.sort(key=clave_res, reverse=not self.orden_ascendente)
+            # Unidades por pedido precalculadas: antes se buscaba el pedido en la lista
+            # completa en cada comparación del sort (O(P) por clave).
+            unidades = {
+                pedido.id: sum(linea.cantidad for linea in pedido.lineas)
+                for pedido in self.motor.pedidos
+            }
+            claves_resultado = {
+                "estado": lambda r: ORDEN_ESTADOS.get(r.estado.value.lower(), len(ORDEN_ESTADOS)),
+                "lineas": lambda r: len(r.lineas_cubiertas) + len(r.lineas_faltantes),
+                "unidades": lambda r: unidades.get(r.id_pedido, 0),
+            }
+            clave = claves_resultado.get(criterio, lambda r: r.id_pedido)
+            self.resultados_ultimo_proceso.sort(key=clave, reverse=invertir)
             self._renderizar_resultados_procesados()
-        else:
-            # Ordenar pedidos no procesados
-            def clave_ped(p):
-                if criterio == "lineas":
-                    return len(p.lineas)
-                elif criterio == "unidades":
-                    return sum(lp.cantidad for lp in p.lineas)
-                return p.id
+            return
 
-            self.pedidos_actuales.sort(key=clave_ped, reverse=not self.orden_ascendente)
-            self._renderizar_pedidos_sin_procesar()
+        claves_pedido = {
+            "lineas": lambda pedido: len(pedido.lineas),
+            "unidades": lambda pedido: sum(linea.cantidad for linea in pedido.lineas),
+        }
+        clave = claves_pedido.get(criterio, lambda pedido: pedido.id)
+        self.pedidos_actuales.sort(key=clave, reverse=invertir)
+        self._renderizar_pedidos_sin_procesar()
 
     def _renderizar_pedidos_sin_procesar(self):
-        if not self.pedidos_actuales:
+        self._renderizar_pagina(self.pedidos_actuales, self._crear_tile_pedido_pendiente)
+
+    def _renderizar_resultados_procesados(self):
+        self._renderizar_pagina(self.resultados_ultimo_proceso, self._crear_tile_resultado)
+
+    def _renderizar_pagina(self, elementos: list, crear_tile) -> None:
+        """Muestra la página actual de ``elementos``, un tile desplegable por elemento."""
+        if elementos:
+            self.col_pedidos.controls = [crear_tile(e) for e in self._paginar(elementos)]
+        else:
             self.col_pedidos.controls = []
             self.txt_info_pagina.value = "Página 1"
             self.btn_pag_anterior.disabled = True
             self.btn_pag_siguiente.disabled = True
-            actualizar_control(self)
-            return
-
-        items_pagina = self._paginar(self.pedidos_actuales)
-
-        items = []
-        for ped in items_pagina:
-            total_unidades = sum(linea.cantidad for linea in ped.lineas)
-
-            # Construir desglose de líneas desplegables
-            filas_lineas = []
-            precio_total_estimado = 0.0
-            for linea in ped.lineas:
-                prod = self.motor.buscar_por_id(linea.id_producto)
-                nombre_p = prod.nombre if prod else f"Producto #{linea.id_producto}"
-                stock_p = prod.stock if prod else 0
-                precio_p = prod.precio if prod else 0.0
-                subtotal = precio_p * linea.cantidad
-                precio_total_estimado += subtotal
-
-                if stock_p >= linea.cantidad:
-                    badge_linea = ft.Container(
-                        content=ft.Text(
-                            f"Cubierta (Stock: {stock_p})",
-                            size=11,
-                            color=COLOR_EXITO,
-                            weight=ft.FontWeight.BOLD,
-                        ),
-                        bgcolor=COLOR_FONDO_EXITO,
-                        padding=padding_symmetric(horizontal=8, vertical=3),
-                        border_radius=6,
-                    )
-                elif stock_p > 0:
-                    badge_linea = ft.Container(
-                        content=ft.Text(
-                            f"Parcial (Stock: {stock_p} / Falta: {linea.cantidad - stock_p})",
-                            size=11,
-                            color="#F59E0B",
-                            weight=ft.FontWeight.BOLD,
-                        ),
-                        bgcolor=COLOR_FONDO_ADVERTENCIA,
-                        padding=padding_symmetric(horizontal=8, vertical=3),
-                        border_radius=6,
-                    )
-                else:
-                    badge_linea = ft.Container(
-                        content=ft.Text(
-                            "Sin Stock en Almacén",
-                            size=11,
-                            color=COLOR_PELIGRO,
-                            weight=ft.FontWeight.BOLD,
-                        ),
-                        bgcolor=COLOR_FONDO_PELIGRO,
-                        padding=padding_symmetric(horizontal=8, vertical=3),
-                        border_radius=6,
-                    )
-
-                filas_lineas.append(
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                crear_texto_id_producto(linea.id_producto),
-                                crear_texto_nombre_producto(nombre_p),
-                                ft.Text(
-                                    f"Pedido: {linea.cantidad} Unidades",
-                                    size=12,
-                                    color=COLOR_TEXTO_SECUNDARIO,
-                                    width=140,
-                                ),
-                                ft.Text(
-                                    f"${subtotal:,.2f}",
-                                    size=12,
-                                    color=COLOR_TEXTO_PRIMARIO,
-                                    weight=ft.FontWeight.W_600,
-                                    width=90,
-                                ),
-                                badge_linea,
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        ),
-                        padding=padding_symmetric(horizontal=8, vertical=4),
-                    )
-                )
-
-            desglose = ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Divider(height=1, color=COLOR_BORDE),
-                        ft.Text(
-                            "Auditoría de líneas requeridas vs. existencias:",
-                            size=12,
-                            weight=ft.FontWeight.BOLD,
-                            color=COLOR_TEXTO_MUTED,
-                        ),
-                        *filas_lineas,
-                        ft.Divider(height=1, color=COLOR_BORDE),
-                        ft.Row(
-                            controls=[
-                                ft.Text(
-                                    f"Subtotal estimado: ${precio_total_estimado:,.2f}",
-                                    size=12,
-                                    weight=ft.FontWeight.BOLD,
-                                    color=COLOR_PRIMARIO,
-                                ),
-                            ],
-                            alignment=ft.MainAxisAlignment.END,
-                        ),
-                    ],
-                    spacing=6,
-                ),
-                padding=padding_symmetric(horizontal=12, vertical=8),
-                bgcolor=COLOR_TARJETA,
-            )
-
-            tile = ft.ExpansionTile(
-                leading=ft.Icon(ft.Icons.RECEIPT_OUTLINED, color=COLOR_PRIMARIO, size=20),
-                title=ft.Text(
-                    f"Pedido #{ped.id}",
-                    size=14,
-                    weight=ft.FontWeight.BOLD,
-                    color=COLOR_TEXTO_PRIMARIO,
-                ),
-                subtitle=ft.Text(
-                    f"{len(ped.lineas)} líneas demandadas | {total_unidades} Unidades en total",
-                    size=12,
-                    color=COLOR_TEXTO_MUTED,
-                ),
-                trailing=ft.Container(
-                    content=ft.Text(
-                        "Pendiente", size=11, color=COLOR_TEXTO_MUTED, weight=ft.FontWeight.BOLD
-                    ),
-                    padding=padding_symmetric(horizontal=8, vertical=3),
-                    border=borde_all(1, COLOR_BORDE),
-                    border_radius=6,
-                ),
-                controls=[desglose],
-            )
-            items.append(tile)
-
-        self.col_pedidos.controls = items
         actualizar_control(self)
+
+    def _datos_producto(self, id_producto: int) -> tuple[str, int, float]:
+        """Nombre, stock y precio del producto (con valores por defecto si no existe)."""
+        producto = self.motor.buscar_por_id(id_producto)
+        if producto is None:
+            return f"Producto #{id_producto}", 0, 0.0
+        return producto.nombre, producto.stock, producto.precio
+
+    def _crear_tile_pedido_pendiente(self, pedido) -> ft.ExpansionTile:
+        """Tile de un pedido sin procesar, con el desglose de sus líneas contra el stock."""
+        total_unidades = sum(linea.cantidad for linea in pedido.lineas)
+        filas_lineas = []
+        precio_total_estimado = 0.0
+        for linea in pedido.lineas:
+            nombre, stock, precio = self._datos_producto(linea.id_producto)
+            subtotal = precio * linea.cantidad
+            precio_total_estimado += subtotal
+            filas_lineas.append(_fila_linea_pendiente(linea, nombre, stock, subtotal))
+
+        desglose = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Divider(height=1, color=COLOR_BORDE),
+                    ft.Text(
+                        "Auditoría de líneas requeridas vs. existencias:",
+                        size=12,
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXTO_MUTED,
+                    ),
+                    *filas_lineas,
+                    ft.Divider(height=1, color=COLOR_BORDE),
+                    ft.Row(
+                        controls=[
+                            ft.Text(
+                                f"Subtotal estimado: ${precio_total_estimado:,.2f}",
+                                size=12,
+                                weight=ft.FontWeight.BOLD,
+                                color=COLOR_PRIMARIO,
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.END,
+                    ),
+                ],
+                spacing=6,
+            ),
+            padding=padding_symmetric(horizontal=12, vertical=8),
+            bgcolor=COLOR_TARJETA,
+        )
+        return ft.ExpansionTile(
+            leading=ft.Icon(ft.Icons.RECEIPT_OUTLINED, color=COLOR_PRIMARIO, size=20),
+            title=ft.Text(
+                f"Pedido #{pedido.id}",
+                size=14,
+                weight=ft.FontWeight.BOLD,
+                color=COLOR_TEXTO_PRIMARIO,
+            ),
+            subtitle=ft.Text(
+                f"{len(pedido.lineas)} líneas demandadas | {total_unidades} Unidades en total",
+                size=12,
+                color=COLOR_TEXTO_MUTED,
+            ),
+            trailing=ft.Container(
+                content=ft.Text(
+                    "Pendiente", size=11, color=COLOR_TEXTO_MUTED, weight=ft.FontWeight.BOLD
+                ),
+                padding=padding_symmetric(horizontal=8, vertical=3),
+                border=borde_all(1, COLOR_BORDE),
+                border_radius=6,
+            ),
+            controls=[desglose],
+        )
+
+    def _crear_tile_resultado(self, resultado) -> ft.ExpansionTile:
+        """Tile de un pedido procesado: primero las líneas faltantes, después las cubiertas."""
+        cubiertas = len(resultado.lineas_cubiertas)
+        total_lineas = cubiertas + len(resultado.lineas_faltantes)
+        porc_cobertura = (cubiertas / total_lineas * 100.0) if total_lineas > 0 else 100.0
+        filas_lineas = [
+            self._fila_linea_resultado(linea, cubierta=False)
+            for linea in resultado.lineas_faltantes
+        ] + [
+            self._fila_linea_resultado(linea, cubierta=True)
+            for linea in resultado.lineas_cubiertas
+        ]
+
+        desglose = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Divider(height=1, color=COLOR_BORDE),
+                    ft.Text(
+                        (
+                            f"Auditoría de cumplimiento ({cubiertas}/"
+                            f"{total_lineas} líneas cubiertas - {porc_cobertura:.1f}%):"
+                        ),
+                        size=12,
+                        weight=ft.FontWeight.BOLD,
+                        color=COLOR_TEXTO_MUTED,
+                    ),
+                    *filas_lineas,
+                ],
+                spacing=6,
+            ),
+            padding=padding_symmetric(horizontal=12, vertical=8),
+            bgcolor=COLOR_TARJETA,
+        )
+        return ft.ExpansionTile(
+            leading=ft.Icon(ft.Icons.RECEIPT_ROUNDED, color=COLOR_PRIMARIO, size=20),
+            title=ft.Text(
+                f"Pedido #{resultado.id_pedido}",
+                size=14,
+                weight=ft.FontWeight.BOLD,
+                color=COLOR_TEXTO_PRIMARIO,
+            ),
+            subtitle=ft.Text(
+                f"{cubiertas}/{total_lineas} líneas cubiertas ({porc_cobertura:.0f}%)",
+                size=12,
+                color=COLOR_TEXTO_SECUNDARIO,
+            ),
+            trailing=crear_badge_estado(resultado.estado.value),
+            controls=[desglose],
+        )
+
+    def _fila_linea_resultado(self, linea, cubierta: bool) -> ft.Container:
+        """Fila de una línea procesada, en verde si se cubrió y en rojo si faltó stock."""
+        nombre, stock, _precio = self._datos_producto(linea.id_producto)
+        if cubierta:
+            icono, color = ft.Icons.CHECK_CIRCLE_OUTLINE, COLOR_EXITO
+            texto_stock, texto_estado = f"Stock disponible: {stock} Unidades", "100% Satisfecho"
+        else:
+            icono, color = ft.Icons.CANCEL_OUTLINED, COLOR_PELIGRO
+            texto_stock = f"Stock actual: {stock} Unidades"
+            texto_estado = f"Faltan: {linea.faltante} Unidades"
+        return ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(icono, size=14, color=color),
+                    ft.Text(f"#{linea.id_producto} {nombre}", size=12, color=color, expand=True),
+                    ft.Text(
+                        f"Pedido: {linea.cantidad_solicitada} Unidades",
+                        size=12,
+                        color=COLOR_TEXTO_SECUNDARIO,
+                        width=130,
+                    ),
+                    ft.Text(texto_stock, size=12, color=COLOR_TEXTO_MUTED, width=130),
+                    ft.Text(
+                        texto_estado,
+                        size=12,
+                        color=color,
+                        weight=ft.FontWeight.BOLD,
+                        width=130,
+                    ),
+                ],
+            ),
+            padding=padding_symmetric(horizontal=8, vertical=3),
+        )
 
     def _paginar(self, elementos: list) -> list:
         """Devuelve los elementos de la página actual y actualiza los controles de paginación."""
@@ -407,150 +477,6 @@ class PantallaPedidos(PantallaBase):
             self._renderizar_resultados_procesados()
         else:
             self._renderizar_pedidos_sin_procesar()
-
-    def _renderizar_resultados_procesados(self):
-        if not self.resultados_ultimo_proceso:
-            self.col_pedidos.controls = []
-            self.txt_info_pagina.value = "Página 1"
-            self.btn_pag_anterior.disabled = True
-            self.btn_pag_siguiente.disabled = True
-            actualizar_control(self)
-            return
-
-        items_pagina = self._paginar(self.resultados_ultimo_proceso)
-
-        items = []
-        for r in items_pagina:
-            total_lineas = len(r.lineas_cubiertas) + len(r.lineas_faltantes)
-            porc_cobertura = (
-                (len(r.lineas_cubiertas) / total_lineas * 100.0) if total_lineas > 0 else 100.0
-            )
-
-            filas_lineas = []
-            for lf in r.lineas_faltantes:
-                prod = self.motor.buscar_por_id(lf.id_producto)
-                nombre_p = prod.nombre if prod else f"Producto #{lf.id_producto}"
-                stock_p = prod.stock if prod else 0
-                filas_lineas.append(
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.CANCEL_OUTLINED, size=14, color=COLOR_PELIGRO),
-                                ft.Text(
-                                    f"#{lf.id_producto} {nombre_p}",
-                                    size=12,
-                                    color=COLOR_PELIGRO,
-                                    expand=True,
-                                ),
-                                ft.Text(
-                                    f"Pedido: {lf.cantidad_solicitada} Unidades",
-                                    size=12,
-                                    color=COLOR_TEXTO_SECUNDARIO,
-                                    width=130,
-                                ),
-                                ft.Text(
-                                    f"Stock actual: {stock_p} Unidades",
-                                    size=12,
-                                    color=COLOR_TEXTO_MUTED,
-                                    width=130,
-                                ),
-                                ft.Text(
-                                    f"Faltan: {lf.faltante} Unidades",
-                                    size=12,
-                                    color=COLOR_PELIGRO,
-                                    weight=ft.FontWeight.BOLD,
-                                    width=130,
-                                ),
-                            ],
-                        ),
-                        padding=padding_symmetric(horizontal=8, vertical=3),
-                    )
-                )
-
-            for lc in r.lineas_cubiertas:
-                prod = self.motor.buscar_por_id(lc.id_producto)
-                nombre_p = prod.nombre if prod else f"Producto #{lc.id_producto}"
-                stock_p = prod.stock if prod else 0
-                filas_lineas.append(
-                    ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, size=14, color=COLOR_EXITO),
-                                ft.Text(
-                                    f"#{lc.id_producto} {nombre_p}",
-                                    size=12,
-                                    color=COLOR_EXITO,
-                                    expand=True,
-                                ),
-                                ft.Text(
-                                    f"Pedido: {lc.cantidad_solicitada} Unidades",
-                                    size=12,
-                                    color=COLOR_TEXTO_SECUNDARIO,
-                                    width=130,
-                                ),
-                                ft.Text(
-                                    f"Stock disponible: {stock_p} Unidades",
-                                    size=12,
-                                    color=COLOR_TEXTO_MUTED,
-                                    width=130,
-                                ),
-                                ft.Text(
-                                    "100% Satisfecho",
-                                    size=12,
-                                    color=COLOR_EXITO,
-                                    weight=ft.FontWeight.BOLD,
-                                    width=130,
-                                ),
-                            ],
-                        ),
-                        padding=padding_symmetric(horizontal=8, vertical=3),
-                    )
-                )
-
-            desglose = ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Divider(height=1, color=COLOR_BORDE),
-                        ft.Text(
-                            (
-                                f"Auditoría de cumplimiento ({len(r.lineas_cubiertas)}/"
-                                f"{total_lineas} líneas cubiertas - {porc_cobertura:.1f}%):"
-                            ),
-                            size=12,
-                            weight=ft.FontWeight.BOLD,
-                            color=COLOR_TEXTO_MUTED,
-                        ),
-                        *filas_lineas,
-                    ],
-                    spacing=6,
-                ),
-                padding=padding_symmetric(horizontal=12, vertical=8),
-                bgcolor=COLOR_TARJETA,
-            )
-
-            tile = ft.ExpansionTile(
-                leading=ft.Icon(ft.Icons.RECEIPT_ROUNDED, color=COLOR_PRIMARIO, size=20),
-                title=ft.Text(
-                    f"Pedido #{r.id_pedido}",
-                    size=14,
-                    weight=ft.FontWeight.BOLD,
-                    color=COLOR_TEXTO_PRIMARIO,
-                ),
-                subtitle=ft.Text(
-                    (
-                        f"{len(r.lineas_cubiertas)}/{total_lineas} líneas cubiertas ("
-                        f"{porc_cobertura:.0f}%)"
-                    ),
-                    size=12,
-                    color=COLOR_TEXTO_SECUNDARIO,
-                ),
-                trailing=crear_badge_estado(r.estado.value),
-                controls=[desglose],
-            )
-            items.append(tile)
-
-        self.col_pedidos.controls = items
-        actualizar_control(self)
 
     def _exportar_picking_csv(self):
         try:

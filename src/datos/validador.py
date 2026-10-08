@@ -101,48 +101,46 @@ class ValidadorDataset:
             total_pedidos=len(self.pedidos),
         )
 
+    @staticmethod
+    def _deserializar_unicos(items: list[Any], modelo: type, nombre: str) -> list:
+        """Construye ``modelo`` desde cada diccionario y verifica que los ids no se repitan.
+
+        Lanza:
+            ValueError: Si un elemento no es un objeto, tiene datos inválidos o repite id.
+        """
+        objetos = []
+        ids: set[int] = set()
+        for posicion, item in enumerate(items):
+            if not isinstance(item, dict):
+                raise ValueError(
+                    f"El {nombre} en la posición {posicion} no es un objeto JSON válido."
+                )
+            try:
+                objeto = modelo.desde_diccionario(item)
+            except Exception as error:
+                raise ValueError(
+                    f"Error en datos de {nombre} #{posicion} (id={item.get('id')}): {error}"
+                ) from error
+            if objeto.id in ids:
+                raise ValueError(f"Identificador de {nombre} duplicado en dataset: #{objeto.id}")
+            ids.add(objeto.id)
+            objetos.append(objeto)
+        return objetos
+
     @classmethod
     def validar_diccionario(cls, datos: dict[str, Any]) -> tuple[list[Producto], list[Pedido]]:
         """Valida y deserializa un diccionario de dataset crudo. Lanza ValueError ante errores."""
         cls.validar_estructura_cruda(datos)
 
-        productos: list[Producto] = []
-        ids_prods: set[int] = set()
-        for idx, item in enumerate(datos["productos"]):
-            if not isinstance(item, dict):
-                raise ValueError(f"El producto en la posición {idx} no es un objeto JSON válido.")
-            try:
-                prod = Producto.desde_diccionario(item)
-            except Exception as e:
-                raise ValueError(
-                    f"Error en datos de producto #{idx} (id={item.get('id')}): {e}"
-                ) from e
-            if prod.id in ids_prods:
-                raise ValueError(f"Identificador de producto duplicado en dataset: #{prod.id}")
-            ids_prods.add(prod.id)
-            productos.append(prod)
-
-        pedidos: list[Pedido] = []
-        ids_peds: set[int] = set()
-        for idx, item in enumerate(datos["pedidos"]):
-            if not isinstance(item, dict):
-                raise ValueError(f"El pedido en la posición {idx} no es un objeto JSON válido.")
-            try:
-                ped = Pedido.desde_diccionario(item)
-            except Exception as e:
-                raise ValueError(
-                    f"Error en datos de pedido #{idx} (id={item.get('id')}): {e}"
-                ) from e
-            if ped.id in ids_peds:
-                raise ValueError(f"Identificador de pedido duplicado en dataset: #{ped.id}")
-            ids_peds.add(ped.id)
-
-            for linea in ped.lineas:
-                if linea.id_producto not in ids_prods:
+        productos = cls._deserializar_unicos(datos["productos"], Producto, "producto")
+        pedidos = cls._deserializar_unicos(datos["pedidos"], Pedido, "pedido")
+        ids_productos = {producto.id for producto in productos}
+        for pedido in pedidos:
+            for linea in pedido.lineas:
+                if linea.id_producto not in ids_productos:
                     raise ValueError(
-                        f"Integridad rota en pedido #{ped.id}: el producto con id "
+                        f"Integridad rota en pedido #{pedido.id}: el producto con id "
                         f"#{linea.id_producto} no existe en el catálogo."
                     )
-            pedidos.append(ped)
 
         return productos, pedidos

@@ -197,6 +197,48 @@ def escribir_pedidos_jsonl(
     return escribir_lineas_con_buffer(ruta, lineas, tamano_buffer, tamano_lote)
 
 
+def _fila_picking_desde_diccionario(datos: dict[str, Any]) -> list[Any]:
+    """Fila CSV desde ``a_diccionario()`` o un diccionario equivalente."""
+    if "pedidos_solicitantes" in datos:
+        total_pedidos = len(datos["pedidos_solicitantes"])
+    else:
+        total_pedidos = datos.get("total_pedidos", 0)
+    return [
+        datos.get("id_producto", 0),
+        datos.get("nombre_producto", datos.get("nombre", "")),
+        datos.get("categoria", ""),
+        datos.get("cantidad_total", datos.get("total_demandado", 0)),
+        datos.get("stock_disponible", 0),
+        total_pedidos,
+    ]
+
+
+def _fila_picking_desde_atributos(item: Any) -> list[Any]:
+    """Fila CSV desde un objeto con atributos (por ejemplo, un ítem sin ``a_diccionario``)."""
+    producto = getattr(item, "producto", None)
+    if hasattr(item, "demandas_por_pedido"):
+        total_pedidos = len(item.demandas_por_pedido)
+    else:
+        total_pedidos = getattr(item, "total_pedidos", 0)
+    return [
+        getattr(item, "id_producto", 0),
+        producto.nombre if producto else getattr(item, "nombre", ""),
+        producto.categoria if producto else getattr(item, "categoria", ""),
+        getattr(item, "cantidad_total", getattr(item, "total_demandado", 0)),
+        producto.stock if producto else getattr(item, "stock_disponible", 0),
+        total_pedidos,
+    ]
+
+
+def _fila_picking(item: Any) -> list[Any]:
+    """Convierte un ítem de picking (objeto o diccionario) en una fila del CSV."""
+    if hasattr(item, "a_diccionario"):
+        return _fila_picking_desde_diccionario(item.a_diccionario())
+    if isinstance(item, dict):
+        return _fila_picking_desde_diccionario(item)
+    return _fila_picking_desde_atributos(item)
+
+
 def exportar_picking_csv_con_buffer(
     ruta: str | Path,
     items_picking: Iterable[Any],
@@ -230,39 +272,7 @@ def exportar_picking_csv_con_buffer(
         )
 
         for item in items_picking:
-            if hasattr(item, "a_diccionario"):
-                d = item.a_diccionario()
-                id_prod = d.get("id_producto", 0)
-                nombre = d.get("nombre_producto", "")
-                cat = d.get("categoria", "")
-                demandado = d.get("cantidad_total", 0)
-                stock = d.get("stock_disponible", 0)
-                pedidos_cnt = len(d.get("pedidos_solicitantes", []))
-            elif isinstance(item, dict):
-                id_prod = item.get("id_producto", 0)
-                nombre = item.get("nombre_producto", item.get("nombre", ""))
-                cat = item.get("categoria", "")
-                demandado = item.get("cantidad_total", item.get("total_demandado", 0))
-                stock = item.get("stock_disponible", 0)
-                pedidos_cnt = (
-                    len(item.get("pedidos_solicitantes", []))
-                    if "pedidos_solicitantes" in item
-                    else item.get("total_pedidos", 0)
-                )
-            else:
-                prod = getattr(item, "producto", None)
-                id_prod = getattr(item, "id_producto", 0)
-                nombre = prod.nombre if prod else getattr(item, "nombre", "")
-                cat = prod.categoria if prod else getattr(item, "categoria", "")
-                demandado = getattr(item, "cantidad_total", getattr(item, "total_demandado", 0))
-                stock = prod.stock if prod else getattr(item, "stock_disponible", 0)
-                pedidos_cnt = (
-                    len(getattr(item, "demandas_por_pedido", []))
-                    if hasattr(item, "demandas_por_pedido")
-                    else getattr(item, "total_pedidos", 0)
-                )
-
-            escritor.writerow([id_prod, nombre, cat, demandado, stock, pedidos_cnt])
+            escritor.writerow(_fila_picking(item))
             filas_escritas += 1
 
     return filas_escritas
