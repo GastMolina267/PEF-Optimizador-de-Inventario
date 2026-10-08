@@ -15,6 +15,7 @@ masivos de datos (streaming, buffering y procesamiento por lotes).
    :maxdepth: 2
    :caption: Guías y Arquitectura
 
+   guias/resumen_parcial_2
    guias/analisis
    guias/flujo_aplicacion
    guias/observabilidad
