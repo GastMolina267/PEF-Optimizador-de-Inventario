@@ -440,7 +440,9 @@ def construir_propuestas(raiz: Path, hotspots: list[EntradaPerfil]) -> list[Prop
         propuestas.append(
             PropuestaMejora(
                 titulo="Evitar el sort final del lote de picking si la UI no lo requiere",
-                hotspot="`agrupar_pedidos_batch` aparece en tottime de cProfile (grande: 0.020 s).",
+                hotspot=(
+                    "`agrupar_pedidos_batch` aparece en tottime de cProfile (grande: 0.020 s)."
+                ),
                 evidencia="docs/mediciones/cprofile_resumen.txt — src/pedidos/agrupador.py:70",
                 alternativa="La consolidación hash ya es O(L). El `sorted(..., reverse=True)` "
                 "añade O(U log U) solo para presentación. Diferir el orden a la "

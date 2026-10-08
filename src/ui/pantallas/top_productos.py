@@ -107,15 +107,24 @@ class PantallaTopProductos(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Ranking de Productos Más Solicitados (Top-N)",
-                    "Comparación algorítmica: Heap O(N log k) acotado en memoria vs. Ordenamiento global O(N log N)",
+                    (
+                        "Comparación algorítmica: Heap O(N log k) acotado en memoria vs. "
+                        "Ordenamiento global O(N log N)"
+                    ),
                     self.btn_calcular,
                 ),
                 crear_banner_explicativo(
                     titulo="Ranking Top-N y Priorización de Inventario",
-                    descripcion="Identifica los artículos con mayor volumen de demanda acumulada para ubicarlos estratégicamente en zonas de picking rápido.",
+                    descripcion=(
+                        "Identifica los artículos con mayor volumen de demanda acumulada para "
+                        "ubicarlos estratégicamente en zonas de picking rápido."
+                    ),
                     complejidad_base="Ordenamiento Total O(N log N)",
                     complejidad_opt="Min-Heap acotado O(N log k)",
-                    por_que_importa="El algoritmo con Heap mantiene únicamente los k elementos en memoria, ahorrando espacio y tiempo sin ordenar el catálogo completo.",
+                    por_que_importa=(
+                        "El algoritmo con Heap mantiene únicamente los k elementos en memoria, "
+                        "ahorrando espacio y tiempo sin ordenar el catálogo completo."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -220,7 +229,9 @@ class PantallaTopProductos(PantallaBase):
 
         self._publicar_resultado(
             tiempo_ms=duracion_ms,
-            resultado_negocio=f"Top-{k} calculado con {metodo.upper()} en {formatear_tiempo_ms(duracion_ms)}",
+            resultado_negocio=(
+                f"Top-{k} calculado con {metodo.upper()} en {formatear_tiempo_ms(duracion_ms)}"
+            ),
         )
         actualizar_control(self)
 
@@ -261,7 +272,10 @@ class PantallaTopProductos(PantallaBase):
                                     ),
                                     crear_columna_titulo_detalle(
                                         prod.nombre,
-                                        f"#{prod.id} | {prod.categoria} | Stock: {prod.stock} Unidades",
+                                        (
+                                            f"#{prod.id} | {prod.categoria} | Stock: {prod.stock} "
+                                            "Unidades"
+                                        ),
                                     ),
                                     ft.Column(
                                         controls=[

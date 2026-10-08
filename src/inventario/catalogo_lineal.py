@@ -34,7 +34,8 @@ class CatalogoLineal:
         for p in self._productos:
             if p.id == producto.id:
                 raise ValueError(
-                    f"Conflicto de identificador: ya existe un producto con id #{producto.id} ({p.nombre})"
+                    f"Conflicto de identificador: ya existe un producto con id #{producto.id} "
+                    f"({p.nombre})"
                 )
         self._productos.append(producto)
 
@@ -51,7 +52,8 @@ class CatalogoLineal:
     def buscar_por_nombre(self, texto: str) -> list[Producto]:
         """Busca productos cuyo nombre contenga el texto buscado (insensible a mayúsculas).
 
-        Complejidad temporal: O(n * L), donde n es la cantidad de productos y L la longitud media del texto.
+        Complejidad temporal: O(n * L), con n la cantidad de productos y L la longitud media
+        del nombre.
         """
         texto_norm = texto.lower()
         coincidencias: list[Producto] = []

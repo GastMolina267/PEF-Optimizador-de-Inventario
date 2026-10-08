@@ -3,7 +3,8 @@
 Uso::
 
     python -m benchmarks.resumir_scalene
-    python -m benchmarks.resumir_scalene --antes a.json --despues b.json --entorno "Windows 11, 8 núcleos"
+    python -m benchmarks.resumir_scalene --antes a.json --despues b.json \\
+        --entorno "Windows 11, 8 núcleos"
 
 Genera ``docs/mediciones/scalene/resumen.md``. Los porcentajes de Scalene son relativos al
 tiempo total de cada corrida: sirven para ver dónde se va el tiempo dentro de un perfil;
@@ -125,7 +126,8 @@ def generar_resumen(antes: Perfil, despues: Perfil, entorno: str) -> str:
         reverse=True,
     )
     filas = [
-        f"| `{clave}` | {_celda(antes.funciones.get(clave))} | {_celda(despues.funciones.get(clave))} |"
+        f"| `{clave}` | {_celda(antes.funciones.get(clave))} "
+        f"| {_celda(despues.funciones.get(clave))} |"
         for clave in claves[:MAX_FILAS]
         if max(
             antes.funciones.get(clave, PerfilFuncion(0, 0, 0, 0)).total,

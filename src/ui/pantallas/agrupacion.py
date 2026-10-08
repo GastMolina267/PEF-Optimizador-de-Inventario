@@ -78,15 +78,24 @@ class PantallaAgrupacion(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Batch Picking Consolidado",
-                    "Fusión de demandas en una sola pasada O(L) mediante acumulación en tablas Hash",
+                    (
+                        "Fusión de demandas en una sola pasada O(L) mediante acumulación en "
+                        "tablas Hash"
+                    ),
                     self.btn_agrupar,
                 ),
                 crear_banner_explicativo(
                     titulo="Batch Picking Consolidado en Almacén",
-                    descripcion="Consolida las demandas de todos los pedidos en una única lista de recolección para que el operario visite cada posición una sola vez.",
+                    descripcion=(
+                        "Consolida las demandas de todos los pedidos en una única lista de "
+                        "recolección para que el operario visite cada posición una sola vez."
+                    ),
                     complejidad_base="Agrupación Anidada O(P·L·n)",
                     complejidad_opt="Agrupación Hash O(L)",
-                    por_que_importa="En depósitos con miles de pedidos, elimina búsquedas cuadráticas repetidas y reduce la distancia física recorrida en almacén.",
+                    por_que_importa=(
+                        "En depósitos con miles de pedidos, elimina búsquedas cuadráticas "
+                        "repetidas y reduce la distancia física recorrida en almacén."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -172,7 +181,10 @@ class PantallaAgrupacion(PantallaBase):
 
         self._publicar_resultado(
             tiempo_ms=duracion_ms,
-            resultado_negocio=f"Batch Picking: {lote.total_unidades} Unidades en {lote.total_productos_distintos} productos",
+            resultado_negocio=(
+                f"Batch Picking: {lote.total_unidades} Unidades en "
+                f"{lote.total_productos_distintos} productos"
+            ),
         )
         actualizar_control(self)
 
@@ -209,7 +221,10 @@ class PantallaAgrupacion(PantallaBase):
                             ),
                             crear_columna_titulo_detalle(
                                 nombre,
-                                f"{categoria} | {item.total_pedidos_solicitantes} pedidos solicitantes",
+                                (
+                                    f"{categoria} | {item.total_pedidos_solicitantes} pedidos "
+                                    "solicitantes"
+                                ),
                             ),
                             ft.Column(
                                 controls=[
@@ -242,7 +257,10 @@ class PantallaAgrupacion(PantallaBase):
         if len(self.items_consolidados_actuales) > max_mostrar:
             items_visuales.append(
                 ft.Text(
-                    f"Mostrando los primeros {max_mostrar} de {len(self.items_consolidados_actuales)} productos consolidados...",
+                    (
+                        f"Mostrando los primeros {max_mostrar} de "
+                        f"{len(self.items_consolidados_actuales)} productos consolidados..."
+                    ),
                     size=12,
                     color=COLOR_TEXTO_MUTED,
                     text_align=ft.TextAlign.CENTER,

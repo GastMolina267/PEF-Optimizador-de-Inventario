@@ -113,10 +113,16 @@ class PantallaInicio(PantallaBase):
                 ),
                 crear_banner_explicativo(
                     titulo="Gestión Logística y Optimización a Escala",
-                    descripcion="Simulación de almacén inteligente para comparar estrategias ingenuas vs. optimizadas ante catálogos crecientes.",
+                    descripcion=(
+                        "Simulación de almacén inteligente para comparar estrategias ingenuas vs. "
+                        "optimizadas ante catálogos crecientes."
+                    ),
                     complejidad_base="Operaciones no coordinadas O(n) a O(P·L·n)",
                     complejidad_opt="Flujo integral hash y sub-lineal O(1) a O(L)",
-                    por_que_importa="Permite auditar el impacto marginal de cada técnica algorítmica sobre el mismo volumen de datos.",
+                    por_que_importa=(
+                        "Permite auditar el impacto marginal de cada técnica algorítmica sobre el "
+                        "mismo volumen de datos."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -142,7 +148,11 @@ class PantallaInicio(PantallaBase):
                                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
                             ft.Text(
-                                "Al presionar 'Ejecutar Escenario', el motor procesa secuencialmente pedidos, batch picking, ranking Top-N y cálculo de alternativas sustitutas para faltantes.",
+                                (
+                                    "Al presionar 'Ejecutar Escenario', el motor procesa "
+                                    "secuencialmente pedidos, batch picking, ranking Top-N y "
+                                    "cálculo de alternativas sustitutas para faltantes."
+                                ),
                                 size=12,
                                 color=COLOR_TEXTO_MUTED,
                             ),
@@ -193,7 +203,10 @@ class PantallaInicio(PantallaBase):
                     n_pedidos=stats["total_pedidos"],
                     estrategia=self.motor.estrategia,
                     tiempo_ms=duracion_ms,
-                    resultado_negocio=f"Dataset masivo cargado en streaming en {formatear_tiempo_ms(duracion_ms)}",
+                    resultado_negocio=(
+                        "Dataset masivo cargado en streaming en "
+                        f"{formatear_tiempo_ms(duracion_ms)}"
+                    ),
                 )
                 if self.on_dataset_cambiado:
                     self.on_dataset_cambiado(nombre)
@@ -220,7 +233,9 @@ class PantallaInicio(PantallaBase):
                 n_pedidos=stats["total_pedidos"],
                 estrategia=self.motor.estrategia,
                 tiempo_ms=duracion_ms,
-                resultado_negocio=f"Dataset {nombre} cargado en {formatear_tiempo_ms(duracion_ms)}",
+                resultado_negocio=(
+                    f"Dataset {nombre} cargado en {formatear_tiempo_ms(duracion_ms)}"
+                ),
             )
             if self.on_dataset_cambiado:
                 self.on_dataset_cambiado(nombre)
@@ -306,8 +321,10 @@ class PantallaInicio(PantallaBase):
                         weight=ft.FontWeight.BOLD,
                     ),
                     subtitle=ft.Text(
-                        f"Cubiertos: {res_pedidos.pedidos_cubiertos} | Parciales: {res_pedidos.pedidos_parciales} | "
-                        f"Imposibles: {res_pedidos.pedidos_imposibles} ({formatear_tiempo_ms(res_pedidos.tiempo_ejecucion_ms)})",
+                        f"Cubiertos: {res_pedidos.pedidos_cubiertos} | "
+                        f"Parciales: {res_pedidos.pedidos_parciales} | "
+                        f"Imposibles: {res_pedidos.pedidos_imposibles} "
+                        f"({formatear_tiempo_ms(res_pedidos.tiempo_ejecucion_ms)})",
                         size=11,
                         color=COLOR_TEXTO_SECUNDARIO,
                     ),
@@ -316,12 +333,18 @@ class PantallaInicio(PantallaBase):
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.ALL_INBOX, color=COLOR_SECUNDARIO, size=18),
                     title=ft.Text(
-                        f"Batch Picking Consolidado: {picking.total_productos_distintos} productos únicos",
+                        (
+                            f"Batch Picking Consolidado: {picking.total_productos_distintos} "
+                            "productos únicos"
+                        ),
                         size=13,
                         weight=ft.FontWeight.BOLD,
                     ),
                     subtitle=ft.Text(
-                        f"Total unidades a recolectar: {picking.total_unidades} en {picking.total_pedidos} pedidos.",
+                        (
+                            f"Total unidades a recolectar: {picking.total_unidades} en "
+                            f"{picking.total_pedidos} pedidos."
+                        ),
                         size=11,
                         color=COLOR_TEXTO_SECUNDARIO,
                     ),
@@ -353,7 +376,11 @@ class PantallaInicio(PantallaBase):
                             weight=ft.FontWeight.BOLD,
                         ),
                         subtitle=ft.Text(
-                            f"{res_alternativas.total_combinaciones} combinaciones en {res_alternativas.categoria} ({formatear_tiempo_ms(res_alternativas.tiempo_ejecucion_ms)}).",
+                            (
+                                f"{res_alternativas.total_combinaciones} combinaciones en "
+                                f"{res_alternativas.categoria} ("
+                                f"{formatear_tiempo_ms(res_alternativas.tiempo_ejecucion_ms)})."
+                            ),
                             size=11,
                             color=COLOR_TEXTO_SECUNDARIO,
                         ),
@@ -364,7 +391,10 @@ class PantallaInicio(PantallaBase):
             self.col_resultado_escenario.controls = items_resumen
             self._publicar_resultado(
                 tiempo_ms=duracion_total_ms,
-                resultado_negocio=f"Escenario ejecutado: {res_pedidos.pedidos_cubiertos}/{res_pedidos.pedidos_procesados} cubiertos",
+                resultado_negocio=(
+                    f"Escenario ejecutado: {res_pedidos.pedidos_cubiertos}/"
+                    f"{res_pedidos.pedidos_procesados} cubiertos"
+                ),
                 dataset=self.dropdown_datasets.value,
             )
             actualizar_control(self)

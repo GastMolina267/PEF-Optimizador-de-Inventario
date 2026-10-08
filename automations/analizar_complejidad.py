@@ -407,8 +407,14 @@ def renderizar_markdown(informes: list[InformeComplejidad], raiz: Path) -> str:
         MARCA_INICIO,
         "",
         "<!-- Bloque generado por la automatización Origin 1 (análisis de complejidad). -->",
-        "<!-- No editar a mano: se regenera con `python -m automations.ejecutar --complejidad`. -->",
-        "<!-- El comentario del grupo (secciones 1-8) permanece intacto por encima de este bloque. -->",
+        (
+            "<!-- No editar a mano: se regenera con `python -m automations.ejecutar "
+            "--complejidad`. -->"
+        ),
+        (
+            "<!-- El comentario del grupo (secciones 1-8) permanece intacto por encima de este "
+            "bloque. -->"
+        ),
         "",
         f"**Commit analizado:** `{sha}` · **Generado:** {ahora}",
         "",

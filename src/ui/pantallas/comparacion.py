@@ -83,15 +83,25 @@ class PantallaComparacion(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Desafío Experimental: Baseline vs. Optimizado",
-                    "Medición empírica rigurosa de tiempo, memoria y aceleración (Speedup) sobre el mismo dataset",
+                    (
+                        "Medición empírica rigurosa de tiempo, memoria y aceleración (Speedup) "
+                        "sobre el mismo dataset"
+                    ),
                     self.btn_comparar,
                 ),
                 crear_banner_explicativo(
                     titulo="Desafío Experimental y Comparación Obligatoria",
-                    descripcion="Medición empírica rigurosa de las 4 operaciones fundamentales sobre el mismo dataset para evaluar la aceleración real (Speedup = Tiempo_base / Tiempo_opt).",
+                    descripcion=(
+                        "Medición empírica rigurosa de las 4 operaciones fundamentales sobre el "
+                        "mismo dataset para evaluar la aceleración real (Speedup = Tiempo_base / "
+                        "Tiempo_opt)."
+                    ),
                     complejidad_base="O(n), O(N log N), O(P·L), O(2^N)",
                     complejidad_opt="O(1), O(N log k), Multi-Proceso, O(N·P)",
-                    por_que_importa="Satisface el requisito central de la rúbrica del parcial y suministra la evidencia empírica directa para la exposición oral.",
+                    por_que_importa=(
+                        "Satisface el requisito central de la rúbrica del parcial y suministra la "
+                        "evidencia empírica directa para la exposición oral."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [

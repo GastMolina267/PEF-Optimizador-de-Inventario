@@ -71,7 +71,7 @@ def leer_productos_streaming_jsonl(
     ruta: str | Path,
     tamano_buffer: int = TAMANO_BUFFER_DEFECTO,
 ) -> Iterator[Producto]:
-    """Lee productos desde un archivo .jsonl línea a línea en streaming sin cargar el archivo en RAM.
+    """Lee productos de un archivo .jsonl en streaming, sin cargar el archivo en memoria.
 
     Cada línea debe ser un objeto JSON válido con campos id, nombre, categoria, stock, precio.
     Lanza ValueError si alguna línea contiene JSON inválido o campos obligatorios faltantes.
@@ -102,7 +102,8 @@ def leer_productos_streaming_jsonl(
                 )
             except (KeyError, TypeError, ValueError) as e:
                 raise ValueError(
-                    f"Estructura inválida de Producto en línea {num_linea} de {path_archivo.name}: {e}"
+                    f"Estructura inválida de Producto en línea {num_linea} de "
+                    f"{path_archivo.name}: {e}"
                 ) from e
 
 
@@ -112,8 +113,8 @@ def leer_pedidos_streaming_jsonl(
 ) -> Iterator[Pedido]:
     """Lee pedidos desde un archivo .jsonl línea a línea en streaming sin materializar la lista.
 
-    Cada línea debe ser un objeto JSON con id y lineas (lista de objetos con id_producto y cantidad).
-    Lanza ValueError si alguna línea contiene datos corruptos.
+    Cada línea debe ser un objeto JSON con ``id`` y ``lineas`` (lista de objetos con
+    ``id_producto`` y ``cantidad``). Lanza ValueError si alguna línea está corrupta.
     """
     path_archivo = Path(ruta)
     if not path_archivo.is_file():
@@ -142,7 +143,8 @@ def leer_pedidos_streaming_jsonl(
                 yield Pedido(id=int(d["id"]), lineas=lineas_pedido)
             except (KeyError, TypeError, ValueError) as e:
                 raise ValueError(
-                    f"Estructura inválida de Pedido en línea {num_linea} de {path_archivo.name}: {e}"
+                    f"Estructura inválida de Pedido en línea {num_linea} de "
+                    f"{path_archivo.name}: {e}"
                 ) from e
 
 

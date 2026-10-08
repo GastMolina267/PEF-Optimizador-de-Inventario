@@ -61,7 +61,7 @@ def guardar_dataset_json(
         ruta: Ruta de destino para el archivo.
         productos: Lista de instancias Producto.
         pedidos: Lista de instancias Pedido.
-        metadatos: Diccionario opcional con información adicional (semilla, descripción, fecha, etc.).
+        metadatos: Información adicional opcional (semilla, descripción, fecha, etc.).
     """
     path_archivo = Path(ruta)
     path_archivo.parent.mkdir(parents=True, exist_ok=True)

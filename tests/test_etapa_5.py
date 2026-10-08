@@ -134,7 +134,7 @@ class TestEquivalenciaEscalaGrande:
 
 
 class TestArtefactosMedicionesGenerados:
-    """Verifica que todos los informes exigidos por la Etapa 5 existan y contengan datos válidos."""
+    """Los informes exigidos por la Etapa 5 existen y contienen datos válidos."""
 
     def test_tabla_comparativa_existe(self):
         ruta_md = MEDICIONES_DIR / "tabla_comparativa.md"

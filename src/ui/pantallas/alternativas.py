@@ -106,15 +106,24 @@ class PantallaAlternativas(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Cálculo de Alternativas y Combinaciones Sustitutas",
-                    "Demostración experimental de Memoización: Árbol recursivo exhaustivo O(2^N) vs. Programación Dinámica O(N * P)",
+                    (
+                        "Demostración experimental de Memoización: Árbol recursivo exhaustivo "
+                        "O(2^N) vs. Programación Dinámica O(N * P)"
+                    ),
                     self.btn_buscar,
                 ),
                 crear_banner_explicativo(
                     titulo="Sustitutos y Programación Dinámica",
-                    descripcion="Explora combinaciones de productos dentro de una categoría para suplir faltantes de stock respetando un presupuesto máximo.",
+                    descripcion=(
+                        "Explora combinaciones de productos dentro de una categoría para suplir "
+                        "faltantes de stock respetando un presupuesto máximo."
+                    ),
                     complejidad_base="Árbol Recursivo Exhaustivo O(2^N)",
                     complejidad_opt="Programación Dinámica Memoizada O(N·P)",
-                    por_que_importa="La memoización de subproblemas previene la explosión exponencial O(2^N), permitiendo encontrar combinaciones óptimas en menos de 1 milisegundo.",
+                    por_que_importa=(
+                        "La memoización de subproblemas previene la explosión exponencial O(2^N), "
+                        "permitiendo encontrar combinaciones óptimas en menos de 1 milisegundo."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -307,7 +316,10 @@ class PantallaAlternativas(PantallaBase):
                     color=COLOR_TEXTO_PRIMARIO,
                 ),
                 subtitle=ft.Text(
-                    f"Total: ${costo_total:,.2f} ({porc_uso:.1f}% del presupuesto) | Remanente: ${diferencia:,.2f}",
+                    (
+                        f"Total: ${costo_total:,.2f} ({porc_uso:.1f}% del presupuesto) | "
+                        f"Remanente: ${diferencia:,.2f}"
+                    ),
                     size=12,
                     color=COLOR_TEXTO_SECUNDARIO,
                 ),
@@ -331,7 +343,10 @@ class PantallaAlternativas(PantallaBase):
             items.append(
                 ft.Container(
                     content=ft.Text(
-                        "No se hallaron combinaciones viables dentro del presupuesto en esta categoría.",
+                        (
+                            "No se hallaron combinaciones viables dentro del presupuesto en esta "
+                            "categoría."
+                        ),
                         size=13,
                         color=COLOR_TEXTO_MUTED,
                     ),

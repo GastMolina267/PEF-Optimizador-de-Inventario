@@ -140,8 +140,8 @@ class ValidadorDataset:
             for linea in ped.lineas:
                 if linea.id_producto not in ids_prods:
                     raise ValueError(
-                        f"Integridad rota en pedido #{ped.id}: el producto con id #{linea.id_producto} "
-                        "no existe en el catálogo."
+                        f"Integridad rota en pedido #{ped.id}: el producto con id "
+                        f"#{linea.id_producto} no existe en el catálogo."
                     )
             pedidos.append(ped)
 

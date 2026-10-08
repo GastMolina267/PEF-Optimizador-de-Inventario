@@ -297,7 +297,9 @@ def generar_todos_los_datasets(directorio_destino: str | Path, semilla: int = 42
             )
             metadatos = {
                 "nombre": nombre_archivo.replace(".json", "").capitalize(),
-                "descripcion": f"Dataset sintético determinista ({n_prods} productos, {n_peds} pedidos).",
+                "descripcion": (
+                    f"Dataset sintético determinista ({n_prods} productos, {n_peds} pedidos)."
+                ),
                 "total_productos": len(prods),
                 "total_pedidos": len(peds),
                 "semilla": semilla,

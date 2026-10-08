@@ -152,15 +152,24 @@ class PantallaCatalogo(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Catálogo de Productos",
-                    "Comparación en tiempo real: Búsqueda Lineal O(n) vs. Búsqueda Hash O(1) con LRU",
+                    (
+                        "Comparación en tiempo real: Búsqueda Lineal O(n) vs. Búsqueda Hash O(1) "
+                        "con LRU"
+                    ),
                     self.badge_estrategia,
                 ),
                 crear_banner_explicativo(
                     titulo="Acceso a Catálogo e Índices de Búsqueda",
-                    descripcion="Demostración del desafío experimental: recorrido secuencial de lista frente a tabla Hash con índice invertido tokenizado y caché LRU.",
+                    descripcion=(
+                        "Demostración del desafío experimental: recorrido secuencial de lista "
+                        "frente a tabla Hash con índice invertido tokenizado y caché LRU."
+                    ),
                     complejidad_base="Búsqueda Lineal O(n)",
                     complejidad_opt="Búsqueda Hash O(1) amortizado",
-                    por_que_importa="En catálogos de 10.000+ artículos, la búsqueda O(1) reduce el tiempo de varios milisegundos a fracciones de milisegundo (speedup > 2000x).",
+                    por_que_importa=(
+                        "En catálogos de 10.000+ artículos, la búsqueda O(1) reduce el tiempo de "
+                        "varios milisegundos a fracciones de milisegundo (speedup > 2000x)."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [

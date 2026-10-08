@@ -43,7 +43,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 
 class PantallaPedidos(PantallaBase):
-    """Vista para procesar lotes de pedidos de forma secuencial o concurrente con despliegue línea por línea."""
+    """Vista para procesar lotes de pedidos (secuencial o concurrente) y ver cada línea."""
 
     def __init__(self, motor: MotorInventario, on_actualizar_panel, notificar) -> None:
         super().__init__(motor, on_actualizar_panel, notificar)
@@ -129,15 +129,24 @@ class PantallaPedidos(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Preparación de Pedidos en Lote",
-                    "Evaluación de disponibilidad: Mono-hilo secuencial vs. ProcessPoolExecutor (CPU-bound)",
+                    (
+                        "Evaluación de disponibilidad: Mono-hilo secuencial vs. "
+                        "ProcessPoolExecutor (CPU-bound)"
+                    ),
                     self.btn_procesar,
                 ),
                 crear_banner_explicativo(
                     titulo="Preparación de Pedidos y Evaluación Concurrente",
-                    descripcion="Evaluación de satisfacción de demanda: verificación mono-hilo secuencial frente a ProcessPoolExecutor con chunking para evadir el GIL.",
+                    descripcion=(
+                        "Evaluación de satisfacción de demanda: verificación mono-hilo secuencial "
+                        "frente a ProcessPoolExecutor con chunking para evadir el GIL."
+                    ),
                     complejidad_base="Secuencial O(P·L)",
                     complejidad_opt="Paralelo O((P·L)/C + IPC)",
-                    por_que_importa="Permite evidenciar el punto de equilibrio (break-even): en lotes masivos supera el GIL, mientras que en lotes pequeños el costo de IPC domina.",
+                    por_que_importa=(
+                        "Permite evidenciar el punto de equilibrio (break-even): en lotes masivos "
+                        "supera el GIL, mientras que en lotes pequeños el costo de IPC domina."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -152,7 +161,8 @@ class PantallaPedidos(PantallaBase):
                 ft.Row(
                     controls=[
                         crear_titulo_seccion(
-                            "Listado de Pedidos (Clic en cada pedido para desplegar líneas y stock)"
+                            "Listado de Pedidos (Clic en cada pedido para desplegar líneas y "
+                            "stock)"
                         ),
                         ft.Container(expand=True),
                         self.fila_paginacion,
@@ -237,18 +247,7 @@ class PantallaPedidos(PantallaBase):
             actualizar_control(self)
             return
 
-        total_res = len(self.pedidos_actuales)
-        total_paginas = max(1, (total_res + self.tamano_pagina - 1) // self.tamano_pagina)
-        self.pagina_actual = max(1, min(self.pagina_actual, total_paginas))
-
-        self.btn_pag_anterior.disabled = self.pagina_actual <= 1
-        self.btn_pag_siguiente.disabled = self.pagina_actual >= total_paginas
-
-        inicio_idx = (self.pagina_actual - 1) * self.tamano_pagina
-        fin_idx = min(inicio_idx + self.tamano_pagina, total_res)
-        items_pagina = self.pedidos_actuales[inicio_idx:fin_idx]
-
-        self.txt_info_pagina.value = f"Pág. {self.pagina_actual}/{total_paginas} ({inicio_idx + 1}-{fin_idx} de {total_res:,})"
+        items_pagina = self._paginar(self.pedidos_actuales)
 
         items = []
         for ped in items_pagina:
@@ -387,6 +386,21 @@ class PantallaPedidos(PantallaBase):
         self.col_pedidos.controls = items
         actualizar_control(self)
 
+    def _paginar(self, elementos: list) -> list:
+        """Devuelve los elementos de la página actual y actualiza los controles de paginación."""
+        total = len(elementos)
+        total_paginas = max(1, -(-total // self.tamano_pagina))  # división hacia arriba
+        self.pagina_actual = max(1, min(self.pagina_actual, total_paginas))
+        self.btn_pag_anterior.disabled = self.pagina_actual <= 1
+        self.btn_pag_siguiente.disabled = self.pagina_actual >= total_paginas
+
+        desde = (self.pagina_actual - 1) * self.tamano_pagina
+        hasta = min(desde + self.tamano_pagina, total)
+        self.txt_info_pagina.value = (
+            f"Pág. {self.pagina_actual}/{total_paginas} ({desde + 1}-{hasta} de {total:,})"
+        )
+        return elementos[desde:hasta]
+
     def _cambiar_pagina(self, delta: int):
         self.pagina_actual += delta
         if self.resultados_ultimo_proceso:
@@ -403,18 +417,7 @@ class PantallaPedidos(PantallaBase):
             actualizar_control(self)
             return
 
-        total_res = len(self.resultados_ultimo_proceso)
-        total_paginas = max(1, (total_res + self.tamano_pagina - 1) // self.tamano_pagina)
-        self.pagina_actual = max(1, min(self.pagina_actual, total_paginas))
-
-        self.btn_pag_anterior.disabled = self.pagina_actual <= 1
-        self.btn_pag_siguiente.disabled = self.pagina_actual >= total_paginas
-
-        inicio_idx = (self.pagina_actual - 1) * self.tamano_pagina
-        fin_idx = min(inicio_idx + self.tamano_pagina, total_res)
-        items_pagina = self.resultados_ultimo_proceso[inicio_idx:fin_idx]
-
-        self.txt_info_pagina.value = f"Pág. {self.pagina_actual}/{total_paginas} ({inicio_idx + 1}-{fin_idx} de {total_res:,})"
+        items_pagina = self._paginar(self.resultados_ultimo_proceso)
 
         items = []
         for r in items_pagina:
@@ -509,7 +512,10 @@ class PantallaPedidos(PantallaBase):
                     controls=[
                         ft.Divider(height=1, color=COLOR_BORDE),
                         ft.Text(
-                            f"Auditoría de cumplimiento ({len(r.lineas_cubiertas)}/{total_lineas} líneas cubiertas - {porc_cobertura:.1f}%):",
+                            (
+                                f"Auditoría de cumplimiento ({len(r.lineas_cubiertas)}/"
+                                f"{total_lineas} líneas cubiertas - {porc_cobertura:.1f}%):"
+                            ),
                             size=12,
                             weight=ft.FontWeight.BOLD,
                             color=COLOR_TEXTO_MUTED,
@@ -531,7 +537,10 @@ class PantallaPedidos(PantallaBase):
                     color=COLOR_TEXTO_PRIMARIO,
                 ),
                 subtitle=ft.Text(
-                    f"{len(r.lineas_cubiertas)}/{total_lineas} líneas cubiertas ({porc_cobertura:.0f}%)",
+                    (
+                        f"{len(r.lineas_cubiertas)}/{total_lineas} líneas cubiertas ("
+                        f"{porc_cobertura:.0f}%)"
+                    ),
                     size=12,
                     color=COLOR_TEXTO_SECUNDARIO,
                 ),
@@ -548,7 +557,10 @@ class PantallaPedidos(PantallaBase):
             ruta_csv = BASE_DIR / "data" / "generados" / "picking_consolidado.csv"
             filas = self.motor.exportar_picking_csv(ruta_csv)
             self.notificar(
-                f"Reporte de picking exportado con buffer de 1 MB ({filas:,} filas) en data/generados/picking_consolidado.csv",
+                (
+                    f"Reporte de picking exportado con buffer de 1 MB ({filas:,} filas) en "
+                    "data/generados/picking_consolidado.csv"
+                ),
                 ft.Icons.CHECK,
             )
         except Exception as err:
@@ -607,11 +619,17 @@ class PantallaPedidos(PantallaBase):
                 modo_txt = "Secuencial con lista O(n)"
             self._publicar_resultado(
                 tiempo_ms=resumen.tiempo_ejecucion_ms,
-                resultado_negocio=f"Lote ({modo_txt}): {resumen.pedidos_cubiertos} cubiertos, {resumen.pedidos_parciales} parciales",
+                resultado_negocio=(
+                    f"Lote ({modo_txt}): {resumen.pedidos_cubiertos} cubiertos, "
+                    f"{resumen.pedidos_parciales} parciales"
+                ),
             )
             actualizar_control(self)
             self.notificar(
-                f"Lote de pedidos procesado ({modo_txt}) en {formatear_tiempo_ms(resumen.tiempo_ejecucion_ms)}.",
+                (
+                    f"Lote de pedidos procesado ({modo_txt}) en "
+                    f"{formatear_tiempo_ms(resumen.tiempo_ejecucion_ms)}."
+                ),
                 ft.Icons.CHECK,
             )
         except Exception as err:

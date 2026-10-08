@@ -1,4 +1,4 @@
-"""Módulo de cálculo de combinaciones de alternativas de productos (Programación Dinámica / Memoización).
+"""Combinaciones de productos alternativos (Programación Dinámica / Memoización).
 
 Permite sugerir productos sustitutos cuando un producto de un pedido no tiene stock suficiente,
 respetando la misma categoría y un presupuesto máximo asignado.
@@ -59,7 +59,8 @@ class BuscadorAlternativas:
     def __init__(self, productos: Sequence[Producto]) -> None:
         """Inicializa el buscador con el catálogo de productos disponibles."""
         self._productos_disponibles = [p for p in productos if p.stock > 0]
-        # Caché de memoización explícita: (categoria, tupla_ids, presupuesto_entero) -> list[tuple[ids]]
+        # Memoización explícita:
+        # (categoria, tupla_ids, presupuesto_entero) -> list[tuple[ids]]
         self._memo_cache: dict[tuple[int, int], list[list[int]]] = {}
         self._contador_llamadas = 0
         self._contador_hits = 0
@@ -88,7 +89,8 @@ class BuscadorAlternativas:
             max_combinaciones: Cota superior de combinaciones a retornar para presentación.
             usar_memoizacion: Si True, utiliza programación dinámica con memoización;
                              si False, ejecuta búsqueda recursiva exhaustiva.
-            max_candidatos: Límite de productos candidatos a evaluar (útil para benchmarking de O(2^N)).
+            max_candidatos: Límite de productos candidatos a evaluar (sirve para medir el
+                costo O(2^N) en los benchmarks).
         """
         inicio = time.perf_counter()
         self._contador_llamadas = 0

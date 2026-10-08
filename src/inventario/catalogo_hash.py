@@ -1,9 +1,10 @@
 """Catálogo de inventario optimizado basado en Tablas Hash (O(1)).
 
-Utiliza un diccionario principal (hash map) para acceso por identificador en tiempo O(1) promedio,
-un índice secundario agrupado por categoría en O(1), y un índice invertido de palabras para acelerar
-búsquedas por texto.
-Mantiene exactamente la misma API pública que CatalogoLineal para permitir la sustitución transparente.
+Usa un diccionario principal (hash map) para acceder por identificador en O(1) promedio,
+un índice secundario por categoría en O(1) y un índice invertido de palabras para acelerar
+las búsquedas por texto.
+
+Mantiene la misma API pública que CatalogoLineal, así que uno reemplaza al otro sin cambios.
 """
 
 from __future__ import annotations

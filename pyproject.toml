@@ -86,9 +86,6 @@ select = [
     "SIM",  # flake8-simplify
     "UP",   # pyupgrade (sintaxis moderna para py310)
 ]
-# E501: las líneas largas que el formateador no puede partir (strings y comentarios)
-# se corrigen a mano en la fase F7 (legibilidad). Ver docs/planificacion-parcial-2.md.
-ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E402"]

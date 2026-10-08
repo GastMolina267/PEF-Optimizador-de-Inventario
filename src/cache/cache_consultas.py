@@ -3,8 +3,8 @@
 Diferenciación conceptual clave frente a la memoización:
 - Memoización: Guarda subestados algorítmicos dentro de una función pura (DP en combinaciones).
 - Caching Inteligente: Capa de persistencia en memoria para consultas repetitivas de lectura
-  (búsquedas por texto, por categoría y rankings Top-N), con política de desalojo acotada (LRU)
-  y protocolo estricto de invalidación reactiva ante mutaciones de datos para evitar información obsoleta.
+  (búsquedas por texto, por categoría y rankings Top-N), con desalojo acotado (LRU) e
+  invalidación reactiva ante mutaciones de datos para no servir información obsoleta.
 """
 
 from __future__ import annotations

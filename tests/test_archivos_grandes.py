@@ -1,4 +1,4 @@
-"""Tests unitarios y de integración para la Fase F5: Archivos Grandes, Streaming y Procesamiento por Lotes."""
+"""Tests de la fase F5: archivos grandes, streaming y procesamiento por lotes."""
 
 from __future__ import annotations
 
@@ -86,7 +86,8 @@ class TestStreamingLecturaEscritura:
     def test_linea_corrupta_json(self, tmp_path: Path) -> None:
         ruta = tmp_path / "corrupto.jsonl"
         ruta.write_text(
-            '{"id": 1, "nombre": "Martillo", "categoria": "Herramientas", "stock": 10, "precio": 500.0}\n'
+            '{"id": 1, "nombre": "Martillo", "categoria": "Herramientas", '
+            '"stock": 10, "precio": 500.0}\n'
             '{"id": 2, "nombre": "Clavo", BROKEN_JSON\n',
             encoding="utf-8",
         )
@@ -212,7 +213,7 @@ class TestExportacionPickingCSV:
 
 
 class TestProcesamientoLotesYEquivalencia:
-    """Verifica que el procesamiento por lotes (secuencial y paralelo) sea matemáticamente equivalente."""
+    """El procesamiento por lotes secuencial y el paralelo dan el mismo resultado."""
 
     @pytest.fixture
     def dataset_jsonl(self, tmp_path: Path) -> tuple[Path, Path, dict[int, int]]:

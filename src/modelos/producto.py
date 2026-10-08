@@ -36,7 +36,8 @@ class Producto:
             raise ValueError("La categoría del producto no puede estar vacía.")
         if not isinstance(self.stock, int) or self.stock < 0:
             raise ValueError(
-                f"El stock del producto debe ser un entero mayor o igual a 0, recibido: {self.stock}"
+                "El stock del producto debe ser un entero mayor o igual a 0, recibido: "
+                f"{self.stock}"
             )
         if not isinstance(self.precio, (int, float)) or self.precio < 0.0:
             raise ValueError(

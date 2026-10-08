@@ -218,7 +218,7 @@ def crear_dropdown(
     width: float | None = None,
     **kwargs,
 ) -> ft.Dropdown:
-    """Crea un Dropdown compatible con versiones antiguas (on_change) y nuevas (on_select) de Flet."""
+    """Crea un Dropdown compatible con Flet antiguo (on_change) y nuevo (on_select)."""
     params = {
         "label": label,
         "options": options,
@@ -492,7 +492,7 @@ def crear_columna_corrida(titulo: str, tiempo_ms: float, es_baseline: bool) -> f
 
 
 def crear_dialogo_explicativo_modos(page: ft.Page) -> ft.AlertDialog:
-    """Genera un modal interactivo completo con la comparativa conceptual entre Modo Baseline y Optimizado."""
+    """Genera el modal con la comparativa conceptual entre el modo Baseline y el Optimizado."""
     filas_tabla = [
         ft.DataRow(
             cells=[
@@ -746,8 +746,9 @@ def crear_dialogo_explicativo_modos(page: ft.Page) -> ft.AlertDialog:
             content=ft.Column(
                 controls=[
                     ft.Text(
-                        "El sistema implementa dos versiones simultáneas para cada operación fundamental del almacén. "
-                        "Esto permite contrastar empíricamente en la defensa oral cómo la elección de algoritmos y estructuras de datos "
+                        "El sistema implementa dos versiones simultáneas para cada operación "
+                        "fundamental del almacén. Esto permite contrastar empíricamente en la "
+                        "defensa oral cómo la elección de algoritmos y estructuras de datos "
                         "transforma la escalabilidad y el consumo de recursos:",
                         size=13,
                         color=COLOR_TEXTO_SECUNDARIO,

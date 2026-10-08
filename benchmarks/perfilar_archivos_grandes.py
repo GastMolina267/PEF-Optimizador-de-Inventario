@@ -240,16 +240,55 @@ def _conclusion_csv(csv: dict[str, float]) -> str:
     )
 
 
+def fila_markdown(*celdas: object) -> str:
+    """Arma una fila de tabla Markdown: ``| a | b | c |``."""
+    return "| " + " | ".join(str(celda) for celda in celdas) + " |"
+
+
 def generar_informe(datos: dict[str, Any]) -> None:
     """Escribe ``docs/mediciones/archivos_grandes.md`` con los resultados."""
     lectura = datos["lectura"]
-    filas_lotes = "\n".join(
-        f"| {f['lote']:,} | {f['secuencial_ms']:.1f} | {f['paralelo_ms']:.1f} "
-        f"| **{f['speedup']:.2f}×** | {f['secuencial_mb']:.2f} | {f['paralelo_mb']:.2f} |"
-        for f in datos["lotes"]
-    )
     ram = datos["memoria_ram"]
     csv = datos["csv"]
+    entorno = (
+        f"{datos['sistema']} · Python {datos['python']} · "
+        f"{datos['nucleos']} núcleos lógicos · {datos['workers']} workers"
+    )
+    fila_carga_completa = fila_markdown(
+        "Carga completa (`json.loads` de todas las líneas a una lista)",
+        f"{lectura['completa_ms']:.1f}",
+        f"{lectura['completa_mb']:.2f}",
+    )
+    fila_streaming = fila_markdown(
+        "Streaming (`leer_pedidos_streaming_jsonl`)",
+        f"{lectura['streaming_ms']:.1f}",
+        f"{lectura['streaming_mb']:.2f}",
+    )
+    encabezado_lotes = fila_markdown(
+        "Lote (líneas)",
+        "Secuencial (ms)",
+        "Paralelo (ms)",
+        "Speedup",
+        "Pico secuencial (MB)",
+        "Pico paralelo (MB)",
+    )
+    filas_lotes = "\n".join(
+        fila_markdown(
+            f"{fila['lote']:,}",
+            f"{fila['secuencial_ms']:.1f}",
+            f"{fila['paralelo_ms']:.1f}",
+            f"**{fila['speedup']:.2f}×**",
+            f"{fila['secuencial_mb']:.2f}",
+            f"{fila['paralelo_mb']:.2f}",
+        )
+        for fila in datos["lotes"]
+    )
+    fila_ram = fila_markdown(
+        f"{ram['pedidos']:,}",
+        f"{ram['secuencial_ms']:.1f}",
+        f"{ram['paralelo_ms']:.1f}",
+        f"**{ram['speedup']:.2f}×**",
+    )
 
     contenido = f"""# Archivos grandes: streaming, buffering y paralelismo
 
@@ -258,7 +297,7 @@ a correr el script para actualizar los números.
 
 ## Entorno y datos
 
-- **Sistema:** {datos["sistema"]} · Python {datos["python"]} · {datos["nucleos"]} núcleos lógicos · {datos["workers"]} workers.
+- **Sistema:** {entorno}.
 - **Archivos generados** (semilla {datos["semilla"]}, en `data/generados/`, fuera de git):
   `productos.jsonl` con {datos["n_productos"]:,} productos ({datos["mb_productos"]:.2f} MB) y
   `pedidos.jsonl` con {datos["n_pedidos"]:,} pedidos ({datos["mb_pedidos"]:.2f} MB).
@@ -271,8 +310,8 @@ a correr el script para actualizar los números.
 
 | Estrategia | Tiempo (ms) | Pico de memoria (MB) |
 |---|---:|---:|
-| Carga completa (`json.loads` de todas las líneas a una lista) | {lectura["completa_ms"]:.1f} | {lectura["completa_mb"]:.2f} |
-| Streaming (`leer_pedidos_streaming_jsonl`) | {lectura["streaming_ms"]:.1f} | {lectura["streaming_mb"]:.2f} |
+{fila_carga_completa}
+{fila_streaming}
 
 {_conclusion_lectura(lectura)}
 
@@ -282,7 +321,7 @@ Cada lote se parsea, valida y evalúa con la misma función en ambas versiones. 
 paralela manda el stock una sola vez por worker (initializer) y mantiene como máximo dos
 lotes en vuelo por worker, así que su memoria no crece con el archivo.
 
-| Lote (líneas) | Secuencial (ms) | Paralelo (ms) | Speedup | Pico secuencial (MB) | Pico paralelo (MB) |
+{encabezado_lotes}
 |---:|---:|---:|---:|---:|---:|
 {filas_lotes}
 
@@ -292,7 +331,7 @@ lotes en vuelo por worker, así que su memoria no crece con el archivo.
 
 | Pedidos | Secuencial (ms) | Pool de procesos (ms) | Speedup |
 |---:|---:|---:|---:|
-| {ram["pedidos"]:,} | {ram["secuencial_ms"]:.1f} | {ram["paralelo_ms"]:.1f} | **{ram["speedup"]:.2f}×** |
+{fila_ram}
 
 Evaluar un pedido en memoria es un lookup O(1) por línea, más barato que serializarlo hacia
 un worker. Por eso `MotorInventario.procesar_pedidos` es secuencial por defecto y el pool

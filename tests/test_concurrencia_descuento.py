@@ -62,7 +62,8 @@ def test_concurrencia_respeta_descuento_de_stock():
 
     # 2. Las métricas cuantitativas deben coincidir
     assert res_conc.pedidos_cubiertos == res_sec.pedidos_cubiertos, (
-        f"Concurrente cubrió {res_conc.pedidos_cubiertos} pedidos pero secuencial {res_sec.pedidos_cubiertos}"
+        f"Concurrente cubrió {res_conc.pedidos_cubiertos} pedidos pero secuencial "
+        f"{res_sec.pedidos_cubiertos}"
     )
     assert res_conc.pedidos_imposibles == res_sec.pedidos_imposibles
 

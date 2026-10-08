@@ -75,7 +75,9 @@ class PanelEstado(ft.Container):
             icon=ft.Icons.HELP_OUTLINE,
             icon_color=COLOR_MARCA,
             icon_size=18,
-            tooltip="¿Qué cambia entre Modo Optimizado O(1) y Modo Baseline? Clic para ver comparativa",
+            tooltip=(
+                "¿Qué cambia entre Modo Optimizado O(1) y Modo Baseline? Clic para ver comparativa"
+            ),
             on_click=lambda _: self._abrir_ayuda_modos(),
         )
 
