@@ -48,17 +48,19 @@ class ValidadorDataset:
         """Verifica unicidad de IDs y rangos válidos en la lista de productos."""
         errores: list[str] = []
         ids_productos: set[int] = set()
-        for p in productos:
-            if p.id <= 0:
-                errores.append(f"ID de producto no positivo: {p.id}")
-            if p.id in ids_productos:
-                errores.append(f"ID de producto duplicado: #{p.id}")
-            ids_productos.add(p.id)
+        for producto in productos:
+            if producto.id <= 0:
+                errores.append(f"ID de producto no positivo: {producto.id}")
+            if producto.id in ids_productos:
+                errores.append(f"ID de producto duplicado: #{producto.id}")
+            ids_productos.add(producto.id)
 
-            if p.stock < 0:
-                errores.append(f"Producto #{p.id} tiene stock negativo ({p.stock})")
-            if p.precio < 0:
-                errores.append(f"Producto #{p.id} tiene precio negativo ({p.precio})")
+            if producto.stock < 0:
+                errores.append(f"Producto #{producto.id} tiene stock negativo ({producto.stock})")
+            if producto.precio < 0:
+                errores.append(
+                    f"Producto #{producto.id} tiene precio negativo ({producto.precio})"
+                )
         return ids_productos, errores
 
     @staticmethod
@@ -66,25 +68,25 @@ class ValidadorDataset:
         """Verifica unicidad de pedidos e integridad referencial de líneas."""
         errores: list[str] = []
         ids_pedidos: set[int] = set()
-        for ped in pedidos:
-            if ped.id <= 0:
-                errores.append(f"ID de pedido no positivo: {ped.id}")
-            if ped.id in ids_pedidos:
-                errores.append(f"ID de pedido duplicado: #{ped.id}")
-            ids_pedidos.add(ped.id)
+        for pedido in pedidos:
+            if pedido.id <= 0:
+                errores.append(f"ID de pedido no positivo: {pedido.id}")
+            if pedido.id in ids_pedidos:
+                errores.append(f"ID de pedido duplicado: #{pedido.id}")
+            ids_pedidos.add(pedido.id)
 
-            if not ped.lineas:
-                errores.append(f"Pedido #{ped.id} no contiene ninguna línea")
+            if not pedido.lineas:
+                errores.append(f"Pedido #{pedido.id} no contiene ninguna línea")
 
-            for linea in ped.lineas:
+            for linea in pedido.lineas:
                 if linea.cantidad <= 0:
                     errores.append(
-                        f"Pedido #{ped.id}: cantidad demandada inválida ({linea.cantidad}) "
+                        f"Pedido #{pedido.id}: cantidad demandada inválida ({linea.cantidad}) "
                         f"para producto #{linea.id_producto}"
                     )
                 if linea.id_producto not in ids_productos:
                     errores.append(
-                        f"Pedido #{ped.id}: producto #{linea.id_producto} no existe en catálogo"
+                        f"Pedido #{pedido.id}: producto #{linea.id_producto} no existe en catálogo"
                     )
         return errores
 

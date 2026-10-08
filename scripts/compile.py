@@ -143,7 +143,7 @@ def main() -> int:
         limpiar_directorios()
 
     cmd = construir_comando(args.mode, args.debug)
-    cmd_str = " ".join(f'"{c}"' if " " in c else c for c in cmd)
+    comando_legible = " ".join(f'"{c}"' if " " in c else c for c in cmd)
 
     print("=" * 70)
     print("OPTMIZADOR DE INVENTARIO — COMPILACIÓN Y EMPAQUETADO")
@@ -151,7 +151,7 @@ def main() -> int:
     print(f"Sistema Operativo: {sys.platform}")
     print(f"Modo:              {args.mode}")
     print(f"Punto de Entrada:  {ENTRY_POINT.name}")
-    print(f"Comando PyInstaller:\n  {cmd_str}\n")
+    print(f"Comando PyInstaller:\n  {comando_legible}\n")
 
     if args.dry_run:
         print("[DRY-RUN] Comando validado con éxito. No se realizaron cambios.")

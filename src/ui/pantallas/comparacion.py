@@ -146,10 +146,10 @@ class PantallaComparacion(PantallaBase):
         self._renderizar_tabla()
 
     def _ejecutar_comparativa(self):
-        prods = self.motor.catalogo.obtener_todos()
-        peds = self.motor.pedidos
+        productos = self.motor.catalogo.obtener_todos()
+        pedidos = self.motor.pedidos
 
-        if not prods or not peds:
+        if not productos or not pedidos:
             self.notificar(
                 "Cargue un dataset primero desde la pantalla de Inicio.", ft.Icons.WARNING
             )
@@ -163,7 +163,7 @@ class PantallaComparacion(PantallaBase):
         palabra_muestra = "a"
         t0 = time.perf_counter()
         for _ in range(5):
-            _ = [p for p in prods if palabra_muestra in p.nombre.lower()]
+            _ = [p for p in productos if palabra_muestra in p.nombre.lower()]
         t_busq_base = ((time.perf_counter() - t0) / 5) * 1000.0
 
         t0 = time.perf_counter()
@@ -174,24 +174,24 @@ class PantallaComparacion(PantallaBase):
         # 2. Top-N (Sort vs Heap)
         k = 5
         t0 = time.perf_counter()
-        calcular_top_solicitados_lineal(peds, self.motor.catalogo, k=k)
+        calcular_top_solicitados_lineal(pedidos, self.motor.catalogo, k=k)
         t_top_base = (time.perf_counter() - t0) * 1000.0
 
         t0 = time.perf_counter()
-        calcular_top_solicitados_heap(peds, self.motor.catalogo, k=k)
+        calcular_top_solicitados_heap(pedidos, self.motor.catalogo, k=k)
         t_top_opt = (time.perf_counter() - t0) * 1000.0
 
         # 3. Preparación de pedidos (Secuencial vs Concurrente)
         t0 = time.perf_counter()
-        _ = procesar_pedidos_secuencial(self.motor.catalogo, peds, descontar_stock=False)
+        _ = procesar_pedidos_secuencial(self.motor.catalogo, pedidos, descontar_stock=False)
         t_ped_base = (time.perf_counter() - t0) * 1000.0
 
         t0 = time.perf_counter()
-        _ = procesar_pedidos_concurrente(self.motor.catalogo, peds, descontar_stock=False)
+        _ = procesar_pedidos_concurrente(self.motor.catalogo, pedidos, descontar_stock=False)
         t_ped_opt = (time.perf_counter() - t0) * 1000.0
 
         # 4. Alternativas (Recursivo puro vs DP Memoizado)
-        cat_ejemplo = prods[0].categoria
+        cat_ejemplo = productos[0].categoria
         t0 = time.perf_counter()
         _ = self.motor.buscar_alternativas(
             cat_ejemplo, 35000.0, forzar_memoizacion=False, max_combinaciones=10
@@ -277,8 +277,8 @@ class PantallaComparacion(PantallaBase):
 
         self.on_actualizar_panel(
             dataset="activo",
-            n_productos=len(prods),
-            n_pedidos=len(peds),
+            n_productos=len(productos),
+            n_pedidos=len(pedidos),
             estrategia="comparativa",
             tiempo_ms=t_busq_opt + t_top_opt + t_ped_opt + t_alt_opt,
             memoria_mb=mem_mb,

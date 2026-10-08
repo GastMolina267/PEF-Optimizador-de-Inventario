@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from src.inventario.protocolo import Catalogo
 from src.modelos.pedido import Pedido
 from src.modelos.producto import Producto
 
@@ -72,7 +73,7 @@ class LotePickingConsolidado:
 
 def agrupar_pedidos_batch(
     pedidos: Sequence[Pedido],
-    catalogo=None,
+    catalogo: Catalogo | None = None,
 ) -> LotePickingConsolidado:
     """Fusiona y consolida las demandas de una secuencia de pedidos (Batch Picking).
 
@@ -94,10 +95,10 @@ def agrupar_pedidos_batch(
         for linea in pedido.lineas:
             total_unidades += linea.cantidad
             if linea.id_producto not in acumulador:
-                prod_obj = catalogo.buscar_por_id(linea.id_producto) if catalogo else None
+                producto = catalogo.buscar_por_id(linea.id_producto) if catalogo else None
                 acumulador[linea.id_producto] = ItemPickingConsolidado(
                     id_producto=linea.id_producto,
-                    producto=prod_obj,
+                    producto=producto,
                     cantidad_total=linea.cantidad,
                     demandas_por_pedido=[
                         DetalleDemandaPedido(id_pedido=pedido.id, cantidad=linea.cantidad)

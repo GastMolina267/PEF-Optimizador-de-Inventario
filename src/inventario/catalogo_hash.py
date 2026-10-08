@@ -28,8 +28,8 @@ class CatalogoHash:
         self._indice_palabras: dict[str, set[int]] = {}
 
         if productos:
-            for prod in productos:
-                self.agregar(prod)
+            for producto in productos:
+                self.agregar(producto)
 
     def _indexar_nombre(self, producto: Producto) -> None:
         """Descompone el nombre del producto en palabras clave para el índice invertido."""

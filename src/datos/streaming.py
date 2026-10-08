@@ -86,7 +86,7 @@ def leer_productos_streaming_jsonl(
             if not linea_limpia:
                 continue
             try:
-                d = json.loads(linea_limpia)
+                datos = json.loads(linea_limpia)
             except json.JSONDecodeError as e:
                 raise ValueError(
                     f"Error de sintaxis JSON en línea {num_linea} de {path_archivo.name}: {e}"
@@ -94,11 +94,11 @@ def leer_productos_streaming_jsonl(
 
             try:
                 yield Producto(
-                    id=int(d["id"]),
-                    nombre=str(d["nombre"]),
-                    categoria=str(d["categoria"]),
-                    stock=int(d["stock"]),
-                    precio=float(d["precio"]),
+                    id=int(datos["id"]),
+                    nombre=str(datos["nombre"]),
+                    categoria=str(datos["categoria"]),
+                    stock=int(datos["stock"]),
+                    precio=float(datos["precio"]),
                 )
             except (KeyError, TypeError, ValueError) as e:
                 raise ValueError(
@@ -126,7 +126,7 @@ def leer_pedidos_streaming_jsonl(
             if not linea_limpia:
                 continue
             try:
-                d = json.loads(linea_limpia)
+                datos = json.loads(linea_limpia)
             except json.JSONDecodeError as e:
                 raise ValueError(
                     f"Error de sintaxis JSON en línea {num_linea} de {path_archivo.name}: {e}"
@@ -135,12 +135,12 @@ def leer_pedidos_streaming_jsonl(
             try:
                 lineas_pedido = [
                     LineaPedido(
-                        id_producto=int(lp["id_producto"]),
-                        cantidad=int(lp["cantidad"]),
+                        id_producto=int(linea_datos["id_producto"]),
+                        cantidad=int(linea_datos["cantidad"]),
                     )
-                    for lp in d.get("lineas", [])
+                    for linea_datos in datos.get("lineas", [])
                 ]
-                yield Pedido(id=int(d["id"]), lineas=lineas_pedido)
+                yield Pedido(id=int(datos["id"]), lineas=lineas_pedido)
             except (KeyError, TypeError, ValueError) as e:
                 raise ValueError(
                     f"Estructura inválida de Pedido en línea {num_linea} de "
@@ -158,17 +158,17 @@ def escribir_productos_jsonl(
     lineas = (
         json.dumps(
             {
-                "id": p.id,
-                "nombre": p.nombre,
-                "categoria": p.categoria,
-                "stock": p.stock,
-                "precio": p.precio,
+                "id": elemento.id,
+                "nombre": elemento.nombre,
+                "categoria": elemento.categoria,
+                "stock": elemento.stock,
+                "precio": elemento.precio,
             },
             ensure_ascii=False,
             separators=(",", ":"),
         )
         + "\n"
-        for p in productos
+        for elemento in productos
     )
     return escribir_lineas_con_buffer(ruta, lineas, tamano_buffer, tamano_lote)
 
@@ -183,16 +183,17 @@ def escribir_pedidos_jsonl(
     lineas = (
         json.dumps(
             {
-                "id": p.id,
+                "id": elemento.id,
                 "lineas": [
-                    {"id_producto": lp.id_producto, "cantidad": lp.cantidad} for lp in p.lineas
+                    {"id_producto": linea_datos.id_producto, "cantidad": linea_datos.cantidad}
+                    for linea_datos in elemento.lineas
                 ],
             },
             ensure_ascii=False,
             separators=(",", ":"),
         )
         + "\n"
-        for p in pedidos
+        for elemento in pedidos
     )
     return escribir_lineas_con_buffer(ruta, lineas, tamano_buffer, tamano_lote)
 

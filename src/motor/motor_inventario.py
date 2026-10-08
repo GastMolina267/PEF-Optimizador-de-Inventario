@@ -31,6 +31,7 @@ from src.datos.streaming import (
 )
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
+from src.inventario.protocolo import Catalogo
 from src.modelos.pedido import Pedido, ResumenProcesamiento
 from src.modelos.producto import Producto
 from src.observabilidad import etiquetar, medir
@@ -88,7 +89,7 @@ class MotorInventario:
         return self._estrategia == EstrategiaMotor.OPTIMIZADO
 
     @property
-    def catalogo(self):
+    def catalogo(self) -> Catalogo:
         """Acceso al catálogo de inventario activo."""
         return self._catalogo
 
@@ -148,9 +149,9 @@ class MotorInventario:
         ruta_pedidos: str | Path,
     ) -> None:
         """Carga datos desde archivos .jsonl en streaming con memoria constante."""
-        prods = list(leer_productos_streaming_jsonl(ruta_productos))
-        peds = list(leer_pedidos_streaming_jsonl(ruta_pedidos))
-        self.cargar_desde_listas(prods, peds)
+        productos_cargados = list(leer_productos_streaming_jsonl(ruta_productos))
+        pedidos_cargados = list(leer_pedidos_streaming_jsonl(ruta_pedidos))
+        self.cargar_desde_listas(productos_cargados, pedidos_cargados)
         self._etiquetar(dataset=Path(ruta_pedidos).name)
 
     def cargar_desde_listas(
@@ -352,16 +353,16 @@ class MotorInventario:
 
     def obtener_estadisticas(self) -> dict[str, Any]:
         """Retorna estadísticas descriptivas del estado del sistema y de la caché."""
-        prods = self._catalogo.obtener_todos()
-        stock_total = sum(p.stock for p in prods)
-        categorias = sorted({p.categoria for p in prods})
+        productos_cargados = self._catalogo.obtener_todos()
+        stock_total = sum(p.stock for p in productos_cargados)
+        categorias = sorted({p.categoria for p in productos_cargados})
         total_lineas = sum(len(p.lineas) for p in self._pedidos)
         unidades_demandadas = sum(lin.cantidad for p in self._pedidos for lin in p.lineas)
 
         stats: dict[str, Any] = {
             "estrategia": self._estrategia,
             "tipo_catalogo": type(self._catalogo).__name__,
-            "total_productos": len(prods),
+            "total_productos": len(productos_cargados),
             "stock_total_unidades": stock_total,
             "total_categorias": len(categorias),
             "categorias": categorias,
