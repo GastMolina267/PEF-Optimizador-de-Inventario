@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import ast
 import re
-import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +19,7 @@ from automations.inventario_funciones import (
     FUNCIONES_FUNDAMENTALES,
     FuncionFundamental,
     resolver_raiz,
+    sha_corto,
 )
 
 MARCA_INICIO = "<!-- ORIGIN-AUTO-COMPLEJIDAD:INICIO -->"
@@ -399,22 +399,10 @@ def analizar_repositorio(raiz: Path | None = None) -> list[InformeComplejidad]:
     return informes
 
 
-def _sha_corto(raiz: Path) -> str:
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=raiz,
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except (OSError, subprocess.CalledProcessError):
-        return "desconocido"
-
-
 def renderizar_markdown(informes: list[InformeComplejidad], raiz: Path) -> str:
     """Genera el bloque que se inserta entre las marcas Origin."""
     ahora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    sha = _sha_corto(raiz)
+    sha = sha_corto(raiz)
     lineas = [
         MARCA_INICIO,
         "",

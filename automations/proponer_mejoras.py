@@ -11,7 +11,6 @@ from __future__ import annotations
 import ast
 import json
 import re
-import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +18,7 @@ from pathlib import Path
 from automations.inventario_funciones import (
     FUNCIONES_FUNDAMENTALES,
     resolver_raiz,
+    sha_corto,
 )
 
 INFORMES_PRIORITARIOS: tuple[str, ...] = (
@@ -54,18 +54,6 @@ class PropuestaMejora:
     trade_off: str
     ya_cubierta: bool
     prioridad: str
-
-
-def _sha_corto(raiz: Path) -> str:
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=raiz,
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except (OSError, subprocess.CalledProcessError):
-        return "desconocido"
 
 
 def _informes_disponibles(raiz: Path) -> list[Path]:
@@ -237,11 +225,12 @@ def _parsear_scalene(ruta: Path) -> list[EntradaPerfil]:
         if "/src/" not in archivo_norm and "/benchmarks/" not in archivo_norm:
             continue
 
-        nombre_corto = (
-            archivo_norm.split("/PEF/Parcial/")[-1]
-            if "/PEF/Parcial/" in archivo_norm
-            else archivo_norm.split("/")[-1]
-        )
+        # Ruta relativa al repo, sin depender de dónde se clonó en cada máquina.
+        nombre_corto = archivo_norm.split("/")[-1]
+        for carpeta in ("/src/", "/benchmarks/"):
+            if carpeta in archivo_norm:
+                nombre_corto = carpeta.strip("/") + "/" + archivo_norm.split(carpeta, 1)[1]
+                break
 
         for linea in info.get("lines", []):
             py_pct = float(linea.get("n_cpu_percent_python", 0.0))
@@ -480,7 +469,7 @@ def renderizar_markdown(
     propuestas: list[PropuestaMejora],
 ) -> str:
     ahora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    sha = _sha_corto(raiz)
+    sha = sha_corto(raiz)
     informes = _informes_disponibles(raiz)
     lineas = [
         "# Propuestas de mejora (Automatización Origin 2)",
