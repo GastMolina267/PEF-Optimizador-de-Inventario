@@ -1,2 +1,3 @@
 flet>=0.25.0
 flet-desktop>=0.25.0
+elastic-apm>=6.26.0

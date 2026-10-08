@@ -48,3 +48,6 @@ data/generados/
 # Salidas por defecto de Scalene (los perfiles del proyecto van en docs/mediciones/scalene/)
 scalene-profile.json
 scalene-profile.html
+
+# Credenciales locales (Elastic APM, etc.)
+.env

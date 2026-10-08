@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "flet>=0.25.0",
+    "elastic-apm>=6.26.0",
 ]
 
 [project.optional-dependencies]
