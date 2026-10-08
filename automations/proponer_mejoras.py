@@ -9,6 +9,7 @@ aplica ningún cambio en ``src/``.
 from __future__ import annotations
 
 import ast
+import json
 import re
 import subprocess
 from dataclasses import dataclass
@@ -26,6 +27,8 @@ INFORMES_PRIORITARIOS: tuple[str, ...] = (
     "memoria_resumen.txt",
     "tabla_comparativa.md",
     "tabla_comparativa.txt",
+    "scalene/scalene_despues.json",
+    "scalene/scalene_antes.json",
 )
 
 
@@ -221,6 +224,54 @@ def _parsear_memoria(ruta: Path) -> list[EntradaPerfil]:
     return entradas
 
 
+def _parsear_scalene(ruta: Path) -> list[EntradaPerfil]:
+    """Extrae hotspots de CPU (Python / Nativo / Sistema) y memoria desde el JSON de Scalene."""
+    try:
+        data = json.loads(ruta.read_text(encoding="utf-8", errors="replace"))
+    except (json.JSONDecodeError, OSError):
+        return []
+
+    entradas: list[EntradaPerfil] = []
+    for archivo, info in data.get("files", {}).items():
+        archivo_norm = archivo.replace("\\", "/")
+        if "/src/" not in archivo_norm and "/benchmarks/" not in archivo_norm:
+            continue
+
+        nombre_corto = (
+            archivo_norm.split("/PEF/Parcial/")[-1]
+            if "/PEF/Parcial/" in archivo_norm
+            else archivo_norm.split("/")[-1]
+        )
+
+        for linea in info.get("lines", []):
+            py_pct = float(linea.get("n_cpu_percent_python", 0.0))
+            c_pct = float(linea.get("n_cpu_percent_c", 0.0))
+            sys_pct = float(linea.get("n_sys_percent", 0.0))
+            peak_mb = float(linea.get("n_peak_mb", 0.0))
+            total_cpu = py_pct + c_pct + sys_pct
+
+            if total_cpu < 1.0 and peak_mb < 0.5:
+                continue
+
+            num_linea = linea.get("lineno", 0)
+            codigo = linea.get("line", "").strip()[:80]
+            metrica = "cpu_sys_ipc_pct" if sys_pct > py_pct else "cpu_python_pct"
+            valor = sys_pct if sys_pct > py_pct else py_pct
+
+            entradas.append(
+                EntradaPerfil(
+                    origen="Scalene",
+                    simbolo=f"{nombre_corto}:{num_linea}",
+                    metrica=metrica,
+                    valor=round(valor, 2),
+                    detalle=f"py={py_pct:.1f}% c={c_pct:.1f}% sys={sys_pct:.1f}% peak={peak_mb:.1f}MB | {codigo}",
+                )
+            )
+
+    entradas.sort(key=lambda e: e.valor, reverse=True)
+    return entradas[:10]
+
+
 def recoger_hotspots(raiz: Path) -> list[EntradaPerfil]:
     """Lee mediciones si existen; si no, no inventa números empíricos."""
     hotspots: list[EntradaPerfil] = []
@@ -234,6 +285,8 @@ def recoger_hotspots(raiz: Path) -> list[EntradaPerfil]:
             hotspots.extend(_parsear_tabla_comparativa(ruta))
         elif nombre.startswith("memoria"):
             hotspots.extend(_parsear_memoria(ruta))
+        elif "scalene" in nombre:
+            hotspots.extend(_parsear_scalene(ruta))
     return _deduplicar(hotspots)
 
 
@@ -246,6 +299,7 @@ def _hotspots_para_informe(hotspots: list[EntradaPerfil]) -> list[EntradaPerfil]
     for origen, cupo in (
         ("cProfile", 8),
         ("line_profiler", 4),
+        ("Scalene", 6),
         ("tabla_comparativa", 8),
         ("memory_profiler", 2),
     ):

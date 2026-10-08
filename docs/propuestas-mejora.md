@@ -3,7 +3,7 @@
 <!-- Bloque generado por la automatización de hotspots. -->
 <!-- No aplicar estos cambios de forma automática: el grupo decide y vuelve a medir. -->
 
-**Commit analizado:** `ecbe63a` · **Generado:** 2026-09-08 01:45 UTC
+**Commit analizado:** `823bb18` · **Generado:** 2026-10-08 01:55 UTC
 
 ## Fuentes consultadas
 
@@ -12,6 +12,8 @@
 - `docs/mediciones/memoria_resumen.txt`
 - `docs/mediciones/tabla_comparativa.md`
 - `docs/mediciones/tabla_comparativa.txt`
+- `docs/mediciones/scalene/scalene_despues.json`
+- `docs/mediciones/scalene/scalene_antes.json`
 
 ## Hotspots detectados
 
@@ -29,6 +31,8 @@
 | line_profiler | `procesar_pedidos_secuencial:52` | pct_tiempo | 90.8 | producto = catalogo.buscar_por_id(linea.id_producto) |
 | line_profiler | `CatalogoLineal.buscar_por_nombre:57` | pct_tiempo | 62.6 | if texto_norm in producto.nombre.lower(): |
 | line_profiler | `CatalogoLineal.buscar_por_id:45` | pct_tiempo | 50.4 | if producto.id == id_producto: |
+| Scalene | `benchmarks/perfilar_scalene.py:80` | cpu_sys_ipc_pct | 88.13 | py=0.0% c=3.2% sys=88.1% peak=0.0MB \| _ = procesar_pedidos_concurrente( |
+| Scalene | `benchmarks/perfilar_scalene.py:80` | cpu_sys_ipc_pct | 95.99 | py=0.0% c=4.0% sys=96.0% peak=0.0MB \| _ = procesar_pedidos_concurrente( |
 | tabla_comparativa | `demo_oral.json / **Ranking Top-N (k=5)**` | speedup | 0.41 | base=0.032 ms · opt=0.078 ms |
 | tabla_comparativa | `demo_oral.json / **Batch Picking Consolidado**` | speedup | 0.29 | base=0.079 ms · opt=0.273 ms |
 | tabla_comparativa | `demo_oral.json / **Combinaciones Sustitutas**` | speedup | 0.81 | base=0.278 ms · opt=0.342 ms |
