@@ -162,6 +162,8 @@ class MotorInventario:
 
         return resultados
 
+    UMBRAL_PEDIDOS_CONCURRENTE: int = 500
+
     def procesar_pedidos(
         self,
         pedidos: Sequence[Pedido] | None = None,
@@ -172,9 +174,11 @@ class MotorInventario:
         """Procesa un lote de pedidos según la estrategia configurada."""
         lote = pedidos if pedidos is not None else self._pedidos
 
-        # Decidir si procesar concurrente o secuencial
+        # El overhead de IPC en Windows solo se amortiza en lotes grandes o pesados.
         es_concurrente = (
-            concurrente if concurrente is not None else (self.es_optimizado and len(lote) >= 50)
+            concurrente
+            if concurrente is not None
+            else (self.es_optimizado and len(lote) >= self.UMBRAL_PEDIDOS_CONCURRENTE)
         )
 
         if es_concurrente:

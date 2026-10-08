@@ -124,7 +124,11 @@ class _VisitanteCuerpo(ast.NodeVisitor):
             self.evidencia.llamadas_sorted = True
         if "heapq.nlargest" in calificado or "heapq.nsmallest" in calificado:
             self.evidencia.llamadas_heapq = True
-        if calificado.endswith("ProcessPoolExecutor"):
+        if (
+            calificado.endswith("ProcessPoolExecutor")
+            or "pool_pedidos" in calificado
+            or "obtener_executor" in calificado
+        ):
             self.evidencia.usa_process_pool = True
         if calificado.endswith("buscar_por_id"):
             self.evidencia.llama_buscar_por_id = True
