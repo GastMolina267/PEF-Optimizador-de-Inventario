@@ -7,6 +7,7 @@ from pathlib import Path
 
 import flet as ft
 
+from src.datos.generador_archivos import generar_archivos_grandes_jsonl
 from src.motor.motor_inventario import MotorInventario
 from src.ui.pantallas.base import PantallaBase
 from src.ui.tema import (
@@ -34,6 +35,7 @@ from src.ui.tema import (
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"
+GENERADOS_DIR = BASE_DIR / "data" / "generados"
 
 
 class PantallaInicio(PantallaBase):
@@ -45,7 +47,7 @@ class PantallaInicio(PantallaBase):
         super().__init__(motor, on_actualizar_panel, notificar)
         self.on_dataset_cambiado = on_dataset_cambiado
 
-        # Dropdown de datasets estándar
+        # Dropdown de datasets estándar y masivo
         self.dropdown_datasets = ft.Dropdown(
             label="Dataset empaquetado",
             options=[
@@ -60,6 +62,9 @@ class PantallaInicio(PantallaBase):
                 ),
                 ft.dropdown.Option(
                     "grande.json", "grande.json (10.000 productos, 2.000 pedidos - Grande)"
+                ),
+                ft.dropdown.Option(
+                    "masivo.jsonl", "masivo.jsonl (10.000 prod, 50.000 ped - Streaming JSONL)"
                 ),
             ],
             value="demo_oral.json",
@@ -83,6 +88,10 @@ class PantallaInicio(PantallaBase):
             icon=ft.Icons.PLAY_ARROW_ROUNDED,
             style=estilo_boton_primario(),
             on_click=lambda _: self._ejecutar_escenario_completo(),
+        )
+
+        self.barra_progreso = ft.ProgressBar(
+            visible=False, width=380, color=COLOR_PRIMARIO, bgcolor=COLOR_BORDE
         )
 
         # Contenedores de KPIs dinámicos
@@ -116,6 +125,7 @@ class PantallaInicio(PantallaBase):
                         self.btn_ejecutar_escenario,
                     ]
                 ),
+                self.barra_progreso,
                 envolver_metricas(self.fila_kpis),
                 ft.Container(
                     content=ft.Column(
@@ -154,6 +164,48 @@ class PantallaInicio(PantallaBase):
 
     def _cargar_dataset_actual(self):
         nombre = self.dropdown_datasets.value
+        if nombre == "masivo.jsonl":
+            ruta_prods = GENERADOS_DIR / "productos.jsonl"
+            ruta_peds = GENERADOS_DIR / "pedidos.jsonl"
+            try:
+                self.barra_progreso.visible = True
+                actualizar_control(self.barra_progreso)
+                if not ruta_prods.is_file() or not ruta_peds.is_file():
+                    self.notificar(
+                        "Generando archivos JSON Lines masivos deterministas...",
+                        ft.Icons.HOURGLASS_BOTTOM,
+                    )
+                    generar_archivos_grandes_jsonl(
+                        GENERADOS_DIR, n_productos=10000, n_pedidos=50000, seed=42
+                    )
+
+                inicio = time.perf_counter()
+                self.motor.cargar_dataset_jsonl(ruta_prods, ruta_peds)
+                duracion_ms = (time.perf_counter() - inicio) * 1000.0
+
+                self.barra_progreso.visible = False
+                actualizar_control(self.barra_progreso)
+                self._actualizar_metricas_visuales()
+                stats = self.motor.obtener_estadisticas()
+                self.on_actualizar_panel(
+                    dataset=nombre,
+                    n_productos=stats["total_productos"],
+                    n_pedidos=stats["total_pedidos"],
+                    estrategia=self.motor.estrategia,
+                    tiempo_ms=duracion_ms,
+                    resultado_negocio=f"Dataset masivo cargado en streaming en {formatear_tiempo_ms(duracion_ms)}",
+                )
+                if self.on_dataset_cambiado:
+                    self.on_dataset_cambiado(nombre)
+                self.notificar(f"Dataset streaming '{nombre}' cargado con éxito.", ft.Icons.CHECK)
+            except Exception as err:
+                self.barra_progreso.visible = False
+                actualizar_control(self.barra_progreso)
+                self.notificar(
+                    f"Error al cargar dataset masivo: {err}", ft.Icons.ERROR, color=COLOR_EXITO
+                )
+            return
+
         ruta = DATASETS_DIR / nombre
         try:
             inicio = time.perf_counter()

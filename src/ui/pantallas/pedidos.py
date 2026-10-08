@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import flet as ft
 
 from src.motor.motor_inventario import MotorInventario
@@ -35,6 +37,8 @@ from src.ui.tema import (
     padding_symmetric,
 )
 
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+
 
 class PantallaPedidos(PantallaBase):
     """Vista para procesar lotes de pedidos de forma secuencial o concurrente con despliegue línea por línea."""
@@ -45,6 +49,8 @@ class PantallaPedidos(PantallaBase):
 
         self.resultados_ultimo_proceso = None
         self.orden_ascendente = True
+        self.pagina_actual = 1
+        self.tamano_pagina = 50
 
         # Controles
         self.switch_concurrente = ft.Switch(
@@ -66,6 +72,12 @@ class PantallaPedidos(PantallaBase):
             on_click=lambda _: self._ejecutar_procesamiento(),
         )
 
+        self.btn_exportar_csv = ft.OutlinedButton(
+            "Exportar Picking CSV",
+            icon=ft.Icons.FILE_DOWNLOAD_OUTLINED,
+            on_click=lambda _: self._exportar_picking_csv(),
+        )
+
         # Controles de ordenamiento
         self.dropdown_orden = crear_dropdown(
             label="Ordenar pedidos por",
@@ -84,6 +96,26 @@ class PantallaPedidos(PantallaBase):
             icon=ft.Icons.ARROW_UPWARD_ROUNDED,
             tooltip="Orden Ascendente (Clic para alternar a Descendente)",
             on_click=lambda _: self._alternar_sentido_orden(),
+        )
+
+        # Controles de paginación
+        self.txt_info_pagina = ft.Text("Página 1", size=12, color=COLOR_TEXTO_MUTED)
+        self.btn_pag_anterior = ft.IconButton(
+            icon=ft.Icons.CHEVRON_LEFT,
+            tooltip="Página anterior",
+            disabled=True,
+            on_click=lambda _: self._cambiar_pagina(-1),
+        )
+        self.btn_pag_siguiente = ft.IconButton(
+            icon=ft.Icons.CHEVRON_RIGHT,
+            tooltip="Página siguiente",
+            disabled=True,
+            on_click=lambda _: self._cambiar_pagina(1),
+        )
+        self.fila_paginacion = ft.Row(
+            controls=[self.btn_pag_anterior, self.txt_info_pagina, self.btn_pag_siguiente],
+            spacing=4,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
         # Fila de KPIs
@@ -115,11 +147,20 @@ class PantallaPedidos(PantallaBase):
                         self.check_descontar_stock,
                         self.dropdown_orden,
                         self.btn_sentido_orden,
+                        self.btn_exportar_csv,
                     ]
                 ),
                 envolver_metricas(self.fila_kpis),
-                crear_titulo_seccion(
-                    "Listado de Pedidos (Clic en cada pedido para desplegar líneas y stock disponible)"
+                ft.Row(
+                    controls=[
+                        crear_titulo_seccion(
+                            "Listado de Pedidos (Clic en cada pedido para desplegar líneas y stock)"
+                        ),
+                        ft.Container(expand=True),
+                        self.fila_paginacion,
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 envolver_lista(self.col_pedidos),
             ],
@@ -203,9 +244,29 @@ class PantallaPedidos(PantallaBase):
             self._renderizar_pedidos_sin_procesar()
 
     def _renderizar_pedidos_sin_procesar(self):
+        if not self.pedidos_actuales:
+            self.col_pedidos.controls = []
+            self.txt_info_pagina.value = "Página 1"
+            self.btn_pag_anterior.disabled = True
+            self.btn_pag_siguiente.disabled = True
+            actualizar_control(self)
+            return
+
+        total_res = len(self.pedidos_actuales)
+        total_paginas = max(1, (total_res + self.tamano_pagina - 1) // self.tamano_pagina)
+        self.pagina_actual = max(1, min(self.pagina_actual, total_paginas))
+
+        self.btn_pag_anterior.disabled = self.pagina_actual <= 1
+        self.btn_pag_siguiente.disabled = self.pagina_actual >= total_paginas
+
+        inicio_idx = (self.pagina_actual - 1) * self.tamano_pagina
+        fin_idx = min(inicio_idx + self.tamano_pagina, total_res)
+        items_pagina = self.pedidos_actuales[inicio_idx:fin_idx]
+
+        self.txt_info_pagina.value = f"Pág. {self.pagina_actual}/{total_paginas} ({inicio_idx + 1}-{fin_idx} de {total_res:,})"
+
         items = []
-        max_mostrar = 100
-        for ped in self.pedidos_actuales[:max_mostrar]:
+        for ped in items_pagina:
             total_unidades = sum(linea.cantidad for linea in ped.lineas)
 
             # Construir desglose de líneas desplegables
@@ -349,10 +410,37 @@ class PantallaPedidos(PantallaBase):
         self.col_pedidos.controls = items
         actualizar_control(self)
 
+    def _cambiar_pagina(self, delta: int):
+        self.pagina_actual += delta
+        if self.resultados_ultimo_proceso:
+            self._renderizar_resultados_procesados()
+        else:
+            self._renderizar_pedidos_sin_procesar()
+
     def _renderizar_resultados_procesados(self):
+        if not self.resultados_ultimo_proceso:
+            self.col_pedidos.controls = []
+            self.txt_info_pagina.value = "Página 1"
+            self.btn_pag_anterior.disabled = True
+            self.btn_pag_siguiente.disabled = True
+            actualizar_control(self)
+            return
+
+        total_res = len(self.resultados_ultimo_proceso)
+        total_paginas = max(1, (total_res + self.tamano_pagina - 1) // self.tamano_pagina)
+        self.pagina_actual = max(1, min(self.pagina_actual, total_paginas))
+
+        self.btn_pag_anterior.disabled = self.pagina_actual <= 1
+        self.btn_pag_siguiente.disabled = self.pagina_actual >= total_paginas
+
+        inicio_idx = (self.pagina_actual - 1) * self.tamano_pagina
+        fin_idx = min(inicio_idx + self.tamano_pagina, total_res)
+        items_pagina = self.resultados_ultimo_proceso[inicio_idx:fin_idx]
+
+        self.txt_info_pagina.value = f"Pág. {self.pagina_actual}/{total_paginas} ({inicio_idx + 1}-{fin_idx} de {total_res:,})"
+
         items = []
-        max_mostrar = 100
-        for r in self.resultados_ultimo_proceso[:max_mostrar]:
+        for r in items_pagina:
             total_lineas = len(r.lineas_cubiertas) + len(r.lineas_faltantes)
             porc_cobertura = (
                 (len(r.lineas_cubiertas) / total_lineas * 100.0) if total_lineas > 0 else 100.0
@@ -477,6 +565,17 @@ class PantallaPedidos(PantallaBase):
 
         self.col_pedidos.controls = items
         actualizar_control(self)
+
+    def _exportar_picking_csv(self):
+        try:
+            ruta_csv = BASE_DIR / "data" / "generados" / "picking_consolidado.csv"
+            filas = self.motor.exportar_picking_csv(ruta_csv)
+            self.notificar(
+                f"Reporte de picking exportado con buffer de 1 MB ({filas:,} filas) en data/generados/picking_consolidado.csv",
+                ft.Icons.CHECK,
+            )
+        except Exception as err:
+            self.notificar(f"Error al exportar reporte de picking: {err}", ft.Icons.ERROR)
 
     def _ejecutar_procesamiento(self):
         es_conc = self.switch_concurrente.value
