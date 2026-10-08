@@ -285,8 +285,6 @@ def crear_tarjeta_kpi(
     titulo: str,
     valor: str,
     subtitulo: str | None = None,
-    icono: str = ft.Icons.INFO_OUTLINE,
-    color_icono: str = COLOR_PRIMARIO,
 ) -> ft.Container:
     """Celda de métrica: etiqueta, valor, nota."""
     controles = [

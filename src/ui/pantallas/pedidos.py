@@ -240,18 +240,10 @@ class PantallaPedidos(PantallaBase):
                 "Total Pedidos",
                 f"{total_peds:,}",
                 "En cola de preparación",
-                ft.Icons.RECEIPT_LONG,
-                COLOR_PRIMARIO,
             ),
-            crear_tarjeta_kpi(
-                "Cubiertos", "--", "100% de stock disponible", ft.Icons.CHECK_CIRCLE, COLOR_EXITO
-            ),
-            crear_tarjeta_kpi(
-                "Parciales", "--", "Stock parcial o faltantes", ft.Icons.WARNING, "#F59E0B"
-            ),
-            crear_tarjeta_kpi(
-                "Imposibles", "--", "Sin stock disponible", ft.Icons.CANCEL, COLOR_PELIGRO
-            ),
+            crear_tarjeta_kpi("Cubiertos", "--", "100% de stock disponible"),
+            crear_tarjeta_kpi("Parciales", "--", "Stock parcial o faltantes"),
+            crear_tarjeta_kpi("Imposibles", "--", "Sin stock disponible"),
         ]
         self.pedidos_actuales = list(self.motor.pedidos)
         self._aplicar_ordenamiento()
@@ -508,29 +500,21 @@ class PantallaPedidos(PantallaBase):
                     "Total Procesados",
                     f"{resumen.pedidos_procesados:,}",
                     f"Tiempo: {formatear_tiempo_ms(resumen.tiempo_ejecucion_ms)}",
-                    ft.Icons.RECEIPT_LONG,
-                    COLOR_PRIMARIO,
                 ),
                 crear_tarjeta_kpi(
                     "Cubiertos",
                     f"{resumen.pedidos_cubiertos:,}",
                     f"{resumen.porcentaje_cobertura:.1f}% del lote",
-                    ft.Icons.CHECK_CIRCLE,
-                    COLOR_EXITO,
                 ),
                 crear_tarjeta_kpi(
                     "Parciales",
                     f"{resumen.pedidos_parciales:,}",
                     "Faltante parcial",
-                    ft.Icons.WARNING,
-                    "#F59E0B",
                 ),
                 crear_tarjeta_kpi(
                     "Imposibles",
                     f"{resumen.pedidos_imposibles:,}",
                     "Faltante total",
-                    ft.Icons.CANCEL,
-                    COLOR_PELIGRO,
                 ),
             ]
 

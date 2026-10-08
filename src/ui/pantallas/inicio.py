@@ -250,29 +250,21 @@ class PantallaInicio(PantallaBase):
                 "Catálogo de Productos",
                 f"{stats['total_productos']:,}",
                 f"{stats['total_categorias']} categorías registradas",
-                ft.Icons.INVENTORY_2,
-                COLOR_PRIMARIO,
             ),
             crear_tarjeta_kpi(
                 "Lote de Pedidos",
                 f"{stats['total_pedidos']:,}",
                 f"{stats['total_lineas_pedidos']} líneas de demanda",
-                ft.Icons.SHOPPING_BAG,
-                COLOR_SECUNDARIO,
             ),
             crear_tarjeta_kpi(
                 "Unidades en Stock",
                 f"{stats['stock_total_unidades']:,}",
                 "Disponibilidad total en almacén",
-                ft.Icons.WAREHOUSE,
-                COLOR_EXITO,
             ),
             crear_tarjeta_kpi(
                 "Demanda Total",
                 f"{stats['unidades_demandadas']:,}",
                 f"Estrategia: {self.motor.estrategia.upper()}",
-                ft.Icons.TRENDING_UP,
-                COLOR_PRIMARIO,
             ),
         ]
         actualizar_control(self)

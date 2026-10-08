@@ -36,6 +36,9 @@ INFORMES_PRIORITARIOS: tuple[str, ...] = (
 PORCENTAJE_MINIMO_LINE_PROFILER = 20.0
 PORCENTAJE_MINIMO_CPU_SCALENE = 1.0
 PICO_MINIMO_MB_SCALENE = 0.5
+# Columnas de las tablas de pstats y line_profiler.
+COLUMNAS_PSTATS = 6
+COLUMNAS_LINE_PROFILER = 6
 # Columnas mínimas de una fila de la tabla comparativa (hasta la de speedup).
 COLUMNAS_TABLA_COMPARATIVA = 7
 
@@ -76,16 +79,49 @@ def _informes_disponibles(raiz: Path) -> list[Path]:
     return hallados
 
 
+def _es_numero(texto: str, extra: str = "") -> bool:
+    """True si ``texto`` tiene solo dígitos, puntos y los caracteres de ``extra``."""
+    return bool(texto) and all(c.isdigit() or c == "." or c in extra for c in texto)
+
+
+def _filas_cprofile(texto: str) -> list[tuple[str, str, str]]:
+    """Filas ``(tottime, cumtime, símbolo)`` de la tabla de pstats.
+
+    Columnas: ncalls tottime percall cumtime percall filename:lineno(function). Se parsea
+    con ``split`` en lugar de una expresión regular para evitar backtracking.
+    """
+    filas = []
+    for linea in texto.splitlines():
+        campos = linea.split(None, 5)
+        if (
+            len(campos) == COLUMNAS_PSTATS
+            and _es_numero(campos[0], extra="/")
+            and all(_es_numero(c) for c in campos[1:5])
+        ):
+            filas.append((campos[1], campos[3], campos[5]))
+    return filas
+
+
+def _fila_line_profiler(linea: str) -> tuple[str, float, str] | None:
+    """``(número de línea, % de tiempo, código)`` de una fila de line_profiler, o None.
+
+    Columnas: Line # · Hits · Time · Per Hit · % Time · contenido.
+    """
+    campos = linea.split(None, 5)
+    if len(campos) == COLUMNAS_LINE_PROFILER - 1 and linea[-1:].isspace():  # fila sin código
+        campos.append("")
+    if len(campos) != COLUMNAS_LINE_PROFILER:
+        return None
+    if not (campos[0].isdigit() and campos[1].isdigit() and all(map(_es_numero, campos[2:5]))):
+        return None
+    return campos[0], float(campos[4]), campos[5].strip()
+
+
 def _parsear_cprofile(ruta: Path) -> list[EntradaPerfil]:
     """Toma las funciones de dominio con mayor tottime / cumtime."""
     texto = ruta.read_text(encoding="utf-8", errors="replace")
     entradas: list[EntradaPerfil] = []
-    # ncalls tottime percall cumtime percall filename:lineno(function)
-    patron = re.compile(
-        r"^\s*[\d/]+\s+([\d.]+)\s+[\d.]+\s+([\d.]+)\s+[\d.]+\s+(.+)$",
-        re.MULTILINE,
-    )
-    for tottime_s, cumtime_s, simbolo in patron.findall(texto):
+    for tottime_s, cumtime_s, simbolo in _filas_cprofile(texto):
         if "src\\" not in simbolo and "src/" not in simbolo:
             # Conservar IPC del SO cuando domina el tottime (CreateProcess, pickle).
             if any(
@@ -137,23 +173,18 @@ def _parsear_line_profiler(ruta: Path) -> list[EntradaPerfil]:
         if cabecera:
             funcion_actual = cabecera.group(1)
             continue
-        # Line # Hits Time Per Hit % Time  contents
-        m = re.match(
-            r"^\s*(\d+)\s+(\d+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+(.*)$",
-            linea,
-        )
-        if not m:
+        fila = _fila_line_profiler(linea)
+        if fila is None:
             continue
-        pct = float(m.group(5))
+        numero_linea, pct, snippet = fila
         if pct < PORCENTAJE_MINIMO_LINE_PROFILER:
             continue
-        snippet = m.group(6).strip()
         if snippet.startswith('"""') or snippet.startswith("def "):
             continue
         entradas.append(
             EntradaPerfil(
                 "line_profiler",
-                f"{funcion_actual}:{m.group(1)}",
+                f"{funcion_actual}:{numero_linea}",
                 "pct_tiempo",
                 pct,
                 snippet[:120],

@@ -176,7 +176,8 @@ class TestCatalogoLineal:
         ok = catalogo.descontar_stock(1, 4)
         assert ok is True
         prod = catalogo.buscar_por_id(1)
-        assert prod is not None and prod.stock == 6
+        assert prod is not None
+        assert prod.stock == 6
 
         # Descuento que excede el stock disponible
         insuficiente = catalogo.descontar_stock(1, 10)

@@ -18,22 +18,29 @@ from src.datos.cargador import guardar_dataset_json
 from src.modelos.pedido import LineaPedido, Pedido
 from src.modelos.producto import Producto
 
-# Categorías realistas para los productos sintéticos
 # Proporciones del dataset sintético.
 PROPORCION_SIN_STOCK = 0.05
 PROBABILIDAD_PRODUCTO_POPULAR = 0.70
 
+# Categorías realistas para los productos sintéticos
+FERRETERIA = "Ferretería y Herramientas"
+ELECTRICIDAD = "Electricidad e Iluminación"
+PINTURAS = "Pinturas y Adhesivos"
+SEGURIDAD = "Seguridad Industrial"
+PLOMERIA = "Plomería y Grifería"
+BULONERIA = "Bulonería y Tornillería"
+
 CATEGORIAS = [
-    "Ferretería y Herramientas",
-    "Electricidad e Iluminación",
-    "Pinturas y Adhesivos",
-    "Seguridad Industrial",
-    "Plomería y Grifería",
-    "Bulonería y Tornillería",
+    FERRETERIA,
+    ELECTRICIDAD,
+    PINTURAS,
+    SEGURIDAD,
+    PLOMERIA,
+    BULONERIA,
 ]
 
 NOMBRES_BASE = {
-    "Ferretería y Herramientas": [
+    FERRETERIA: [
         "Taladro percutor",
         "Amoladora angular",
         "Sierra caladora",
@@ -47,7 +54,7 @@ NOMBRES_BASE = {
         "Arco de sierra",
         "Lijadora orbital",
     ],
-    "Electricidad e Iluminación": [
+    ELECTRICIDAD: [
         "Cable unipolar 2.5mm",
         "Cable unipolar 4mm",
         "Foco LED 12W",
@@ -61,7 +68,7 @@ NOMBRES_BASE = {
         "Plafón LED redondo",
         "Canaleta adhesiva",
     ],
-    "Pinturas y Adhesivos": [
+    PINTURAS: [
         "Pintura látex interior",
         "Pintura látex exterior",
         "Esmalte sintético brillante",
@@ -74,7 +81,7 @@ NOMBRES_BASE = {
         "Aguarrás mineral",
         "Masilla para yeso",
     ],
-    "Seguridad Industrial": [
+    SEGURIDAD: [
         "Guantes de nitrilo",
         "Guantes de vaqueta",
         "Casco de protección",
@@ -86,7 +93,7 @@ NOMBRES_BASE = {
         "Chaleco reflectivo",
         "Cono de señalización",
     ],
-    "Plomería y Grifería": [
+    PLOMERIA: [
         "Caño PVC 110mm",
         "Codo PVC 110mm",
         "Curva PVC 90°",
@@ -99,7 +106,7 @@ NOMBRES_BASE = {
         "Flotante para tanque",
         "Rejilla de piso",
     ],
-    "Bulonería y Tornillería": [
+    BULONERIA: [
         "Tornillo autoperforante 10x1",
         "Tornillo autoperforante 10x2",
         "Tarugo con tope N°8",
@@ -137,45 +144,37 @@ def crear_dataset_demo_oral() -> tuple[list[Producto], list[Pedido]]:
     - Productos repetidos en varios pedidos (para batch picking consolidado).
     """
     productos = [
-        Producto(1, "Taladro Percutor 750W", "Ferretería y Herramientas", 15, 45000.0),
-        Producto(2, "Amoladora Angular 115mm", "Ferretería y Herramientas", 10, 38000.0),
-        Producto(3, "Juego de Destornilladores x6", "Ferretería y Herramientas", 25, 12000.0),
-        Producto(4, "Martillo Galponero 500g", "Ferretería y Herramientas", 30, 9500.0),
+        Producto(1, "Taladro Percutor 750W", FERRETERIA, 15, 45000.0),
+        Producto(2, "Amoladora Angular 115mm", FERRETERIA, 10, 38000.0),
+        Producto(3, "Juego de Destornilladores x6", FERRETERIA, 25, 12000.0),
+        Producto(4, "Martillo Galponero 500g", FERRETERIA, 30, 9500.0),
+        Producto(5, "Sierra Caladora 600W", FERRETERIA, 0, 32000.0),  # Agotado deliberado
+        Producto(6, "Cable Unipolar 2.5mm 100m", ELECTRICIDAD, 40, 28000.0),
+        Producto(7, "Foco LED 12W Luz Fría", ELECTRICIDAD, 120, 1800.0),
+        Producto(8, "Foco LED 9W Luz Cálida", ELECTRICIDAD, 80, 1500.0),
+        Producto(9, "Disyuntor Diferencial 25A", ELECTRICIDAD, 20, 31000.0),
+        Producto(10, "Llave Térmica Bipolar 16A", ELECTRICIDAD, 0, 8500.0),  # Agotado deliberado
+        Producto(11, "Pintura Látex Interior 20L", PINTURAS, 18, 52000.0),
+        Producto(12, "Pintura Látex Interior 10L", PINTURAS, 22, 29000.0),
+        Producto(13, "Pintura Látex Interior 4L", PINTURAS, 35, 14000.0),
+        Producto(14, "Esmalte Sintético Brillante 1L", PINTURAS, 25, 8900.0),
+        Producto(15, "Rodillo Antigoteo 22cm", PINTURAS, 50, 4500.0),
+        Producto(16, "Pincel N°20 Cerda Blanca", PINTURAS, 60, 2200.0),
+        Producto(17, "Caño PVC 110mm x 4m", PLOMERIA, 15, 16500.0),
+        Producto(18, "Codo PVC 110mm a 90°", PLOMERIA, 45, 2800.0),
+        Producto(19, "Adhesivo para PVC 250cc", PLOMERIA, 30, 5100.0),
+        Producto(20, "Canilla Monocomando Cocina", PLOMERIA, 12, 42000.0),
+        Producto(21, "Flexible Mallado 1/2 x 40cm", PLOMERIA, 2, 3400.0),  # Stock bajo
+        Producto(22, "Tornillo Autoperforante 10x1 (x100)", BULONERIA, 100, 3200.0),
+        Producto(23, "Tornillo Autoperforante 10x2 (x100)", BULONERIA, 90, 4100.0),
+        Producto(24, "Tarugo con Tope N°8 (x100)", BULONERIA, 150, 2100.0),
+        Producto(25, "Tuerca Hexagonal 1/4 (x100)", BULONERIA, 80, 1900.0),
+        Producto(26, "Arandela Grower 1/4 (x100)", BULONERIA, 85, 1400.0),
+        Producto(27, "Guantes de Nitrilo Talle L", SEGURIDAD, 75, 3100.0),
+        Producto(28, "Casco de Seguridad Amarillo", SEGURIDAD, 15, 9800.0),
+        Producto(29, "Cinta Métrica 5m Antichoque", FERRETERIA, 40, 4900.0),
         Producto(
-            5, "Sierra Caladora 600W", "Ferretería y Herramientas", 0, 32000.0
-        ),  # Agotado deliberado
-        Producto(6, "Cable Unipolar 2.5mm 100m", "Electricidad e Iluminación", 40, 28000.0),
-        Producto(7, "Foco LED 12W Luz Fría", "Electricidad e Iluminación", 120, 1800.0),
-        Producto(8, "Foco LED 9W Luz Cálida", "Electricidad e Iluminación", 80, 1500.0),
-        Producto(9, "Disyuntor Diferencial 25A", "Electricidad e Iluminación", 20, 31000.0),
-        Producto(
-            10, "Llave Térmica Bipolar 16A", "Electricidad e Iluminación", 0, 8500.0
-        ),  # Agotado deliberado
-        Producto(11, "Pintura Látex Interior 20L", "Pinturas y Adhesivos", 18, 52000.0),
-        Producto(12, "Pintura Látex Interior 10L", "Pinturas y Adhesivos", 22, 29000.0),
-        Producto(13, "Pintura Látex Interior 4L", "Pinturas y Adhesivos", 35, 14000.0),
-        Producto(14, "Esmalte Sintético Brillante 1L", "Pinturas y Adhesivos", 25, 8900.0),
-        Producto(15, "Rodillo Antigoteo 22cm", "Pinturas y Adhesivos", 50, 4500.0),
-        Producto(16, "Pincel N°20 Cerda Blanca", "Pinturas y Adhesivos", 60, 2200.0),
-        Producto(17, "Caño PVC 110mm x 4m", "Plomería y Grifería", 15, 16500.0),
-        Producto(18, "Codo PVC 110mm a 90°", "Plomería y Grifería", 45, 2800.0),
-        Producto(19, "Adhesivo para PVC 250cc", "Plomería y Grifería", 30, 5100.0),
-        Producto(20, "Canilla Monocomando Cocina", "Plomería y Grifería", 12, 42000.0),
-        Producto(
-            21, "Flexible Mallado 1/2 x 40cm", "Plomería y Grifería", 2, 3400.0
-        ),  # Stock bajo
-        Producto(
-            22, "Tornillo Autoperforante 10x1 (x100)", "Bulonería y Tornillería", 100, 3200.0
-        ),
-        Producto(23, "Tornillo Autoperforante 10x2 (x100)", "Bulonería y Tornillería", 90, 4100.0),
-        Producto(24, "Tarugo con Tope N°8 (x100)", "Bulonería y Tornillería", 150, 2100.0),
-        Producto(25, "Tuerca Hexagonal 1/4 (x100)", "Bulonería y Tornillería", 80, 1900.0),
-        Producto(26, "Arandela Grower 1/4 (x100)", "Bulonería y Tornillería", 85, 1400.0),
-        Producto(27, "Guantes de Nitrilo Talle L", "Seguridad Industrial", 75, 3100.0),
-        Producto(28, "Casco de Seguridad Amarillo", "Seguridad Industrial", 15, 9800.0),
-        Producto(29, "Cinta Métrica 5m Antichoque", "Ferretería y Herramientas", 40, 4900.0),
-        Producto(
-            30, "Sellador de Silicona Neutra 280ml", "Pinturas y Adhesivos", 0, 6200.0
+            30, "Sellador de Silicona Neutra 280ml", PINTURAS, 0, 6200.0
         ),  # Agotado deliberado
     ]
 

@@ -47,7 +47,8 @@ class TestSubetapa31CatalogoHash:
         for id_prod in [1, 25, 50, 75, 100]:
             p_lin = cat_lineal.buscar_por_id(id_prod)
             p_hash = cat_hash.buscar_por_id(id_prod)
-            assert p_lin is not None and p_hash is not None
+            assert p_lin is not None
+            assert p_hash is not None
             assert p_lin == p_hash
 
         # Equivalencia en ID inexistente
@@ -94,7 +95,8 @@ class TestSubetapa32AgrupacionYTopN:
         assert item_22 is not None
         assert item_22.cantidad_total == 15  # 5 en pedido 2 + 10 en pedido 4
         pedidos_demandantes = [d.id_pedido for d in item_22.demandas_por_pedido]
-        assert 2 in pedidos_demandantes and 4 in pedidos_demandantes
+        assert 2 in pedidos_demandantes
+        assert 4 in pedidos_demandantes
 
     def test_equivalencia_top_n_sort_vs_heap(self):
         prods, peds = cargar_dataset_json(DATASETS_DIR / "mediano.json")

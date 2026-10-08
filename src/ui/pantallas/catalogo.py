@@ -37,6 +37,9 @@ from src.ui.tema import (
     padding_symmetric,
 )
 
+TEXTO_BUSQUEDA_LINEAL = "Búsqueda Lineal O(n)"
+TEXTO_BUSQUEDA_HASH = "Búsqueda Hash O(1) con LRU"
+
 # Por encima de este stock el producto se muestra en verde; entre 1 y este valor, en ámbar.
 STOCK_HOLGADO = 10
 
@@ -89,9 +92,7 @@ class PantallaCatalogo(PantallaBase):
                         color=COLOR_EXITO if self.motor.es_optimizado else COLOR_ADVERTENCIA,
                     ),
                     ft.Text(
-                        "Búsqueda Hash O(1) con LRU"
-                        if self.motor.es_optimizado
-                        else "Búsqueda Lineal O(n)",
+                        TEXTO_BUSQUEDA_HASH if self.motor.es_optimizado else TEXTO_BUSQUEDA_LINEAL,
                         size=12,
                         weight=ft.FontWeight.BOLD,
                         color=COLOR_EXITO if self.motor.es_optimizado else COLOR_ADVERTENCIA,
@@ -167,7 +168,7 @@ class PantallaCatalogo(PantallaBase):
                         "Demostración del desafío experimental: recorrido secuencial de lista "
                         "frente a tabla Hash con índice invertido tokenizado y caché LRU."
                     ),
-                    complejidad_base="Búsqueda Lineal O(n)",
+                    complejidad_base=TEXTO_BUSQUEDA_LINEAL,
                     complejidad_opt="Búsqueda Hash O(1) amortizado",
                     por_que_importa=(
                         "En catálogos de 10.000+ artículos, la búsqueda O(1) reduce el tiempo de "
@@ -260,7 +261,7 @@ class PantallaCatalogo(PantallaBase):
                         color=color_badge,
                     ),
                     ft.Text(
-                        "Búsqueda Hash O(1) con LRU" if es_opt else "Búsqueda Lineal O(n)",
+                        TEXTO_BUSQUEDA_HASH if es_opt else TEXTO_BUSQUEDA_LINEAL,
                         size=12,
                         weight=ft.FontWeight.BOLD,
                         color=color_badge,

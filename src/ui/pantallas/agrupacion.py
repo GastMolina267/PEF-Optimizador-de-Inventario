@@ -13,7 +13,6 @@ from src.ui.tema import (
     COLOR_EXITO,
     COLOR_PELIGRO,
     COLOR_PRIMARIO,
-    COLOR_SECUNDARIO,
     COLOR_TARJETA,
     COLOR_TEXTO_MUTED,
     COLOR_TEXTO_PRIMARIO,
@@ -150,29 +149,21 @@ class PantallaAgrupacion(PantallaBase):
                 "Pedidos Consolidados",
                 f"{lote.total_pedidos:,}",
                 "Órdenes agrupadas",
-                ft.Icons.LOCAL_SHIPPING,
-                COLOR_PRIMARIO,
             ),
             crear_tarjeta_kpi(
                 "Productos Únicos",
                 f"{lote.total_productos_distintos:,}",
                 "Posiciones a visitar",
-                ft.Icons.CATEGORY,
-                COLOR_SECUNDARIO,
             ),
             crear_tarjeta_kpi(
                 "Unidades Totales",
                 f"{lote.total_unidades:,}",
                 "Cantidad agregada",
-                ft.Icons.INVENTORY_2,
-                COLOR_EXITO,
             ),
             crear_tarjeta_kpi(
                 "Tiempo de Consolidación",
                 formatear_tiempo_ms(duracion_ms),
                 "Cómputo en una pasada O(L)",
-                ft.Icons.SPEED,
-                COLOR_PRIMARIO,
             ),
         ]
 

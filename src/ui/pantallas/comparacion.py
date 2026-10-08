@@ -19,8 +19,6 @@ from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
     COLOR_PELIGRO,
-    COLOR_PRIMARIO,
-    COLOR_SECUNDARIO,
     COLOR_TARJETA,
     COLOR_TEXTO_PRIMARIO,
     COLOR_TEXTO_SECUNDARIO,
@@ -225,29 +223,21 @@ class PantallaComparacion(PantallaBase):
                 "Aceleración Búsqueda",
                 f"{sp_busq:.1f}x",
                 "Hash O(1) vs. Lista O(n)",
-                ft.Icons.ROCKET_LAUNCH,
-                COLOR_PRIMARIO,
             ),
             crear_tarjeta_kpi(
                 "Aceleración Top-N",
                 f"{sp_top:.1f}x",
                 "Heap vs. Sort total",
-                ft.Icons.TRENDING_UP,
-                COLOR_SECUNDARIO,
             ),
             crear_tarjeta_kpi(
                 "Aceleración Alternativas",
                 f"{sp_alt:.1f}x",
                 "DP Memo vs. Recursión pura",
-                ft.Icons.PSYCHOLOGY,
-                COLOR_EXITO,
             ),
             crear_tarjeta_kpi(
                 "Memoria Heap Activa",
                 f"{mem_mb:.2f} MB",
                 "Estructuras en memoria",
-                ft.Icons.MEMORY,
-                COLOR_PRIMARIO,
             ),
         ]
 
