@@ -1,15 +1,27 @@
-"""Script de perfilado para Scalene: CPU (Python / Nativo / Sistema) y Memoria.
+"""Escenario de perfilado para Scalene: CPU (Python / nativo / sistema) y memoria.
 
-Ejecuta escenarios representativos y reproducibles sobre los datasets oficiales:
+Ejecuta, sobre los datasets oficiales:
+
 1. Búsquedas intensivas en catálogo (ID y texto).
-2. Consolidación de pedidos para Batch Picking.
+2. Consolidación de pedidos para batch picking.
 3. Ranking Top-N de productos más solicitados.
 4. Búsqueda combinatoria de alternativas de sustitución.
-5. Procesamiento de pedidos: Secuencial vs. Concurrente con ProcessPoolExecutor.
+5. Procesamiento de pedidos, secuencial vs pool de procesos, **repetido** varias veces
+   con el pool ya creado. Así Scalene mide el costo de cada llamada (serialización e
+   IPC) y no solo el arranque de los procesos, que se paga una vez.
+
+Uso (desde la raíz del repo, para que Scalene perfile también ``src/``)::
+
+    scalene run --memory --program-path . -o docs/mediciones/scalene/scalene_despues.json \
+        benchmarks/perfilar_scalene.py
+    scalene run ... benchmarks/perfilar_scalene.py --- --iteraciones 50
+
+El resumen comparativo se genera con ``python -m benchmarks.resumir_scalene``.
 """
 
 from __future__ import annotations
 
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -27,7 +39,7 @@ DATASETS_DIR = BASE_DIR / "data" / "datasets"
 SCALENE_DIR = BASE_DIR / "docs" / "mediciones" / "scalene"
 
 
-def ejecutar_escenario_scalene(nombre_dataset: str = "mediano.json") -> None:
+def ejecutar_escenario_scalene(nombre_dataset: str = "grande.json", iteraciones: int = 30) -> None:
     """Ejecuta una corrida representativa de operaciones sobre el dataset indicado."""
     ruta_dataset = DATASETS_DIR / nombre_dataset
     if not ruta_dataset.is_file():
@@ -65,34 +77,26 @@ def ejecutar_escenario_scalene(nombre_dataset: str = "mediano.json") -> None:
                 max_candidatos=14,
             )
 
-    # 5. Comparativa directa: Procesamiento secuencial vs pool concurrente
-    # Medimos ambos para que Scalene capture el desglose de tiempo de sistema (IPC)
-    # y tiempo nativo / Python.
-    print("[Scalene] Ejecutando procesamiento secuencial...")
-    _ = procesar_pedidos_secuencial(
-        catalogo=motor.catalogo,
-        pedidos=peds,
-        descontar_stock=False,
-    )
+    # 5. Procesamiento repetido: secuencial vs pool (el pool se crea en la primera vuelta).
+    print(f"[Scalene] Procesamiento secuencial x{iteraciones}...")
+    for _ in range(iteraciones):
+        procesar_pedidos_secuencial(catalogo=motor.catalogo, pedidos=peds, descontar_stock=False)
 
-    print("[Scalene] Ejecutando procesamiento concurrente (ProcessPoolExecutor)...")
-    _ = procesar_pedidos_concurrente(
-        catalogo=motor.catalogo,
-        pedidos=peds,
-        descontar_stock=False,
-    )
+    print(f"[Scalene] Procesamiento con pool de procesos x{iteraciones}...")
+    for _ in range(iteraciones):
+        procesar_pedidos_concurrente(catalogo=motor.catalogo, pedidos=peds, descontar_stock=False)
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Escenario de perfilado para Scalene.")
+    parser.add_argument("--dataset", default="grande.json")
+    parser.add_argument("--iteraciones", type=int, default=30)
+    args = parser.parse_args(argv)
+
     SCALENE_DIR.mkdir(parents=True, exist_ok=True)
     inicio = time.perf_counter()
-
-    # Ejecutamos sobre mediano.json (dataset estándar para perfilado interactivo)
-    for ds in ("demo_oral.json", "mediano.json"):
-        ejecutar_escenario_scalene(ds)
-
-    total_s = time.perf_counter() - inicio
-    print(f"[Scalene] Ejecución completa finalizada en {total_s:.2f} s")
+    ejecutar_escenario_scalene(args.dataset, args.iteraciones)
+    print(f"[Scalene] Ejecución completa en {time.perf_counter() - inicio:.2f} s")
 
 
 if __name__ == "__main__":

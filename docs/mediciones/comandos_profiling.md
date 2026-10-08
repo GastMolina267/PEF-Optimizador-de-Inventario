@@ -53,18 +53,32 @@ python -m benchmarks.perfilar_memoria
 
 Scalene es un profiler de alta precisión que discrimina el tiempo invertido en código Python puro, código nativo C, llamadas al sistema/IPC (Windows) y consumo de memoria.
 
-### Ejecución directa del benchmark oficial de Scalene
+### Ejecución del escenario de Scalene
+
+Desde la raíz del repo. `--program-path .` hace que Scalene perfile también `src/` y no solo
+el script; `--memory` activa el perfil de memoria.
+
 ```powershell
-python -m scalene run -o docs/mediciones/scalene/scalene_despues.json benchmarks/perfilar_scalene.py
+scalene run --memory --program-path . -o docs/mediciones/scalene/scalene_despues.json benchmarks/perfilar_scalene.py
 ```
 
-### Generación de reporte interactivo HTML autónomo (standalone)
+Para el perfil "antes", correr el mismo escenario sobre el commit `823bb18` (cierre de F3)
+en la misma máquina, por ejemplo con `git worktree add ../antes 823bb18` y copiando
+`benchmarks/perfilar_scalene.py`, y guardar la salida como `scalene_antes.json`.
+
+### Reporte HTML autónomo y resumen comparativo
+
 ```powershell
-python -m scalene view --standalone docs/mediciones/scalene/scalene_despues.json
+scalene view --standalone docs/mediciones/scalene/scalene_despues.json   # genera scalene-profile.html
+python -m benchmarks.resumir_scalene --entorno "Windows 11, Python 3.13, 8 núcleos"
 ```
-- **Reportes JSON generados:** `docs/mediciones/scalene/scalene_antes.json` y `docs/mediciones/scalene/scalene_despues.json`.
-- **Reportes interactivos HTML:** `docs/mediciones/scalene/scalene_antes.html` y `docs/mediciones/scalene/scalene_despues.html`.
-- **Métricas:** Desglose exacto de `% Python`, `% C`, `% Sistema (IPC)` y asignación de memoria pico por línea.
+
+- **Perfiles:** `docs/mediciones/scalene/scalene_antes.json` y `scalene_despues.json` (más sus `.html`).
+- **Resumen:** `docs/mediciones/scalene/resumen.md`, con el tiempo total y el desglose por función
+  en Python, código nativo y sistema (esperas e IPC).
+- **Comparar en igualdad de condiciones:** ambos perfiles en la misma máquina y con el mismo
+  método de creación de workers. En Linux, la versión anterior usaba `fork`; para la corrida
+  "después" se puede forzar con `PEF_MP_START_METHOD=fork`. En Windows ambas usan `spawn`.
 
 ---
 

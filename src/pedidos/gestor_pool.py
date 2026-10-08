@@ -19,7 +19,14 @@ def _contexto_multiproceso() -> multiprocessing.context.BaseContext:
     ``forkserver`` evita ese problema en Linux y macOS; Windows solo ofrece ``spawn``.
     Así el comportamiento es el mismo en todas las plataformas: cada worker arranca
     limpio e importa los módulos que necesita.
+
+    La variable de entorno ``PEF_MP_START_METHOD`` fuerza otro método. Se usa solo para
+    comparar perfiles en igualdad de condiciones (por ejemplo, Scalene en Linux contra
+    una versión anterior del código que usaba ``fork``).
     """
+    forzado = os.environ.get("PEF_MP_START_METHOD")
+    if forzado:
+        return multiprocessing.get_context(forzado)
     if "forkserver" in multiprocessing.get_all_start_methods():
         return multiprocessing.get_context("forkserver")
     return multiprocessing.get_context("spawn")
