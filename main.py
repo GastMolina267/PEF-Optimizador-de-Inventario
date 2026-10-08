@@ -19,6 +19,7 @@ if str(BASE_DIR) not in sys.path:
 
 import flet as ft  # noqa: E402
 
+from src.observabilidad import configurar_apm  # noqa: E402
 from src.ui.app import main as app_main  # noqa: E402
 
 
@@ -27,6 +28,9 @@ def run() -> None:
     if len(sys.argv) > 1 and sys.argv[1] in ("--version", "-v"):
         print("Optimizador de Inventario y Pedidos v1.0.0 (UBP - PEF 2026)")
         sys.exit(0)
+
+    # Elastic APM: se activa solo si hay ELASTIC_APM_SERVER_URL (entorno o .env).
+    configurar_apm()
 
     if hasattr(ft, "run") and callable(ft.run):
         ft.run(app_main)

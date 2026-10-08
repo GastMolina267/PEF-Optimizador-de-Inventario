@@ -76,6 +76,9 @@ def construir_comando(mode: str, debug: bool) -> list[str]:
     cmd.extend(["--collect-all", "flet"])
     cmd.extend(["--copy-metadata", "flet"])
     cmd.extend(["--collect-all", "flet_desktop"])
+    # Agente de Elastic APM: importa transportes y métricas de forma dinámica.
+    cmd.extend(["--collect-submodules", "elasticapm"])
+    cmd.extend(["--copy-metadata", "elastic-apm"])
 
     # Hidden imports requeridos por Flet y multiproceso
     hidden_imports = [
@@ -98,6 +101,7 @@ def construir_comando(mode: str, debug: bool) -> list[str]:
         "src.cache.cache_consultas",
         "src.datos.cargador",
         "src.datos.validador",
+        "src.observabilidad.apm",
     ]
     for imp in hidden_imports:
         cmd.extend(["--hidden-import", imp])

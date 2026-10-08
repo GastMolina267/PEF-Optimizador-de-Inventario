@@ -37,6 +37,7 @@ from src.modelos.pedido import (
     ResultadoPedido,
     ResumenProcesamiento,
 )
+from src.observabilidad import registrar_error, span
 from src.pedidos.evaluador import (
     ContadorEstados,
     ResultadoCompacto,
@@ -103,6 +104,7 @@ def _evaluar_en_pool(
         return [resultado for futuro in futuros for resultado in futuro.result()]
     except (BrokenProcessPool, RuntimeError):
         # El pool quedó inutilizable (p. ej. un worker murió): se recrea una vez.
+        registrar_error("Pool de procesos inutilizable: se recrea y se reintenta")
         executor = pool_pedidos.reiniciar(max_workers=workers)
         futuros = [executor.submit(_evaluar_fragmento_compacto, *frag) for frag in fragmentos]
         return [resultado for futuro in futuros for resultado in futuro.result()]
@@ -140,12 +142,16 @@ def procesar_pedidos_concurrente(
 
     inicio = time.perf_counter()
     workers = max_workers or min(os.cpu_count() or 4, len(pedidos))
-    fragmentos = _armar_fragmentos(catalogo, pedidos, workers)
+    with span("pool.armar_fragmentos"):
+        fragmentos = _armar_fragmentos(catalogo, pedidos, workers)
     executor = pool_pedidos.obtener_executor(max_workers=workers)
+
+    with span("pool.evaluar", "ipc", {"workers": workers, "fragmentos": len(fragmentos)}):
+        compactos = _evaluar_en_pool(executor, fragmentos, workers)
 
     resultados: list[ResultadoPedido] = []
     contador = ContadorEstados()
-    for compacto in _evaluar_en_pool(executor, fragmentos, workers):
+    for compacto in compactos:
         resultado = resultado_desde_compacto(compacto)
         contador.registrar(resultado.estado)
         resultados.append(resultado)

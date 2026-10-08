@@ -31,6 +31,7 @@ from pathlib import Path
 
 from src.datos.streaming import TAMANO_BUFFER_DEFECTO, TAMANO_LOTE_DEFECTO, en_lotes
 from src.modelos.pedido import ResultadoPedido, ResumenProcesamiento
+from src.observabilidad import etiquetar, span
 from src.pedidos.evaluador import (
     ContadorEstados,
     ResultadoCompacto,
@@ -169,13 +170,19 @@ def procesar_pedidos_jsonl_paralelo(
 
     acumulador = _Acumulador(reconstruir_dataclasses)
     en_vuelo: deque[Future] = deque()
-    with open(ruta, encoding="utf-8", buffering=tamano_buffer) as archivo:
+    lotes_enviados = 0
+    with (
+        span("lotes.procesar_archivo", "ipc", {"workers": workers}),
+        open(ruta, encoding="utf-8", buffering=tamano_buffer) as archivo,
+    ):
         for lote in en_lotes(archivo, tamano_lote):
             en_vuelo.append(executor.submit(_evaluar_lote_lineas_jsonl, lote))
+            lotes_enviados += 1
             if len(en_vuelo) >= limite_en_vuelo:
                 acumulador.agregar(en_vuelo.popleft().result())
-    while en_vuelo:
-        acumulador.agregar(en_vuelo.popleft().result())
+        while en_vuelo:
+            acumulador.agregar(en_vuelo.popleft().result())
+    etiquetar(lotes=lotes_enviados, workers=workers)
 
     return acumulador.resumen(inicio, "optimizado_lotes_paralelo")
 

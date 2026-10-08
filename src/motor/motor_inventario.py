@@ -33,6 +33,7 @@ from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
 from src.modelos.pedido import Pedido, ResumenProcesamiento
 from src.modelos.producto import Producto
+from src.observabilidad import etiquetar, medir
 from src.pedidos.agrupador import LotePickingConsolidado, agrupar_pedidos_batch
 from src.pedidos.combinaciones import BuscadorAlternativas, ResultadoAlternativas
 from src.pedidos.procesador_concurrente import procesar_pedidos_concurrente
@@ -101,6 +102,16 @@ class MotorInventario:
         """Acceso al gestor de caché inteligente."""
         return self._cache
 
+    def _etiquetar(self, **extra: Any) -> None:
+        """Etiqueta la operación en curso en Elastic APM con el contexto del motor."""
+        etiquetar(
+            estrategia=self.estrategia,
+            productos=len(self._catalogo),
+            pedidos=len(self._pedidos),
+            **extra,
+        )
+
+    @medir("motor.cambiar_estrategia")
     def cambiar_estrategia(self, nueva_estrategia: EstrategiaMotor | str) -> None:
         """Permite alternar entre 'baseline' y 'optimizado' conservando los datos cargados."""
         if isinstance(nueva_estrategia, EstrategiaMotor):
@@ -123,11 +134,14 @@ class MotorInventario:
         self._cache.invalidar_todo()
         self._buscador_alternativas = BuscadorAlternativas(todos_prods)
 
+    @medir("motor.cargar_dataset")
     def cargar_dataset(self, ruta: str | Path) -> None:
         """Carga un dataset JSON en el motor reemplazando el estado actual."""
         productos, pedidos = cargar_dataset_json(ruta)
         self.cargar_desde_listas(productos, pedidos)
+        self._etiquetar(dataset=Path(ruta).name)
 
+    @medir("motor.cargar_dataset_jsonl")
     def cargar_dataset_jsonl(
         self,
         ruta_productos: str | Path,
@@ -137,6 +151,7 @@ class MotorInventario:
         prods = list(leer_productos_streaming_jsonl(ruta_productos))
         peds = list(leer_pedidos_streaming_jsonl(ruta_pedidos))
         self.cargar_desde_listas(prods, peds)
+        self._etiquetar(dataset=Path(ruta_pedidos).name)
 
     def cargar_desde_listas(
         self, productos: Sequence[Producto], pedidos: Sequence[Pedido]
@@ -153,6 +168,7 @@ class MotorInventario:
         """Busca un producto por identificador (O(1) en optimizado, O(n) en baseline)."""
         return self._catalogo.buscar_por_id(id_producto)
 
+    @medir("motor.buscar_por_nombre")
     def buscar_por_nombre(self, texto: str, usar_cache: bool = True) -> list[Producto]:
         """Busca productos por denominación. Utiliza caché LRU si la estrategia es optimizada."""
         if self.es_optimizado and usar_cache:
@@ -167,6 +183,7 @@ class MotorInventario:
 
         return resultados
 
+    @medir("motor.buscar_por_categoria")
     def buscar_por_categoria(self, categoria: str, usar_cache: bool = True) -> list[Producto]:
         """Busca productos de una categoría (con o sin caché LRU)."""
         if self.es_optimizado and usar_cache:
@@ -181,6 +198,7 @@ class MotorInventario:
 
         return resultados
 
+    @medir("motor.procesar_pedidos")
     def procesar_pedidos(
         self,
         pedidos: Sequence[Pedido] | None = None,
@@ -204,6 +222,7 @@ class MotorInventario:
             politica_descuento: ``solo_cubiertos`` o ``todo_lo_posible``.
         """
         lote = pedidos if pedidos is not None else self._pedidos
+        self._etiquetar(lote_pedidos=len(lote), concurrente=concurrente, descontar=descontar_stock)
 
         if concurrente:
             resumen = procesar_pedidos_concurrente(
@@ -220,6 +239,8 @@ class MotorInventario:
                 politica_descuento=politica_descuento,
             )
 
+        etiquetar(cubiertos=resumen.pedidos_cubiertos, parciales=resumen.pedidos_parciales)
+
         # Si mutó stock, invalidamos reactivamente la caché de consultas y alternativas
         if descontar_stock:
             self._cache.invalidar_por_mutacion_stock()
@@ -228,6 +249,7 @@ class MotorInventario:
 
         return resumen
 
+    @medir("motor.procesar_pedidos_jsonl")
     def procesar_pedidos_jsonl(
         self,
         ruta_pedidos: str | Path,
@@ -242,6 +264,9 @@ class MotorInventario:
         """
         mapa_stock = {p.id: p.stock for p in self._catalogo.obtener_todos()}
         es_paralelo = self.es_optimizado if paralelo is None else paralelo
+        self._etiquetar(
+            archivo=Path(ruta_pedidos).name, tamano_lote=tamano_lote, paralelo=es_paralelo
+        )
 
         if es_paralelo:
             return procesar_pedidos_jsonl_paralelo(
@@ -257,6 +282,7 @@ class MotorInventario:
             reconstruir_dataclasses=reconstruir_dataclasses,
         )
 
+    @medir("motor.obtener_top_solicitados")
     def obtener_top_solicitados(
         self,
         k: int = 10,
@@ -289,11 +315,13 @@ class MotorInventario:
 
     calcular_top_productos = obtener_top_solicitados
 
+    @medir("motor.agrupar_pedidos")
     def agrupar_pedidos(self, pedidos: Sequence[Pedido] | None = None) -> LotePickingConsolidado:
         """Agrupa las líneas de los pedidos para Batch Picking consolidado."""
         lote = pedidos if pedidos is not None else self._pedidos
         return agrupar_pedidos_batch(lote, self._catalogo)
 
+    @medir("motor.exportar_picking_csv")
     def exportar_picking_csv(
         self, ruta_csv: str | Path, pedidos: Sequence[Pedido] | None = None
     ) -> int:
@@ -301,6 +329,7 @@ class MotorInventario:
         lote_picking = self.agrupar_pedidos(pedidos)
         return exportar_picking_csv_con_buffer(ruta_csv, lote_picking.items)
 
+    @medir("motor.buscar_alternativas")
     def buscar_alternativas(
         self,
         categoria: str,
