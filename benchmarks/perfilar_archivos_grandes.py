@@ -1,28 +1,50 @@
-"""Benchmark y perfilado de archivos grandes (.jsonl): Streaming, Buffering y Paralelismo.
+"""Benchmark de archivos grandes (.jsonl): streaming, buffering y paralelismo.
 
-Compara:
-1. Carga monolítica en memoria vs. Lectura en streaming línea a línea.
-2. Procesamiento por lotes: Secuencial vs. Paralelo con ProcessPoolExecutor.
-3. Barrido de tamaños de lote (1.000, 5.000, 10.000, 25.000) para documentar el break-even.
-4. Exportación con buffer explícito de 1 MB a CSV vs. escritura estándar.
+Experimentos:
 
-Genera el informe Markdown en: docs/mediciones/archivos_grandes.md
+1. Lectura de pedidos: carga completa en memoria vs streaming línea por línea.
+2. Procesamiento de un archivo por lotes: secuencial vs paralelo, barriendo tamaños
+   de lote para encontrar el punto de equilibrio.
+3. Pedidos ya cargados en memoria (``grande.json``): secuencial vs pool de procesos.
+   Justifica que el motor use el procesador secuencial por defecto.
+4. Exportación del picking a CSV: buffer por defecto vs buffer explícito de 1 MB.
+
+Metodología:
+
+- **Tiempo y memoria se miden en corridas separadas.** ``tracemalloc`` hace mucho más
+  lento al proceso que lo activa, pero no a los workers del pool. Medir el tiempo con
+  ``tracemalloc`` activo favorece artificialmente a la versión paralela.
+- Cada tiempo es la **mediana** de varias repeticiones, con el pool ya creado.
+- La memoria es el pico del **proceso principal** según ``tracemalloc``. No incluye la
+  memoria de los workers.
+
+Uso::
+
+    python -m benchmarks.perfilar_archivos_grandes
+    python -m benchmarks.perfilar_archivos_grandes --pedidos 500000 --repeticiones 7
+
+Genera ``docs/mediciones/archivos_grandes.md``.
 """
 
 from __future__ import annotations
 
-import gc
+import argparse
 import json
 import os
+import platform
+import statistics
 import sys
 import time
 import tracemalloc
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+from src.datos.cargador import cargar_dataset_json  # noqa: E402
 from src.datos.generador_archivos import generar_archivos_grandes_jsonl  # noqa: E402
 from src.datos.procesador_lotes_paralelo import (  # noqa: E402
     procesar_pedidos_jsonl_paralelo,
@@ -35,226 +57,334 @@ from src.datos.streaming import (  # noqa: E402
 )
 from src.inventario.catalogo_hash import CatalogoHash  # noqa: E402
 from src.pedidos.agrupador import agrupar_pedidos_batch  # noqa: E402
+from src.pedidos.gestor_pool import pool_archivos, pool_pedidos  # noqa: E402
+from src.pedidos.procesador_concurrente import procesar_pedidos_concurrente  # noqa: E402
+from src.pedidos.procesador_secuencial import procesar_pedidos_secuencial  # noqa: E402
 
 GENERADOS_DIR = BASE_DIR / "data" / "generados"
-DOCS_MEDICIONES_DIR = BASE_DIR / "docs" / "mediciones"
+DATASETS_DIR = BASE_DIR / "data" / "datasets"
+RUTA_INFORME = BASE_DIR / "docs" / "mediciones" / "archivos_grandes.md"
+
+BYTES_POR_MB = 1024.0 * 1024.0
+BUFFER_EXPLICITO = 1024 * 1024
+BUFFER_POR_DEFECTO = -1  # el buffer que elige Python (io.DEFAULT_BUFFER_SIZE)
 
 
-def medir_tiempo_y_memoria(func, *args, **kwargs) -> tuple[float, float, float, any]:
-    """Mide tiempo de ejecución (ms) y memoria (actual y pico en MB) con tracemalloc."""
-    gc.collect()
+def medir_tiempo_ms(funcion: Callable[[], Any], repeticiones: int) -> float:
+    """Mediana del tiempo de ``funcion`` en milisegundos, sin ``tracemalloc``."""
+    tiempos = []
+    for _ in range(repeticiones):
+        inicio = time.perf_counter()
+        funcion()
+        tiempos.append((time.perf_counter() - inicio) * 1000.0)
+    return statistics.median(tiempos)
+
+
+def medir_pico_mb(funcion: Callable[[], Any]) -> float:
+    """Pico de memoria del proceso principal (MB) durante una ejecución."""
     tracemalloc.start()
-    t0 = time.perf_counter()
-    resultado = func(*args, **kwargs)
-    duracion_ms = (time.perf_counter() - t0) * 1000.0
-    actual_b, pico_b = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-    return duracion_ms, actual_b / (1024.0 * 1024.0), pico_b / (1024.0 * 1024.0), resultado
+    try:
+        funcion()
+        _, pico = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    return pico / BYTES_POR_MB
+
+
+def experimento_lectura(ruta_pedidos: Path, repeticiones: int) -> dict[str, float]:
+    """Carga completa en memoria vs recorrido en streaming."""
+
+    def carga_completa():
+        with open(ruta_pedidos, encoding="utf-8") as archivo:
+            return [json.loads(linea) for linea in archivo]
+
+    def streaming():
+        return sum(1 for _ in leer_pedidos_streaming_jsonl(ruta_pedidos))
+
+    return {
+        "completa_ms": medir_tiempo_ms(carga_completa, repeticiones),
+        "completa_mb": medir_pico_mb(carga_completa),
+        "streaming_ms": medir_tiempo_ms(streaming, repeticiones),
+        "streaming_mb": medir_pico_mb(streaming),
+    }
+
+
+def experimento_lotes(
+    ruta_pedidos: Path,
+    mapa_stock: dict[int, int],
+    lotes: list[int],
+    workers: int,
+    repeticiones: int,
+) -> list[dict[str, float]]:
+    """Barrido de tamaños de lote: secuencial vs paralelo sobre el mismo archivo."""
+    # Crear el pool antes de medir: su arranque no forma parte del procesamiento.
+    procesar_pedidos_jsonl_paralelo(ruta_pedidos, mapa_stock, max_workers=workers)
+
+    filas = []
+    for lote in lotes:
+
+        def secuencial(lote=lote):
+            return procesar_pedidos_jsonl_secuencial(ruta_pedidos, mapa_stock, tamano_lote=lote)
+
+        def paralelo(lote=lote):
+            return procesar_pedidos_jsonl_paralelo(
+                ruta_pedidos, mapa_stock, tamano_lote=lote, max_workers=workers
+            )
+
+        t_sec = medir_tiempo_ms(secuencial, repeticiones)
+        t_par = medir_tiempo_ms(paralelo, repeticiones)
+        filas.append(
+            {
+                "lote": lote,
+                "secuencial_ms": t_sec,
+                "paralelo_ms": t_par,
+                "speedup": t_sec / t_par if t_par > 0 else 0.0,
+                "secuencial_mb": medir_pico_mb(secuencial),
+                "paralelo_mb": medir_pico_mb(paralelo),
+            }
+        )
+        print(
+            f"  lote {lote:>7,}: secuencial {t_sec:8.1f} ms | paralelo {t_par:8.1f} ms "
+            f"| speedup {filas[-1]['speedup']:.2f}x"
+        )
+    return filas
+
+
+def experimento_memoria_en_ram(workers: int, repeticiones: int) -> dict[str, float]:
+    """Pedidos ya cargados (grande.json): secuencial vs pool de procesos."""
+    productos, pedidos = cargar_dataset_json(DATASETS_DIR / "grande.json")
+    catalogo = CatalogoHash(productos)
+    procesar_pedidos_concurrente(catalogo, pedidos, max_workers=workers)  # crear el pool
+    t_sec = medir_tiempo_ms(lambda: procesar_pedidos_secuencial(catalogo, pedidos), repeticiones)
+    t_par = medir_tiempo_ms(
+        lambda: procesar_pedidos_concurrente(catalogo, pedidos, max_workers=workers),
+        repeticiones,
+    )
+    return {
+        "pedidos": len(pedidos),
+        "secuencial_ms": t_sec,
+        "paralelo_ms": t_par,
+        "speedup": t_sec / t_par if t_par > 0 else 0.0,
+    }
+
+
+def experimento_csv(ruta_pedidos: Path, catalogo: CatalogoHash, repeticiones: int) -> dict:
+    """Exportación del picking consolidado: buffer por defecto vs 1 MB."""
+    pedidos = list(leer_pedidos_streaming_jsonl(ruta_pedidos))
+    items = agrupar_pedidos_batch(pedidos, catalogo).items
+    ruta_csv = GENERADOS_DIR / "picking_reporte.csv"
+
+    def exportar(buffer: int):
+        return exportar_picking_csv_con_buffer(ruta_csv, items, tamano_buffer=buffer)
+
+    t_defecto = medir_tiempo_ms(lambda: exportar(BUFFER_POR_DEFECTO), repeticiones)
+    t_explicito = medir_tiempo_ms(lambda: exportar(BUFFER_EXPLICITO), repeticiones)
+    filas = exportar(BUFFER_EXPLICITO)
+    return {
+        "filas": filas,
+        "kb": os.path.getsize(ruta_csv) / 1024.0,
+        "defecto_ms": t_defecto,
+        "explicito_ms": t_explicito,
+    }
+
+
+def _conclusion_lectura(lectura: dict[str, float]) -> str:
+    ahorro = 100.0 * (1 - lectura["streaming_mb"] / lectura["completa_mb"])
+    texto = (
+        f"El streaming usa un **{ahorro:.1f} % menos de memoria pico**: la memoria depende "
+        "del tamaño de una línea, no del tamaño del archivo."
+    )
+    if lectura["streaming_ms"] <= lectura["completa_ms"]:
+        return (
+            texto + " Además fue más rápido, porque no tiene que hacer crecer una lista gigante."
+        )
+    return texto + (
+        " A cambio fue más lento, porque construye y valida un `Pedido` por línea en lugar "
+        "de dejar diccionarios crudos."
+    )
+
+
+def _conclusion_lotes(filas: list[dict[str, float]], workers: int) -> str:
+    mejor = max(filas, key=lambda f: f["speedup"])
+    ganadores = [f"{f['lote']:,}" for f in filas if f["speedup"] > 1.0]
+    techo = f"Con {workers} workers el máximo teórico es {workers}×."
+    memoria = (
+        " La memoria del proceso principal crece con el tamaño de lote (hay hasta dos lotes "
+        "por worker en vuelo), no con el tamaño del archivo."
+    )
+    if not ganadores:
+        return (
+            f"En este equipo el paralelo **no superó** al secuencial con ningún tamaño de "
+            f"lote (mejor caso: {mejor['speedup']:.2f}× con lotes de {mejor['lote']:,}). "
+            f"{techo}" + memoria
+        )
+    return (
+        f"El paralelo superó al secuencial con lotes de {', '.join(ganadores)} líneas. "
+        f"El mejor resultado fue **{mejor['speedup']:.2f}×** con lotes de "
+        f"{mejor['lote']:,}. {techo}" + memoria
+    )
+
+
+def _conclusion_csv(csv: dict[str, float]) -> str:
+    base = f"Se exportaron {csv['filas']:,} filas ({csv['kb']:.1f} KB)."
+    diferencia = 100.0 * (csv["defecto_ms"] - csv["explicito_ms"]) / csv["defecto_ms"]
+    if diferencia > 5:
+        return base + (
+            f" El buffer de 1 MB fue un {diferencia:.0f} % más rápido: agrupa las escrituras "
+            "en menos llamadas al sistema operativo."
+        )
+    return base + (
+        " Con este tamaño de archivo la diferencia no es significativa: el buffer por "
+        "defecto de Python ya agrupa las escrituras y el archivo se escribe en pocas "
+        "llamadas. El buffer explícito pesa más con archivos grandes o discos lentos."
+    )
+
+
+def generar_informe(datos: dict[str, Any]) -> None:
+    """Escribe ``docs/mediciones/archivos_grandes.md`` con los resultados."""
+    lectura = datos["lectura"]
+    filas_lotes = "\n".join(
+        f"| {f['lote']:,} | {f['secuencial_ms']:.1f} | {f['paralelo_ms']:.1f} "
+        f"| **{f['speedup']:.2f}×** | {f['secuencial_mb']:.2f} | {f['paralelo_mb']:.2f} |"
+        for f in datos["lotes"]
+    )
+    ram = datos["memoria_ram"]
+    csv = datos["csv"]
+
+    contenido = f"""# Archivos grandes: streaming, buffering y paralelismo
+
+Generado por `python -m benchmarks.perfilar_archivos_grandes`. No editar a mano: volver
+a correr el script para actualizar los números.
+
+## Entorno y datos
+
+- **Sistema:** {datos["sistema"]} · Python {datos["python"]} · {datos["nucleos"]} núcleos lógicos · {datos["workers"]} workers.
+- **Archivos generados** (semilla {datos["semilla"]}, en `data/generados/`, fuera de git):
+  `productos.jsonl` con {datos["n_productos"]:,} productos ({datos["mb_productos"]:.2f} MB) y
+  `pedidos.jsonl` con {datos["n_pedidos"]:,} pedidos ({datos["mb_pedidos"]:.2f} MB).
+- **Metodología:** cada tiempo es la mediana de {datos["repeticiones"]} corridas con el pool ya
+  creado. Tiempo y memoria se miden en corridas separadas, porque `tracemalloc` frena al
+  proceso principal pero no a los workers y eso inflaba el speedup del paralelo. La memoria
+  es el pico del proceso principal (no incluye los workers).
+
+## 1. Lectura: carga completa vs streaming
+
+| Estrategia | Tiempo (ms) | Pico de memoria (MB) |
+|---|---:|---:|
+| Carga completa (`json.loads` de todas las líneas a una lista) | {lectura["completa_ms"]:.1f} | {lectura["completa_mb"]:.2f} |
+| Streaming (`leer_pedidos_streaming_jsonl`) | {lectura["streaming_ms"]:.1f} | {lectura["streaming_mb"]:.2f} |
+
+{_conclusion_lectura(lectura)}
+
+## 2. Procesamiento por lotes: secuencial vs paralelo
+
+Cada lote se parsea, valida y evalúa con la misma función en ambas versiones. La versión
+paralela manda el stock una sola vez por worker (initializer) y mantiene como máximo dos
+lotes en vuelo por worker, así que su memoria no crece con el archivo.
+
+| Lote (líneas) | Secuencial (ms) | Paralelo (ms) | Speedup | Pico secuencial (MB) | Pico paralelo (MB) |
+|---:|---:|---:|---:|---:|---:|
+{filas_lotes}
+
+{_conclusion_lotes(datos["lotes"], datos["workers"])}
+
+## 3. Pedidos ya cargados en memoria (`grande.json`)
+
+| Pedidos | Secuencial (ms) | Pool de procesos (ms) | Speedup |
+|---:|---:|---:|---:|
+| {ram["pedidos"]:,} | {ram["secuencial_ms"]:.1f} | {ram["paralelo_ms"]:.1f} | **{ram["speedup"]:.2f}×** |
+
+Evaluar un pedido en memoria es un lookup O(1) por línea, más barato que serializarlo hacia
+un worker. Por eso `MotorInventario.procesar_pedidos` es secuencial por defecto y el pool
+queda como opción explícita. Con archivos (sección 2) el balance cambia porque cada worker
+además parsea y valida JSON.
+
+## 4. Exportación a CSV con buffer
+
+| Buffer | Tiempo (ms) |
+|---|---:|
+| Por defecto de Python | {csv["defecto_ms"]:.1f} |
+| Explícito de 1 MB | {csv["explicito_ms"]:.1f} |
+
+{_conclusion_csv(csv)}
+"""
+    RUTA_INFORME.write_text(contenido, encoding="utf-8")
+    print(f"\nInforme generado en {RUTA_INFORME.relative_to(BASE_DIR)}")
 
 
 def ejecutar_benchmark_archivos_grandes(
     n_productos: int = 5000,
-    n_pedidos: int = 25000,
-    seed: int = 42,
-) -> dict:
-    """Ejecuta la batería de pruebas y mediciones de rendimiento de F5."""
+    n_pedidos: int = 200_000,
+    lotes: list[int] | None = None,
+    repeticiones: int = 5,
+    workers: int | None = None,
+    semilla: int = 42,
+) -> dict[str, Any]:
+    """Corre los cuatro experimentos y genera el informe."""
+    lotes = lotes or [1_000, 5_000, 20_000, 50_000]
+    workers = workers or min(os.cpu_count() or 4, 8)
     GENERADOS_DIR.mkdir(parents=True, exist_ok=True)
-    DOCS_MEDICIONES_DIR.mkdir(parents=True, exist_ok=True)
 
-    print(
-        f"[Benchmark F5] Generando dataset determinista ({n_productos:,} productos, {n_pedidos:,} pedidos)..."
-    )
-    ruta_prods_jsonl, ruta_peds_jsonl = generar_archivos_grandes_jsonl(
+    print(f"Generando {n_productos:,} productos y {n_pedidos:,} pedidos (semilla {semilla})...")
+    ruta_productos, ruta_pedidos = generar_archivos_grandes_jsonl(
         directorio_destino=GENERADOS_DIR,
         n_productos=n_productos,
         n_pedidos=n_pedidos,
-        seed=seed,
+        seed=semilla,
     )
+    productos = list(leer_productos_streaming_jsonl(ruta_productos))
+    catalogo = CatalogoHash(productos)
+    mapa_stock = {p.id: p.stock for p in productos}
 
-    tamano_prods_mb = os.path.getsize(ruta_prods_jsonl) / (1024.0 * 1024.0)
-    tamano_peds_mb = os.path.getsize(ruta_peds_jsonl) / (1024.0 * 1024.0)
-    print(
-        f"  - productos.jsonl: {tamano_prods_mb:.2f} MB | pedidos.jsonl: {tamano_peds_mb:.2f} MB"
-    )
+    try:
+        print("\n[1] Lectura: carga completa vs streaming")
+        lectura = experimento_lectura(ruta_pedidos, repeticiones)
+        print(f"\n[2] Lotes: secuencial vs paralelo ({workers} workers)")
+        filas_lotes = experimento_lotes(ruta_pedidos, mapa_stock, lotes, workers, repeticiones)
+        print("\n[3] Pedidos en memoria: secuencial vs pool")
+        memoria_ram = experimento_memoria_en_ram(workers, repeticiones)
+        print("\n[4] Exportación CSV con buffer")
+        csv = experimento_csv(ruta_pedidos, catalogo, repeticiones)
+    finally:
+        pool_archivos.cerrar()
+        pool_pedidos.cerrar()
 
-    # 1. Cargar catálogo de productos y mapa de stock
-    prods = list(leer_productos_streaming_jsonl(ruta_prods_jsonl))
-    catalogo = CatalogoHash(prods)
-    mapa_stock = {p.id: p.stock for p in prods}
-
-    # 2. Experimento 1: Monolítico vs. Streaming para lectura de pedidos
-    print("\n[Experimento 1] Carga Completa en Memoria vs. Lectura en Streaming Línea por Línea")
-
-    def carga_monolitica():
-        with open(ruta_peds_jsonl, encoding="utf-8") as f:
-            return [json.loads(linea) for linea in f]
-
-    def recorrido_streaming():
-        contador = 0
-        for _ in leer_pedidos_streaming_jsonl(ruta_peds_jsonl):
-            contador += 1
-        return contador
-
-    t_mono, act_mono, pico_mono, _ = medir_tiempo_y_memoria(carga_monolitica)
-    t_stream, act_stream, pico_stream, _ = medir_tiempo_y_memoria(recorrido_streaming)
-
-    print(
-        f"  * Monolítico (list de dicts):   {t_mono:8.2f} ms | Pico RAM: {pico_mono:6.2f} MB | Final RAM: {act_mono:6.2f} MB"
-    )
-    print(
-        f"  * Streaming (generador O(1)):    {t_stream:8.2f} ms | Pico RAM: {pico_stream:6.2f} MB | Final RAM: {act_stream:6.2f} MB"
-    )
-
-    ahorro_memoria_pct = ((pico_mono - pico_stream) / pico_mono * 100.0) if pico_mono > 0 else 0.0
-
-    # 3. Experimento 2: Barrido de Lotes y Paralelismo (Secuencial vs. Paralelo)
-    print(
-        "\n[Experimento 2] Barrido de Tamaños de Lote: Secuencial vs. Paralelo (ProcessPoolExecutor)"
-    )
-    lotes_a_evaluar = [1000, 5000, 10000, 25000]
-    resultados_lotes = []
-
-    for lote in lotes_a_evaluar:
-        # Secuencial
-        t_sec, _, pico_sec, res_sec = medir_tiempo_y_memoria(
-            procesar_pedidos_jsonl_secuencial,
-            ruta_peds_jsonl,
-            mapa_stock,
-            tamano_lote=lote,
-        )
-        # Paralelo
-        t_par, _, pico_par, res_par = medir_tiempo_y_memoria(
-            procesar_pedidos_jsonl_paralelo,
-            ruta_peds_jsonl,
-            mapa_stock,
-            tamano_lote=lote,
-        )
-
-        speedup = (t_sec / t_par) if t_par > 0 else 1.0
-        resultados_lotes.append(
-            {
-                "tamano_lote": lote,
-                "tiempo_sec_ms": t_sec,
-                "pico_sec_mb": pico_sec,
-                "tiempo_par_ms": t_par,
-                "pico_par_mb": pico_par,
-                "speedup": speedup,
-                "cubiertos": res_par.pedidos_cubiertos,
-                "parciales": res_par.pedidos_parciales,
-                "imposibles": res_par.pedidos_imposibles,
-            }
-        )
-        print(
-            f"  * Lote {lote:5d}: Sec={t_sec:7.1f} ms ({pico_sec:5.2f} MB) | Par={t_par:7.1f} ms ({pico_par:5.2f} MB) | Speedup={speedup:4.2f}x"
-        )
-
-    # 4. Experimento 3: Exportación con buffer explícito (1 MB) a CSV
-    print("\n[Experimento 3] Exportación de Picking Consolidado a CSV con Buffer (1 MB)")
-    pedidos_sample = list(leer_pedidos_streaming_jsonl(ruta_peds_jsonl))[:2000]
-    lote_picking = agrupar_pedidos_batch(pedidos_sample, catalogo)
-
-    ruta_csv_buffer = GENERADOS_DIR / "picking_reporte_buffer.csv"
-    t_csv_buf, _, pico_csv_buf, filas_csv = medir_tiempo_y_memoria(
-        exportar_picking_csv_con_buffer,
-        ruta_csv_buffer,
-        lote_picking.items,
-        tamano_buffer=1024 * 1024,
-    )
-    tamano_csv_kb = os.path.getsize(ruta_csv_buffer) / 1024.0
-    print(
-        f"  * Filas escritas: {filas_csv:,} | Peso CSV: {tamano_csv_kb:.1f} KB | Tiempo: {t_csv_buf:.2f} ms | Pico RAM: {pico_csv_buf:.2f} MB"
-    )
-
-    datos_reporte = {
+    datos = {
+        "sistema": f"{platform.system()} {platform.release()}",
+        "python": platform.python_version(),
+        "nucleos": os.cpu_count(),
+        "workers": workers,
+        "semilla": semilla,
+        "repeticiones": repeticiones,
         "n_productos": n_productos,
         "n_pedidos": n_pedidos,
-        "tamano_prods_mb": tamano_prods_mb,
-        "tamano_peds_mb": tamano_peds_mb,
-        "monolitico": {"tiempo_ms": t_mono, "pico_mb": pico_mono, "actual_mb": act_mono},
-        "streaming": {"tiempo_ms": t_stream, "pico_mb": pico_stream, "actual_mb": act_stream},
-        "ahorro_memoria_pct": ahorro_memoria_pct,
-        "lotes": resultados_lotes,
-        "csv": {
-            "filas": filas_csv,
-            "peso_kb": tamano_csv_kb,
-            "tiempo_ms": t_csv_buf,
-            "pico_mb": pico_csv_buf,
-        },
+        "mb_productos": os.path.getsize(ruta_productos) / BYTES_POR_MB,
+        "mb_pedidos": os.path.getsize(ruta_pedidos) / BYTES_POR_MB,
+        "lectura": lectura,
+        "lotes": filas_lotes,
+        "memoria_ram": memoria_ram,
+        "csv": csv,
     }
+    generar_informe(datos)
+    return datos
 
-    generar_informe_markdown(datos_reporte)
-    return datos_reporte
 
-
-def generar_informe_markdown(datos: dict) -> None:
-    """Genera docs/mediciones/archivos_grandes.md con los hallazgos y tabla comparativa."""
-    ruta_informe = DOCS_MEDICIONES_DIR / "archivos_grandes.md"
-
-    filas_tabla_lotes = []
-    for r in datos["lotes"]:
-        filas_tabla_lotes.append(
-            f"| {r['tamano_lote']:,} | {r['tiempo_sec_ms']:.1f} ms | {r['pico_sec_mb']:.2f} MB | {r['tiempo_par_ms']:.1f} ms | {r['pico_par_mb']:.2f} MB | **{r['speedup']:.2f}×** |"
-        )
-    tabla_lotes_md = "\n".join(filas_tabla_lotes)
-
-    contenido = f"""# Medición de Archivos Grandes: Streaming, Buffering y Paralelismo (Fase F5)
-
-Este documento documenta las mediciones de rendimiento de la **Fase F5** (Programación Eficiente - Segundo Parcial), demostrando el comportamiento de la arquitectura de streaming, el buffering explícito de I/O y el procesamiento paralelo por lotes (chunking) frente a archivos masivos en formato JSON Lines (`.jsonl`).
-
----
-
-## 1. Contexto y Parámetros del Experimento
-
-- **Entorno:** Python en Windows (Arquitectura multicore).
-- **Archivos de prueba generados:**
-  - `productos.jsonl`: **{datos["n_productos"]:,}** productos ({datos["tamano_prods_mb"]:.2f} MB).
-  - `pedidos.jsonl`: **{datos["n_pedidos"]:,}** pedidos ({datos["tamano_peds_mb"]:.2f} MB).
-- **Generación determinista:** Semilla fija (`seed=42`) sin trackeo en Git (`data/generados/` ignorado por `.gitignore`).
-
----
-
-## 2. Experimento 1: Monolítico en Memoria vs. Streaming Línea por Línea
-
-Se evaluó el consumo de memoria RAM pico y tiempo de lectura comparando la carga monolítica tradicional (`json.load` acumulando estructuras en listas de objetos) contra el generador lazy en streaming (`leer_pedidos_streaming_jsonl`).
-
-| Estrategia | Tiempo de Lectura | Memoria Pico (RAM) | Memoria Final Retenida | Comportamiento |
-|---|---|---|---|---|
-| **Monolítico (`json.load`)** | {datos["monolitico"]["tiempo_ms"]:.1f} ms | {datos["monolitico"]["pico_mb"]:.2f} MB | {datos["monolitico"]["actual_mb"]:.2f} MB | $O(N)$ lineal con el tamaño del archivo |
-| **Streaming (`.jsonl` lazy)** | {datos["streaming"]["tiempo_ms"]:.1f} ms | {datos["streaming"]["pico_mb"]:.2f} MB | {datos["streaming"]["actual_mb"]:.2f} MB | $O(1)$ constante (buffer acotado) |
-
-> **Hallazgo:** El generador de streaming logra un **ahorro de memoria pico del {datos["ahorro_memoria_pct"]:.1f}%**, garantizando que el sistema pueda procesar archivos de escala arbitraria sin agotar la memoria física del equipo.
-
----
-
-## 3. Experimento 2: Barrido de Tamaños de Lote (Break-Even Secuencial vs. Paralelo)
-
-Cada worker de proceso independiente deserializa, valida la existencia de IDs y evalúa la cobertura de demanda. Se varió el tamaño de lote ($B$) para determinar el punto óptimo donde el cómputo CPU supera el costo de serialización/IPC de Windows.
-
-| Tamaño de Lote ($B$) | Secuencial (Tiempo) | Secuencial (Pico RAM) | Paralelo (Tiempo) | Paralelo (Pico RAM) | Speedup ($T_{{sec}} / T_{{par}}$) |
-|---|---|---|---|---|---|
-{tabla_lotes_md}
-
-### Conclusiones del Paralelismo:
-1. **Compensación del IPC:** A diferencia de la evaluación individual sobre objetos preexistentes en memoria (donde el IPC no compensaba por la simplicidad de la búsqueda $O(1)$), en archivos `.jsonl` el lote incluye **parsing JSON**, **validación de integridad** y **evaluación algorítmica**.
-2. **Break-Even:** A partir de lotes de **5.000 pedidos**, el paralelismo supera consistentemente a la versión secuencial con un **speedup mayor a 1.0×**, alcanzando su mejor desempeño en lotes entre **5.000 y 10.000 pedidos**.
-3. **Control de Memoria:** El uso de tuplas compactas para devolver resultados y el despacho mediante generadores asegura que la memoria de ambos enfoques se mantenga contenida durante todo el ciclo.
-
----
-
-## 4. Experimento 3: Exportación con Buffering Explícito (1 MB) a CSV
-
-Se evaluó la exportación del reporte consolidado de picking hacia CSV (`exportar_picking_csv_con_buffer`):
-- **Registros consolidados exportados:** {datos["csv"]["filas"]:,} filas.
-- **Tamaño del archivo:** {datos["csv"]["peso_kb"]:.1f} KB.
-- **Tiempo de serialización y escritura con buffer de 1 MB:** {datos["csv"]["tiempo_ms"]:.2f} ms.
-- **Pico de memoria asignada:** {datos["csv"]["pico_mb"]:.2f} MB.
-
-El buffer de 1 MB (`1 << 20 bytes`) minimiza las llamadas al sistema operativo (`write()` syscalls), agrupando los bytes en memoria antes de transferirlos al disco.
-"""
-
-    ruta_informe.write_text(contenido, encoding="utf-8")
-    print(f"\n[Informe F5] Documento generado exitosamente en: {ruta_informe}")
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--productos", type=int, default=5000)
+    parser.add_argument("--pedidos", type=int, default=200_000)
+    parser.add_argument("--lotes", type=int, nargs="+", default=None)
+    parser.add_argument("--repeticiones", type=int, default=5)
+    parser.add_argument("--workers", type=int, default=None)
+    args = parser.parse_args(argv)
+    ejecutar_benchmark_archivos_grandes(
+        n_productos=args.productos,
+        n_pedidos=args.pedidos,
+        lotes=args.lotes,
+        repeticiones=args.repeticiones,
+        workers=args.workers,
+    )
 
 
 if __name__ == "__main__":
-    ejecutar_benchmark_archivos_grandes()
+    main()
