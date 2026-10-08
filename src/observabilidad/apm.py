@@ -31,7 +31,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, TypeVar
 
-import elasticapm
+try:
+    import elasticapm
+except ImportError:  # pragma: no cover
+    elasticapm = None  # type: ignore[assignment]
 
 NOMBRE_SERVICIO = "optimizador-inventario"
 VERSION_SERVICIO = "2.0.0"
@@ -44,7 +47,7 @@ VARIABLES_APM = (
     "ELASTIC_APM_SERVICE_NAME",
 )
 
-_cliente: elasticapm.Client | None = None
+_cliente: Any | None = None
 _registro = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -80,7 +83,7 @@ def obtener_configuracion(
 def configurar_apm(
     entorno: Mapping[str, str] | None = None,
     archivo_env: Path | None = None,
-    fabrica_cliente: Callable[..., Any] = elasticapm.Client,
+    fabrica_cliente: Callable[..., Any] | None = None,
 ) -> Any | None:
     """Crea el cliente de Elastic APM si hay configuración; si no, deja todo desactivado.
 
@@ -90,7 +93,7 @@ def configurar_apm(
         fabrica_cliente: Constructor del cliente; los tests pasan uno falso.
 
     Retorna:
-        El cliente creado, o ``None`` si falta ``ELASTIC_APM_SERVER_URL``.
+        El cliente creado, o ``None`` si falta ``ELASTIC_APM_SERVER_URL`` o no está instalado.
     """
     global _cliente
     if _cliente is not None:
@@ -99,6 +102,12 @@ def configurar_apm(
     config = obtener_configuracion(entorno, archivo_env)
     if not config.get("ELASTIC_APM_SERVER_URL"):
         return None
+
+    if fabrica_cliente is None:
+        if elasticapm is None:
+            _registro.warning("Librería 'elastic-apm' no instalada. APM desactivado.")
+            return None
+        fabrica_cliente = elasticapm.Client
 
     _cliente = fabrica_cliente(
         service_name=config.get("ELASTIC_APM_SERVICE_NAME", NOMBRE_SERVICIO),
@@ -138,6 +147,8 @@ def apm_activo() -> bool:
 
 
 def _hay_transaccion_activa() -> bool:
+    if elasticapm is None:
+        return False
     return elasticapm.get_transaction_id() is not None
 
 
@@ -154,7 +165,7 @@ def transaccion(
         return
 
     _cliente.begin_transaction(tipo)
-    if etiquetas:
+    if etiquetas and elasticapm is not None:
         elasticapm.label(**etiquetas)
     try:
         yield
@@ -168,7 +179,7 @@ def transaccion(
 @contextmanager
 def span(nombre: str, tipo: str = "app", etiquetas: Mapping[str, Any] | None = None):
     """Mide un paso interno dentro de la transacción activa (no hace nada sin APM)."""
-    if _cliente is None or not _hay_transaccion_activa():
+    if _cliente is None or not _hay_transaccion_activa() or elasticapm is None:
         yield
         return
     with elasticapm.capture_span(nombre, span_type=tipo, labels=dict(etiquetas or {})):
@@ -177,7 +188,7 @@ def span(nombre: str, tipo: str = "app", etiquetas: Mapping[str, Any] | None = N
 
 def etiquetar(**etiquetas: Any) -> None:
     """Agrega etiquetas a la transacción activa (no hace nada sin APM)."""
-    if _cliente is not None and _hay_transaccion_activa():
+    if _cliente is not None and _hay_transaccion_activa() and elasticapm is not None:
         elasticapm.label(**etiquetas)
 
 
