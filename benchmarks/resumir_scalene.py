@@ -55,6 +55,21 @@ def _ruta_relativa(archivo: str) -> str:
     return normalizado.rsplit("/", 1)[-1]
 
 
+def ruta_en_proyecto(ruta: Path) -> Path:
+    """Resuelve ``ruta`` y exige que quede dentro del repositorio.
+
+    Los argumentos de línea de comandos no deben poder leer ni escribir archivos fuera
+    del proyecto (por ejemplo, con ``../../``).
+
+    Lanza:
+        ValueError: Si la ruta resuelta queda fuera del repositorio.
+    """
+    absoluta = (ruta if ruta.is_absolute() else BASE_DIR / ruta).resolve()
+    if not absoluta.is_relative_to(BASE_DIR.resolve()):
+        raise ValueError(f"La ruta {ruta} queda fuera del proyecto")
+    return absoluta
+
+
 def cargar_perfil(ruta: Path) -> Perfil:
     """Lee un JSON de Scalene y agrupa el tiempo por función del proyecto."""
     datos = json.loads(ruta.read_text(encoding="utf-8"))
@@ -168,11 +183,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--entorno", default="sin especificar")
     args = parser.parse_args(argv)
 
-    contenido = generar_resumen(
-        cargar_perfil(args.antes), cargar_perfil(args.despues), args.entorno
-    )
-    args.salida.write_text(contenido, encoding="utf-8")
-    print(f"Resumen generado en {args.salida}")
+    antes, despues, salida = (ruta_en_proyecto(r) for r in (args.antes, args.despues, args.salida))
+    contenido = generar_resumen(cargar_perfil(antes), cargar_perfil(despues), args.entorno)
+    salida.write_text(contenido, encoding="utf-8")
+    print(f"Resumen generado en {salida}")
 
 
 if __name__ == "__main__":

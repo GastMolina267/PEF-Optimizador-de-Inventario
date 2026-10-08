@@ -377,6 +377,18 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--repeticiones", type=int, default=5)
     parser.add_argument("--workers", type=int, default=None)
     args = parser.parse_args(argv)
+    limites = {
+        "productos": (1, 1_000_000),
+        "pedidos": (1, 10_000_000),
+        "repeticiones": (1, 50),
+        "workers": (1, 64),
+    }
+    for nombre, (minimo, maximo) in limites.items():
+        valor = getattr(args, nombre)
+        if valor is not None and not minimo <= valor <= maximo:
+            parser.error(f"--{nombre} debe estar entre {minimo} y {maximo}")
+    if args.lotes and not all(1 <= lote <= 1_000_000 for lote in args.lotes):
+        parser.error("--lotes debe tener valores entre 1 y 1000000")
     ejecutar_benchmark_archivos_grandes(
         n_productos=args.productos,
         n_pedidos=args.pedidos,

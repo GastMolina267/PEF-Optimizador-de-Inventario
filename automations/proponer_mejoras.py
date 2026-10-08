@@ -212,6 +212,43 @@ def _parsear_memoria(ruta: Path) -> list[EntradaPerfil]:
     return entradas
 
 
+_CARPETAS_PERFILADAS = ("/src/", "/benchmarks/")
+
+
+def _ruta_relativa_perfil(archivo: str) -> str | None:
+    """Ruta relativa al repo de un archivo perfilado, o None si no es del proyecto.
+
+    No depende de dónde se clonó el repo en cada máquina.
+    """
+    archivo_norm = "/" + archivo.replace("\\", "/").lstrip("./")
+    for carpeta in _CARPETAS_PERFILADAS:
+        if carpeta in archivo_norm:
+            return carpeta.strip("/") + "/" + archivo_norm.split(carpeta, 1)[1]
+    return None
+
+
+def _entrada_scalene(ruta_relativa: str, linea: dict) -> EntradaPerfil | None:
+    """Convierte una línea del perfil en hotspot si consume CPU o memoria apreciable."""
+    py_pct = float(linea.get("n_cpu_percent_python", 0.0))
+    c_pct = float(linea.get("n_cpu_percent_c", 0.0))
+    sys_pct = float(linea.get("n_sys_percent", 0.0))
+    peak_mb = float(linea.get("n_peak_mb", 0.0))
+    if py_pct + c_pct + sys_pct < 1.0 and peak_mb < 0.5:
+        return None
+
+    domina_sistema = sys_pct > py_pct
+    codigo = linea.get("line", "").strip()[:80]
+    return EntradaPerfil(
+        origen="Scalene",
+        simbolo=f"{ruta_relativa}:{linea.get('lineno', 0)}",
+        metrica="cpu_sys_ipc_pct" if domina_sistema else "cpu_python_pct",
+        valor=round(sys_pct if domina_sistema else py_pct, 2),
+        detalle=(
+            f"py={py_pct:.1f}% c={c_pct:.1f}% sys={sys_pct:.1f}% peak={peak_mb:.1f}MB | {codigo}"
+        ),
+    )
+
+
 def _parsear_scalene(ruta: Path) -> list[EntradaPerfil]:
     """Extrae hotspots de CPU (Python / Nativo / Sistema) y memoria desde el JSON de Scalene."""
     try:
@@ -221,41 +258,13 @@ def _parsear_scalene(ruta: Path) -> list[EntradaPerfil]:
 
     entradas: list[EntradaPerfil] = []
     for archivo, info in data.get("files", {}).items():
-        archivo_norm = archivo.replace("\\", "/")
-        if "/src/" not in archivo_norm and "/benchmarks/" not in archivo_norm:
+        ruta_relativa = _ruta_relativa_perfil(archivo)
+        if ruta_relativa is None:
             continue
-
-        # Ruta relativa al repo, sin depender de dónde se clonó en cada máquina.
-        nombre_corto = archivo_norm.split("/")[-1]
-        for carpeta in ("/src/", "/benchmarks/"):
-            if carpeta in archivo_norm:
-                nombre_corto = carpeta.strip("/") + "/" + archivo_norm.split(carpeta, 1)[1]
-                break
-
         for linea in info.get("lines", []):
-            py_pct = float(linea.get("n_cpu_percent_python", 0.0))
-            c_pct = float(linea.get("n_cpu_percent_c", 0.0))
-            sys_pct = float(linea.get("n_sys_percent", 0.0))
-            peak_mb = float(linea.get("n_peak_mb", 0.0))
-            total_cpu = py_pct + c_pct + sys_pct
-
-            if total_cpu < 1.0 and peak_mb < 0.5:
-                continue
-
-            num_linea = linea.get("lineno", 0)
-            codigo = linea.get("line", "").strip()[:80]
-            metrica = "cpu_sys_ipc_pct" if sys_pct > py_pct else "cpu_python_pct"
-            valor = sys_pct if sys_pct > py_pct else py_pct
-
-            entradas.append(
-                EntradaPerfil(
-                    origen="Scalene",
-                    simbolo=f"{nombre_corto}:{num_linea}",
-                    metrica=metrica,
-                    valor=round(valor, 2),
-                    detalle=f"py={py_pct:.1f}% c={c_pct:.1f}% sys={sys_pct:.1f}% peak={peak_mb:.1f}MB | {codigo}",
-                )
-            )
+            entrada = _entrada_scalene(ruta_relativa, linea)
+            if entrada is not None:
+                entradas.append(entrada)
 
     entradas.sort(key=lambda e: e.valor, reverse=True)
     return entradas[:10]

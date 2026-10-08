@@ -355,3 +355,20 @@ def test_conclusiones_del_benchmark_salen_de_los_datos():
     }
     assert "99.0 % menos" in bench._conclusion_lectura(lectura)
     assert "más lento" in bench._conclusion_lectura(lectura)
+
+
+def test_resumir_scalene_rechaza_rutas_fuera_del_proyecto(tmp_path: Path):
+    from benchmarks.resumir_scalene import ruta_en_proyecto
+
+    assert ruta_en_proyecto(Path("docs/mediciones/scalene/resumen.md")).is_relative_to(BASE_DIR)
+    with pytest.raises(ValueError, match="fuera del proyecto"):
+        ruta_en_proyecto(Path("../fuera.md"))
+    with pytest.raises(ValueError, match="fuera del proyecto"):
+        ruta_en_proyecto(tmp_path / "x.md")
+
+
+def test_benchmark_archivos_valida_rangos():
+    with pytest.raises(SystemExit):
+        bench.main(["--pedidos", "0"])
+    with pytest.raises(SystemExit):
+        bench.main(["--lotes", "0"])
