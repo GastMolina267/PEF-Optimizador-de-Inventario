@@ -67,6 +67,16 @@ RUTA_INFORME = BASE_DIR / "docs" / "mediciones" / "archivos_grandes.md"
 
 BYTES_POR_MB = 1024.0 * 1024.0
 BUFFER_EXPLICITO = 1024 * 1024
+# Rangos válidos de los argumentos de línea de comandos.
+LIMITES_ARGUMENTOS = {
+    "productos": (1, 1_000_000),
+    "pedidos": (1, 10_000_000),
+    "lotes": (1, 1_000_000),
+    "repeticiones": (1, 50),
+    "workers": (1, 64),
+}
+# Diferencia (%) a partir de la cual el buffer explícito se considera más rápido.
+DIFERENCIA_SIGNIFICATIVA_PCT = 5.0
 BUFFER_POR_DEFECTO = -1  # el buffer que elige Python (io.DEFAULT_BUFFER_SIZE)
 
 
@@ -228,7 +238,7 @@ def _conclusion_lotes(filas: list[dict[str, float]], workers: int) -> str:
 def _conclusion_csv(csv: dict[str, float]) -> str:
     base = f"Se exportaron {csv['filas']:,} filas ({csv['kb']:.1f} KB)."
     diferencia = 100.0 * (csv["defecto_ms"] - csv["explicito_ms"]) / csv["defecto_ms"]
-    if diferencia > 5:
+    if diferencia > DIFERENCIA_SIGNIFICATIVA_PCT:
         return base + (
             f" El buffer de 1 MB fue un {diferencia:.0f} % más rápido: agrupa las escrituras "
             "en menos llamadas al sistema operativo."
@@ -409,6 +419,7 @@ def ejecutar_benchmark_archivos_grandes(
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Valida los argumentos de línea de comandos y corre el benchmark."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--productos", type=int, default=5000)
     parser.add_argument("--pedidos", type=int, default=200_000)
@@ -416,18 +427,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--repeticiones", type=int, default=5)
     parser.add_argument("--workers", type=int, default=None)
     args = parser.parse_args(argv)
-    limites = {
-        "productos": (1, 1_000_000),
-        "pedidos": (1, 10_000_000),
-        "repeticiones": (1, 50),
-        "workers": (1, 64),
-    }
-    for nombre, (minimo, maximo) in limites.items():
-        valor = getattr(args, nombre)
-        if valor is not None and not minimo <= valor <= maximo:
-            parser.error(f"--{nombre} debe estar entre {minimo} y {maximo}")
-    if args.lotes and not all(1 <= lote <= 1_000_000 for lote in args.lotes):
-        parser.error("--lotes debe tener valores entre 1 y 1000000")
+    for nombre, (minimo, maximo) in LIMITES_ARGUMENTOS.items():
+        valores = getattr(args, nombre)
+        for valor in valores if isinstance(valores, list) else [valores]:
+            if valor is not None and not minimo <= valor <= maximo:
+                parser.error(f"--{nombre} debe estar entre {minimo} y {maximo}")
     ejecutar_benchmark_archivos_grandes(
         n_productos=args.productos,
         n_pedidos=args.pedidos,

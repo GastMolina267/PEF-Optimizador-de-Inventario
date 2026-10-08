@@ -37,6 +37,9 @@ from src.ui.tema import (
     padding_symmetric,
 )
 
+# Color del número de puesto para los tres primeros del ranking.
+COLORES_PODIO = (COLOR_PRIMARIO, COLOR_SECUNDARIO, "#F59E0B")
+
 
 class PantallaTopProductos(PantallaBase):
     """Vista comparativa de Top-N: Min-Heap O(N log k) vs Ordenamiento Total O(N log N)."""
@@ -240,11 +243,7 @@ class PantallaTopProductos(PantallaBase):
         max_demanda = max((cant for _, cant in self.ranking_actual), default=1)
 
         for i, (prod, cantidad) in enumerate(self.ranking_actual, 1):
-            color_medalla = (
-                COLOR_PRIMARIO
-                if i == 1
-                else (COLOR_SECUNDARIO if i == 2 else ("#F59E0B" if i == 3 else COLOR_TEXTO_MUTED))
-            )
+            color_medalla = COLORES_PODIO[i - 1] if i <= len(COLORES_PODIO) else COLOR_TEXTO_MUTED
             fraccion_demanda = (cantidad / max_demanda) if max_demanda > 0 else 0.0
 
             barra_demanda = ft.ProgressBar(

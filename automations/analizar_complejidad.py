@@ -37,6 +37,9 @@ _NOMBRES_DICT = (
     "mapa_posicion_original",
 )
 
+# Desde esta profundidad de bucles anidados se considera un recorrido pedido × línea.
+PROFUNDIDAD_BUCLE_ANIDADO = 2
+
 
 @dataclass
 class EvidenciaAST:
@@ -90,7 +93,7 @@ class _VisitanteCuerpo(ast.NodeVisitor):
         if "producto" in objetivo and "_productos" in iterable:
             self.evidencia.recorre_lista_productos = True
         if (
-            self._profundidad >= 2
+            self._profundidad >= PROFUNDIDAD_BUCLE_ANIDADO
             and any("pedido" in n for n in self._nombres_for)
             and "linea" in objetivo
         ):

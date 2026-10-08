@@ -9,6 +9,10 @@ import contextlib
 
 import flet as ft
 
+# Umbrales de color de los chips de duración (verde / ámbar / naranja).
+TIEMPO_RAPIDO_MS = 1.0
+TIEMPO_MODERADO_MS = 20.0
+
 # Cromo de consola (top nav + side nav)
 COLOR_NAV = "#161D26"
 COLOR_NAV_HOVER = "#232F3E"
@@ -325,11 +329,12 @@ def crear_tarjeta_kpi(
 def crear_badge_tiempo(tiempo_ms: float, speedup: float | None = None) -> ft.Container:
     """Chip de duración como en el panel Performance. Sin emoji."""
     tiempo_texto = formatear_tiempo_ms(tiempo_ms)
-    color_tiempo = (
-        COLOR_EXITO
-        if tiempo_ms < 1.0
-        else (COLOR_ADVERTENCIA if tiempo_ms < 20.0 else COLOR_PRIMARIO)
-    )
+    if tiempo_ms < TIEMPO_RAPIDO_MS:
+        color_tiempo = COLOR_EXITO
+    elif tiempo_ms < TIEMPO_MODERADO_MS:
+        color_tiempo = COLOR_ADVERTENCIA
+    else:
+        color_tiempo = COLOR_PRIMARIO
 
     controles = [
         ft.Text(

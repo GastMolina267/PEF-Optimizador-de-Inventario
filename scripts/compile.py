@@ -111,6 +111,7 @@ def construir_comando(mode: str, debug: bool) -> list[str]:
 
 
 def main() -> int:
+    """Arma y ejecuta el comando de PyInstaller; devuelve su código de salida."""
     parser = argparse.ArgumentParser(
         description="Compila y empaqueta el Optimizador de Inventario usando PyInstaller."
     )

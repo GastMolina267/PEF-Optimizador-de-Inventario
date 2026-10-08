@@ -125,7 +125,7 @@ class PantallaComparacion(PantallaBase):
         actualizar_control(self)
 
     def al_cambiar_estrategia_global(self, nueva_estrategia: str) -> None:
-        pass
+        """No hace nada: la comparativa siempre mide las dos estrategias."""
 
     def _aplicar_ordenamiento(self):
         if not self.filas_medidas:

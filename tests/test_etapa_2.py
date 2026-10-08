@@ -230,7 +230,7 @@ class TestMotorInventarioAPI:
     """Pruebas de la fachada unificada MotorInventario (Criterio de cierre Etapa 2)."""
 
     def test_cierre_etapa_2_con_pequeno_json(self):
-        """Criterio de cierre formal de la Etapa 2:
+        """Criterio de cierre formal de la Etapa 2.
 
         Se carga pequeno.json por código y se buscan productos / preparan pedidos /
         listan top-N con el catálogo lineal, obteniendo resultados consistentes.

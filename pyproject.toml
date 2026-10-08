@@ -85,11 +85,24 @@ select = [
     "B",    # flake8-bugbear (errores probables)
     "SIM",  # flake8-simplify
     "UP",   # pyupgrade (sintaxis moderna para py310)
+    "D",    # pydocstyle (docstrings)
+    "PLR2004",  # números mágicos: usar constantes con nombre
+]
+ignore = [
+    "D107",  # los argumentos del constructor se documentan en la docstring de la clase
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E402"]
 "benchmarks/perfilar_scalene.py" = ["E402"]
+# En los tests el nombre de la función ya describe el caso y los valores esperados
+# son literales a propósito.
+"tests/**" = ["D1", "PLR2004"]
+
+[tool.ruff.lint.pydocstyle]
+# Estilo Google con secciones en español (Argumentos, Retorna, Lanza): las interpreta
+# Sphinx con napoleon_custom_sections (fase F8).
+convention = "google"
 
 [tool.ruff.lint.isort]
 known-first-party = ["src", "automations", "benchmarks", "scripts"]

@@ -277,7 +277,8 @@ class PantallaInicio(PantallaBase):
         ]
         actualizar_control(self)
 
-    def al_cambiar_estrategia_global(self, nueva_estrategia: str):
+    def al_cambiar_estrategia_global(self, nueva_estrategia: str) -> None:
+        """Refresca las métricas de la pantalla con la estrategia nueva."""
         self._actualizar_metricas_visuales()
 
     def _ejecutar_escenario_completo(self):

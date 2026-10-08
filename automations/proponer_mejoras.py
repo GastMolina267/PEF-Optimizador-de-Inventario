@@ -32,6 +32,14 @@ INFORMES_PRIORITARIOS: tuple[str, ...] = (
 )
 
 
+# Umbrales para considerar un dato del profiler como hotspot.
+PORCENTAJE_MINIMO_LINE_PROFILER = 20.0
+PORCENTAJE_MINIMO_CPU_SCALENE = 1.0
+PICO_MINIMO_MB_SCALENE = 0.5
+# Columnas mínimas de una fila de la tabla comparativa (hasta la de speedup).
+COLUMNAS_TABLA_COMPARATIVA = 7
+
+
 @dataclass
 class EntradaPerfil:
     """Una fila extraída de un informe de profiler."""
@@ -137,7 +145,7 @@ def _parsear_line_profiler(ruta: Path) -> list[EntradaPerfil]:
         if not m:
             continue
         pct = float(m.group(5))
-        if pct < 20:
+        if pct < PORCENTAJE_MINIMO_LINE_PROFILER:
             continue
         snippet = m.group(6).strip()
         if snippet.startswith('"""') or snippet.startswith("def "):
@@ -162,7 +170,7 @@ def _parsear_tabla_comparativa(ruta: Path) -> list[EntradaPerfil]:
         if not linea.startswith("| `") or "Speedup" in linea:
             continue
         celdas = [c.strip() for c in linea.strip("|").split("|")]
-        if len(celdas) < 7:
+        if len(celdas) < COLUMNAS_TABLA_COMPARATIVA:
             continue
         dataset, operacion = celdas[0].strip("`"), celdas[1]
         speedup_txt = celdas[6].replace("*", "").replace("x", "").strip()
@@ -233,7 +241,10 @@ def _entrada_scalene(ruta_relativa: str, linea: dict) -> EntradaPerfil | None:
     c_pct = float(linea.get("n_cpu_percent_c", 0.0))
     sys_pct = float(linea.get("n_sys_percent", 0.0))
     peak_mb = float(linea.get("n_peak_mb", 0.0))
-    if py_pct + c_pct + sys_pct < 1.0 and peak_mb < 0.5:
+    if (
+        py_pct + c_pct + sys_pct < PORCENTAJE_MINIMO_CPU_SCALENE
+        and peak_mb < PICO_MINIMO_MB_SCALENE
+    ):
         return None
 
     domina_sistema = sys_pct > py_pct
@@ -479,6 +490,7 @@ def renderizar_markdown(
     hotspots: list[EntradaPerfil],
     propuestas: list[PropuestaMejora],
 ) -> str:
+    """Arma el Markdown de ``docs/propuestas-mejora.md`` con hotspots y propuestas."""
     ahora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     sha = sha_corto(raiz)
     informes = _informes_disponibles(raiz)

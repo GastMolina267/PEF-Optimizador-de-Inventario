@@ -1,4 +1,4 @@
-"""Resume y compara dos perfiles de Scalene (antes / después) en Markdown.
+r"""Resume y compara dos perfiles de Scalene (antes / después) en Markdown.
 
 Uso::
 
@@ -36,6 +36,7 @@ class PerfilFuncion:
 
     @property
     def total(self) -> float:
+        """Porcentaje total: Python + nativo + sistema."""
         return self.python + self.nativo + self.sistema
 
 
@@ -178,6 +179,7 @@ de {UMBRAL_PORCENTAJE:.0f} %.
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Lee los dos perfiles indicados y escribe el resumen comparativo."""
     parser = argparse.ArgumentParser(description="Compara dos perfiles de Scalene.")
     parser.add_argument("--antes", type=Path, default=SCALENE_DIR / "scalene_antes.json")
     parser.add_argument("--despues", type=Path, default=SCALENE_DIR / "scalene_despues.json")

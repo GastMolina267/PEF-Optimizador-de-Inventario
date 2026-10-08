@@ -17,6 +17,10 @@ from dataclasses import dataclass
 
 from src.modelos.producto import Producto
 
+# Candidatos máximos por modo, para no superar el límite de recursión de Python.
+MAX_CANDIDATOS_RECURSION = 16
+MAX_CANDIDATOS_MEMOIZACION = 40
+
 
 @dataclass(slots=True)
 class CombinacionAlternativa:
@@ -26,6 +30,7 @@ class CombinacionAlternativa:
     costo_total: float
 
     def __post_init__(self) -> None:
+        """Redondea el costo total a centavos."""
         object.__setattr__(self, "costo_total", round(float(self.costo_total), 2))
 
     @property
@@ -113,13 +118,13 @@ class BuscadorAlternativas:
         if max_candidatos is not None:
             candidatos = candidatos[:max_candidatos]
         elif not usar_memoizacion:
-            if len(candidatos) > 16:
-                candidatos = candidatos[:16]
+            if len(candidatos) > MAX_CANDIDATOS_RECURSION:
+                candidatos = candidatos[:MAX_CANDIDATOS_RECURSION]
         else:
             # En modo memoizado, acotar a un conjunto seguro (ej. 40) para garantizar
             # que la profundidad de recursión nunca exceda el límite del call stack de Python
-            if len(candidatos) > 40:
-                candidatos = candidatos[:40]
+            if len(candidatos) > MAX_CANDIDATOS_MEMOIZACION:
+                candidatos = candidatos[:MAX_CANDIDATOS_MEMOIZACION]
 
         presupuesto_centavos = int(round(presupuesto_maximo * 100))
 

@@ -37,6 +37,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"
 MEDICIONES_DIR = BASE_DIR / "docs" / "mediciones"
 
+# Con catálogos grandes se acota la búsqueda exhaustiva de alternativas (O(2^N)).
+PRODUCTOS_PARA_ACOTAR_ALTERNATIVAS = 500
+MAX_CANDIDATOS_ALTERNATIVAS = 14
+
 
 def _agrupacion_lineal_ingenua(pedidos, catalogo_lineal):
     """Implementación ingenua O(P * L * n) que busca linealmente por cada línea."""
@@ -197,7 +201,9 @@ def ejecutar_benchmarks_dataset(nombre_archivo: str) -> list[dict[str, Any]]:
 
     # 5. Alternativas / Sustitutos (Recursión O(2^N) vs DP Memo O(N*P))
     # Se evalúa el mismo subconjunto de candidatos para evidenciar la poda de estados
-    max_cands = 14 if n_prods >= 500 else None
+    max_cands = (
+        MAX_CANDIDATOS_ALTERNATIVAS if n_prods >= PRODUCTOS_PARA_ACOTAR_ALTERNATIVAS else None
+    )
     t_base, m_base, r_base = medir_tiempo_y_memoria(
         buscador_alt.buscar_alternativas,
         cat_ejemplo,

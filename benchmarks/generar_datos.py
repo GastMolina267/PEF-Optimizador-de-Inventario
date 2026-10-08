@@ -19,6 +19,10 @@ from src.modelos.pedido import LineaPedido, Pedido
 from src.modelos.producto import Producto
 
 # Categorías realistas para los productos sintéticos
+# Proporciones del dataset sintético.
+PROPORCION_SIN_STOCK = 0.05
+PROBABILIDAD_PRODUCTO_POPULAR = 0.70
+
 CATEGORIAS = [
     "Ferretería y Herramientas",
     "Electricidad e Iluminación",
@@ -220,7 +224,7 @@ def generar_dataset_sintetico(
         nombre_completo = f"{nombre_base} {modificador} #{prod_id}"
 
         # ~5% de productos sin stock (para forzar casos de alternativas y pedidos parciales)
-        stock = 0 if rnd.random() < 0.05 else rnd.randint(5, 250)
+        stock = 0 if rnd.random() < PROPORCION_SIN_STOCK else rnd.randint(5, 250)
 
         precio = round(rnd.uniform(500.0, 65000.0), 2)
 
@@ -246,7 +250,7 @@ def generar_dataset_sintetico(
 
         for _ in range(num_lineas):
             # 70% de probabilidad de elegir un producto del top 20%
-            if rnd.random() < 0.70:
+            if rnd.random() < PROBABILIDAD_PRODUCTO_POPULAR:
                 id_prod = rnd.randint(1, top_20_percent_idx)
             else:
                 id_prod = rnd.randint(1, total_productos)

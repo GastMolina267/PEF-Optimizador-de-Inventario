@@ -37,6 +37,9 @@ from src.ui.tema import (
     padding_symmetric,
 )
 
+# Por encima de este stock el producto se muestra en verde; entre 1 y este valor, en ámbar.
+STOCK_HOLGADO = 10
+
 
 class PantallaCatalogo(PantallaBase):
     """Vista de catálogo con búsquedas comparativas entre catálogo lineal y hash."""
@@ -397,7 +400,7 @@ class PantallaCatalogo(PantallaBase):
         items = []
         max_mostrar = 150
         for p in productos[:max_mostrar]:
-            if p.stock > 10:
+            if p.stock > STOCK_HOLGADO:
                 stock_color = COLOR_EXITO
                 stock_fondo = COLOR_FONDO_EXITO
             elif p.stock > 0:

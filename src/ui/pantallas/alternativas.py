@@ -1,3 +1,5 @@
+"""Pantalla de alternativas sustitutas: recursión exhaustiva vs programación dinámica."""
+
 from __future__ import annotations
 
 import contextlib

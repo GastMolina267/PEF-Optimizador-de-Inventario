@@ -131,7 +131,8 @@ def analizar_huella_cache_lru() -> dict[str, float]:
     }
 
 
-def main():
+def main() -> None:
+    """Mide la huella de memoria de cada estructura y escribe el resumen."""
     MEDICIONES_DIR.mkdir(parents=True, exist_ok=True)
     ruta_salida = MEDICIONES_DIR / "memoria_resumen.txt"
 
