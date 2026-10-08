@@ -20,6 +20,15 @@ from typing import Any
 
 from src.cache.cache_consultas import GestorCacheConsultas
 from src.datos.cargador import cargar_dataset_json
+from src.datos.procesador_lotes_paralelo import (
+    procesar_pedidos_jsonl_paralelo,
+    procesar_pedidos_jsonl_secuencial,
+)
+from src.datos.streaming import (
+    exportar_picking_csv_con_buffer,
+    leer_pedidos_streaming_jsonl,
+    leer_productos_streaming_jsonl,
+)
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
 from src.modelos.pedido import Pedido, ResumenProcesamiento
@@ -119,6 +128,16 @@ class MotorInventario:
         productos, pedidos = cargar_dataset_json(ruta)
         self.cargar_desde_listas(productos, pedidos)
 
+    def cargar_dataset_jsonl(
+        self,
+        ruta_productos: str | Path,
+        ruta_pedidos: str | Path,
+    ) -> None:
+        """Carga datos desde archivos .jsonl en streaming con memoria constante."""
+        prods = list(leer_productos_streaming_jsonl(ruta_productos))
+        peds = list(leer_pedidos_streaming_jsonl(ruta_pedidos))
+        self.cargar_desde_listas(prods, peds)
+
     def cargar_desde_listas(
         self, productos: Sequence[Producto], pedidos: Sequence[Pedido]
     ) -> None:
@@ -204,6 +223,35 @@ class MotorInventario:
 
         return resumen
 
+    def procesar_pedidos_jsonl(
+        self,
+        ruta_pedidos: str | Path,
+        tamano_lote: int = 5000,
+        paralelo: bool | None = None,
+        reconstruir_dataclasses: bool = False,
+    ) -> ResumenProcesamiento:
+        """Procesa un archivo masivo de pedidos .jsonl en streaming por lotes.
+
+        Aprovecha el procesamiento paralelo con workers si la estrategia es optimizada
+        o si se indica explícitamente paralelo=True.
+        """
+        mapa_stock = {p.id: p.stock for p in self._catalogo.obtener_todos()}
+        es_paralelo = self.es_optimizado if paralelo is None else paralelo
+
+        if es_paralelo:
+            return procesar_pedidos_jsonl_paralelo(
+                ruta_pedidos=ruta_pedidos,
+                mapa_stock=mapa_stock,
+                tamano_lote=tamano_lote,
+                reconstruir_dataclasses=reconstruir_dataclasses,
+            )
+        return procesar_pedidos_jsonl_secuencial(
+            ruta_pedidos=ruta_pedidos,
+            mapa_stock=mapa_stock,
+            tamano_lote=tamano_lote,
+            reconstruir_dataclasses=reconstruir_dataclasses,
+        )
+
     def obtener_top_solicitados(
         self,
         k: int = 10,
@@ -240,6 +288,13 @@ class MotorInventario:
         """Agrupa las líneas de los pedidos para Batch Picking consolidado."""
         lote = pedidos if pedidos is not None else self._pedidos
         return agrupar_pedidos_batch(lote, self._catalogo)
+
+    def exportar_picking_csv(
+        self, ruta_csv: str | Path, pedidos: Sequence[Pedido] | None = None
+    ) -> int:
+        """Exporta el reporte consolidado de picking a CSV con buffer de 1 MB."""
+        lote_picking = self.agrupar_pedidos(pedidos)
+        return exportar_picking_csv_con_buffer(ruta_csv, lote_picking.items)
 
     def buscar_alternativas(
         self,
