@@ -135,7 +135,9 @@ class TestCatalogosDetalle:
 
         # Inserción duplicada
         with pytest.raises(ValueError, match="Conflicto de identificador"):
-            cat.agregar(Producto(id=1, nombre="Duplicado", categoria="Pinturas", stock=1, precio=10.0))
+            cat.agregar(
+                Producto(id=1, nombre="Duplicado", categoria="Pinturas", stock=1, precio=10.0)
+            )
 
         # Actualizar stock
         with pytest.raises(ValueError, match="no puede ser negativo"):
@@ -159,8 +161,16 @@ class TestCatalogosDetalle:
 
     def test_catalogo_hash_metodos_borde(self):
         prods = [
-            Producto(id=1, nombre="Tornillo Madera 2 Pulgadas", categoria="Fijaciones", stock=100, precio=5.0),
-            Producto(id=2, nombre="Tarugo Nylon 8mm", categoria="Fijaciones", stock=80, precio=3.0),
+            Producto(
+                id=1,
+                nombre="Tornillo Madera 2 Pulgadas",
+                categoria="Fijaciones",
+                stock=100,
+                precio=5.0,
+            ),
+            Producto(
+                id=2, nombre="Tarugo Nylon 8mm", categoria="Fijaciones", stock=80, precio=3.0
+            ),
         ]
         cat = CatalogoHash(prods)
         assert len(cat) == 2
@@ -168,7 +178,9 @@ class TestCatalogosDetalle:
 
         # Inserción duplicada
         with pytest.raises(ValueError, match="Conflicto de identificador"):
-            cat.agregar(Producto(id=1, nombre="Duplicado", categoria="Fijaciones", stock=1, precio=1.0))
+            cat.agregar(
+                Producto(id=1, nombre="Duplicado", categoria="Fijaciones", stock=1, precio=1.0)
+            )
 
         # Búsqueda texto vacío
         assert cat.buscar_por_nombre("") == []
@@ -271,7 +283,9 @@ class TestCacheDetalle:
 
 
 class TestCargadorYValidadorExhaustivo:
-    def test_guardar_y_cargar_dataset_json(self, tmp_path: Path, productos_muestra, pedidos_muestra):
+    def test_guardar_y_cargar_dataset_json(
+        self, tmp_path: Path, productos_muestra, pedidos_muestra
+    ):
         ruta_salida = tmp_path / "test_dataset.json"
         guardar_dataset_json(
             ruta_salida,
@@ -383,7 +397,9 @@ class TestMotorInventarioDetalle:
 
         res = calcular_top_solicitados(pedidos_muestra, catalogo_hash_muestra, k=3, metodo="heap")
         assert len(res) <= 3
-        res_lin = calcular_top_solicitados(pedidos_muestra, catalogo_hash_muestra, k=3, metodo="lineal")
+        res_lin = calcular_top_solicitados(
+            pedidos_muestra, catalogo_hash_muestra, k=3, metodo="lineal"
+        )
         assert len(res_lin) <= 3
 
 
@@ -432,7 +448,9 @@ class TestAgrupadorYAlternativasDetalle:
 
 
 class TestProcesadoresDetalle:
-    def test_procesador_secuencial_politica_todo_lo_posible(self, catalogo_lineal_muestra, pedidos_muestra):
+    def test_procesador_secuencial_politica_todo_lo_posible(
+        self, catalogo_lineal_muestra, pedidos_muestra
+    ):
         res = procesar_pedidos_secuencial(
             catalogo_lineal_muestra,
             pedidos_muestra,

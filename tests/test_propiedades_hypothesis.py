@@ -43,9 +43,7 @@ def producto_valido(draw, id_fijo: int | None = None) -> Producto:
 
 
 @st.composite
-def lista_productos_unicos(
-    draw, min_size: int = 2, max_size: int = 25
-) -> list[Producto]:
+def lista_productos_unicos(draw, min_size: int = 2, max_size: int = 25) -> list[Producto]:
     n = draw(st.integers(min_value=min_size, max_value=max_size))
     # Generar IDs correlativos y únicos garantizados
     prods = [draw(producto_valido(id_fijo=i)) for i in range(1, n + 1)]
@@ -85,7 +83,10 @@ def lista_pedidos_sobre_productos(
 
 
 @settings(max_examples=30, deadline=None)
-@given(prods=lista_productos_unicos(min_size=3, max_size=20), consulta_id=st.integers(min_value=1, max_value=30))
+@given(
+    prods=lista_productos_unicos(min_size=3, max_size=20),
+    consulta_id=st.integers(min_value=1, max_value=30),
+)
 def test_propiedad_busqueda_por_id_y_nombre(prods: list[Producto], consulta_id: int):
     """Para cualquier catálogo arbitrario, las búsquedas por ID y nombre son idénticas."""
     cat_lineal = CatalogoLineal([p.clonar() for p in prods])
@@ -147,10 +148,7 @@ def test_propiedad_agrupacion_batch_picking(data):
     # Cada ítem consolidado debe sumar exactamente las demandas de sus pedidos
     for item in lote.items:
         demanda_manual = sum(
-            lp.cantidad
-            for p in pedidos
-            for lp in p.lineas
-            if lp.id_producto == item.id_producto
+            lp.cantidad for p in pedidos for lp in p.lineas if lp.id_producto == item.id_producto
         )
         assert item.cantidad_total == demanda_manual
 
