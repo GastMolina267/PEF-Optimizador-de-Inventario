@@ -2,6 +2,7 @@
 
 Integra la barra de estado persistente, el menú de navegación lateral (NavigationRail)
 y las 7 pantallas del sistema:
+
 0. Inicio y selección de datasets
 1. Catálogo de productos (búsquedas lineales vs hash con LRU)
 2. Preparación de pedidos (secuencial vs concurrente)
@@ -13,7 +14,10 @@ y las 7 pantallas del sistema:
 
 from __future__ import annotations
 
+import contextlib
 import multiprocessing
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import flet as ft
@@ -41,44 +45,217 @@ from src.ui.tema import (
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"
+DATASET_INICIAL = "demo_oral.json"
+
+TITULO_VENTANA = "Optimizador de Inventario y Pedidos | Programación Eficiente"
+ANCHO_VENTANA, ALTO_VENTANA = 1280, 840
+ANCHO_MINIMO, ALTO_MINIMO = 1000, 700
+INDICE_INICIO = 0
 
 
-def main(page: ft.Page) -> None:
-    """Punto de entrada de la aplicación de escritorio Flet."""
-    page.title = "Optimizador de Inventario y Pedidos | Programación Eficiente"
-    page.bgcolor = COLOR_FONDO_APP
-    page.theme_mode = ft.ThemeMode.LIGHT
-    page.padding = 0
-    page.theme = ft.Theme(
-        font_family="Segoe UI",
-        visual_density=ft.VisualDensity.COMPACT,
-        color_scheme=ft.ColorScheme(
-            primary=COLOR_PRIMARIO,
-            on_primary="#FFFFFF",
-            surface=COLOR_TARJETA,
-            on_surface="#0F141A",
-        ),
-    )
-    try:
-        page.window.width = 1280
-        page.window.height = 840
-        page.window.min_width = 1000
-        page.window.min_height = 700
-    except Exception:
-        page.width = 1280
-        page.height = 840
+@dataclass(frozen=True)
+class Seccion:
+    """Entrada del menú lateral y la pantalla que muestra."""
 
-    # 1. Inicializar el motor desacoplado y precargar demo_oral.json
-    motor = MotorInventario(estrategia="baseline")
-    ruta_inicial = DATASETS_DIR / "demo_oral.json"
-    if ruta_inicial.is_file():
-        motor.cargar_dataset(ruta_inicial)
+    etiqueta: str
+    icono: str
+    icono_seleccionado: str
+    pantalla: type[ft.Control]
 
-    # 2. Función auxiliar de notificaciones amigable
+
+SECCIONES: tuple[Seccion, ...] = (
+    Seccion("Inicio", ft.Icons.HOME_OUTLINED, ft.Icons.HOME_ROUNDED, PantallaInicio),
+    Seccion(
+        "Catálogo",
+        ft.Icons.INVENTORY_2_OUTLINED,
+        ft.Icons.INVENTORY_2_ROUNDED,
+        PantallaCatalogo,
+    ),
+    Seccion(
+        "Pedidos",
+        ft.Icons.SHOPPING_BAG_OUTLINED,
+        ft.Icons.SHOPPING_BAG_ROUNDED,
+        PantallaPedidos,
+    ),
+    Seccion(
+        "Agrupación",
+        ft.Icons.ALL_INBOX_OUTLINED,
+        ft.Icons.ALL_INBOX_ROUNDED,
+        PantallaAgrupacion,
+    ),
+    Seccion(
+        "Top-N",
+        ft.Icons.LEADERBOARD_OUTLINED,
+        ft.Icons.LEADERBOARD_ROUNDED,
+        PantallaTopProductos,
+    ),
+    Seccion(
+        "Alternativas",
+        ft.Icons.SWAP_HORIZ_OUTLINED,
+        ft.Icons.SWAP_HORIZ_ROUNDED,
+        PantallaAlternativas,
+    ),
+    Seccion(
+        "Comparativa",
+        ft.Icons.COMPARE_ARROWS_OUTLINED,
+        ft.Icons.COMPARE_ARROWS_ROUNDED,
+        PantallaComparacion,
+    ),
+)
+
+
+def _mostrar_superpuesto(page: ft.Page, control: ft.Control) -> None:
+    """Muestra un SnackBar o un diálogo con la API que tenga la versión de Flet instalada."""
+    if hasattr(page, "show_dialog") and isinstance(control, ft.AlertDialog):
+        page.show_dialog(control)
+        return
+    if hasattr(page, "show_dialog") and hasattr(page, "overlay"):
+        with contextlib.suppress(Exception):
+            page.overlay.append(control)
+            control.open = True
+            page.update()
+            return
+    if hasattr(page, "open") and callable(page.open):
+        page.open(control)
+        return
+    # Flet muy antiguo: un atributo por tipo de control.
+    if isinstance(control, ft.AlertDialog):
+        page.dialog = control
+    else:
+        page.snack_bar = control
+    control.open = True
+    page.update()
+
+
+class AplicacionInventario:
+    """Arma la ventana principal: panel de estado, menú lateral y pantallas.
+
+    Las pantallas se crean la primera vez que se visitan y se conservan, así cada una
+    mantiene su estado (filtros, resultados) al cambiar de sección.
+
+    Argumentos:
+        page: Página de Flet donde se monta la aplicación.
+        motor: Motor de inventario. Por defecto, uno nuevo con ``demo_oral.json`` cargado.
+    """
+
+    def __init__(self, page: ft.Page, motor: MotorInventario | None = None) -> None:
+        self.page = page
+        self.motor = motor or self._crear_motor_inicial()
+        self.vistas: dict[int, ft.Control] = {}
+        self.contenedor_pantalla = ft.Container(expand=True, bgcolor=COLOR_FONDO_APP)
+        self.panel_estado = PanelEstado(
+            on_cambiar_estrategia=self.al_conmutar_estrategia,
+            on_mostrar_ayuda_modos=self.abrir_ayuda_modos,
+        )
+        self.rail_navegacion = self._crear_rail()
+
+    @staticmethod
+    def _crear_motor_inicial() -> MotorInventario:
+        motor = MotorInventario(estrategia="baseline")
+        ruta_inicial = DATASETS_DIR / DATASET_INICIAL
+        if ruta_inicial.is_file():
+            motor.cargar_dataset(ruta_inicial)
+        return motor
+
+    # ------------------------------------------------------------------ montaje
+
+    def montar(self) -> None:
+        """Configura la página y agrega el panel de estado y el cuerpo principal."""
+        self._configurar_pagina()
+        self.actualizar_panel(dataset=DATASET_INICIAL)
+        self.contenedor_pantalla.content = self.obtener_vista(INDICE_INICIO)
+        cuerpo_principal = ft.Row(
+            controls=[self.rail_navegacion, self.contenedor_pantalla],
+            spacing=0,
+            expand=True,
+        )
+        self.page.add(
+            ft.Column(controls=[self.panel_estado, cuerpo_principal], spacing=0, expand=True)
+        )
+
+    def _configurar_pagina(self) -> None:
+        page = self.page
+        page.title = TITULO_VENTANA
+        page.bgcolor = COLOR_FONDO_APP
+        page.theme_mode = ft.ThemeMode.LIGHT
+        page.padding = 0
+        page.theme = ft.Theme(
+            font_family="Segoe UI",
+            visual_density=ft.VisualDensity.COMPACT,
+            color_scheme=ft.ColorScheme(
+                primary=COLOR_PRIMARIO,
+                on_primary="#FFFFFF",
+                surface=COLOR_TARJETA,
+                on_surface="#0F141A",
+            ),
+        )
+        try:
+            page.window.width = ANCHO_VENTANA
+            page.window.height = ALTO_VENTANA
+            page.window.min_width = ANCHO_MINIMO
+            page.window.min_height = ALTO_MINIMO
+        except AttributeError:
+            # Versiones de Flet sin page.window.
+            page.width = ANCHO_VENTANA
+            page.height = ALTO_VENTANA
+
+    def _crear_rail(self) -> ft.NavigationRail:
+        return ft.NavigationRail(
+            selected_index=INDICE_INICIO,
+            label_type=ft.NavigationRailLabelType.ALL,
+            min_width=112,
+            min_extended_width=168,
+            bgcolor=COLOR_NAV,
+            indicator_color=COLOR_NAV_HOVER,
+            selected_label_text_style=ft.TextStyle(
+                size=12, weight=ft.FontWeight.W_700, color=COLOR_MARCA
+            ),
+            unselected_label_text_style=ft.TextStyle(
+                size=12, weight=ft.FontWeight.W_500, color=COLOR_NAV_MUTED
+            ),
+            destinations=[
+                ft.NavigationRailDestination(
+                    icon=ft.Icon(seccion.icono, color=COLOR_NAV_MUTED),
+                    selected_icon=ft.Icon(seccion.icono_seleccionado, color=COLOR_MARCA),
+                    label=seccion.etiqueta,
+                )
+                for seccion in SECCIONES
+            ],
+            on_change=lambda _: self.cambiar_vista(self.rail_navegacion.selected_index),
+        )
+
+    # ------------------------------------------------------------------ vistas
+
+    def obtener_vista(self, indice: int) -> ft.Control:
+        """Devuelve la pantalla de la sección; la crea la primera vez que se visita."""
+        if indice not in self.vistas:
+            seccion = SECCIONES[indice] if 0 <= indice < len(SECCIONES) else SECCIONES[0]
+            argumentos: dict[str, Callable] = {}
+            if seccion.pantalla is PantallaInicio:
+                argumentos["on_dataset_cambiado"] = self.al_recargar_dataset
+            self.vistas[indice] = seccion.pantalla(
+                self.motor, self.actualizar_panel, self.notificar, **argumentos
+            )
+        return self.vistas[indice]
+
+    def cambiar_vista(self, indice: int) -> None:
+        """Muestra la pantalla de la sección indicada."""
+        self.contenedor_pantalla.content = self.obtener_vista(indice)
+        self.page.update()
+
+    def al_recargar_dataset(self, nombre_dataset: str) -> None:
+        """Avisa a las pantallas ya creadas (salvo Inicio) que cambió el dataset."""
+        for indice, vista in list(self.vistas.items()):
+            if indice != INDICE_INICIO and hasattr(vista, "al_recargar_dataset"):
+                vista.al_recargar_dataset()
+
+    # ------------------------------------------------------------------ callbacks
+
     def notificar(
-        mensaje: str, icono: str = ft.Icons.INFO_OUTLINE, color: str | None = None
+        self, mensaje: str, icono: str = ft.Icons.INFO_OUTLINE, color: str | None = None
     ) -> None:
-        sb = ft.SnackBar(
+        """Muestra un aviso breve (SnackBar) en la parte inferior de la ventana."""
+        aviso = ft.SnackBar(
             content=ft.Row(
                 controls=[
                     ft.Icon(icono, color=color or COLOR_MARCA, size=20),
@@ -88,23 +265,10 @@ def main(page: ft.Page) -> None:
             ),
             bgcolor=COLOR_NAV,
         )
-        if hasattr(page, "show_dialog") and hasattr(page, "overlay"):
-            try:
-                page.overlay.append(sb)
-                sb.open = True
-                page.update()
-                return
-            except Exception:
-                pass
-        if hasattr(page, "open"):
-            page.open(sb)
-        else:
-            page.snack_bar = sb
-            sb.open = True
-            page.update()
+        _mostrar_superpuesto(self.page, aviso)
 
-    # 3. Función de callback para actualizar la barra de estado
     def actualizar_panel(
+        self,
         dataset: str | None = None,
         n_productos: int | None = None,
         n_pedidos: int | None = None,
@@ -113,178 +277,42 @@ def main(page: ft.Page) -> None:
         memoria_mb: float | None = None,
         resultado_negocio: str | None = None,
     ) -> None:
-        ds = dataset or getattr(panel_estado, "dataset_nombre", "demo_oral.json")
-        panel_estado.dataset_nombre = ds
-        n_p = n_productos if n_productos is not None else len(motor.catalogo)
-        n_ped = n_pedidos if n_pedidos is not None else len(motor.pedidos)
-        est = estrategia or motor.estrategia
-
-        panel_estado.actualizar_estado(
-            dataset=ds,
-            n_productos=n_p,
-            n_pedidos=n_ped,
-            estrategia=est,
+        """Actualiza el panel de estado; lo que no se indica se toma del motor."""
+        nombre_dataset = dataset or getattr(self.panel_estado, "dataset_nombre", DATASET_INICIAL)
+        self.panel_estado.dataset_nombre = nombre_dataset
+        self.panel_estado.actualizar_estado(
+            dataset=nombre_dataset,
+            n_productos=len(self.motor.catalogo) if n_productos is None else n_productos,
+            n_pedidos=len(self.motor.pedidos) if n_pedidos is None else n_pedidos,
+            estrategia=estrategia or self.motor.estrategia,
             tiempo_ms=tiempo_ms,
             memoria_mb=memoria_mb,
             resultado_negocio=resultado_negocio,
         )
 
-    def abrir_modal_ayuda_modos() -> None:
-        dlg = crear_dialogo_explicativo_modos(page)
-        if hasattr(page, "show_dialog") and callable(page.show_dialog):
-            page.show_dialog(dlg)
-        elif hasattr(page, "open") and callable(page.open):
-            page.open(dlg)
-        else:
-            page.dialog = dlg
-            dlg.open = True
-            page.update()
+    def abrir_ayuda_modos(self) -> None:
+        """Abre el diálogo que explica la diferencia entre Baseline y Optimizado."""
+        _mostrar_superpuesto(self.page, crear_dialogo_explicativo_modos(self.page))
 
-    def al_conmutar_estrategia(nueva_estrategia: str) -> None:
-        motor.cambiar_estrategia(nueva_estrategia)
-        actualizar_panel(
+    def al_conmutar_estrategia(self, nueva_estrategia: str) -> None:
+        """Cambia la estrategia del motor y sincroniza todas las pantallas creadas."""
+        self.motor.cambiar_estrategia(nueva_estrategia)
+        self.actualizar_panel(
             estrategia=nueva_estrategia,
             resultado_negocio=f"Estrategia conmutada a {nueva_estrategia.upper()}",
         )
-        notificar(
+        self.notificar(
             f"Estrategia global cambiada a '{nueva_estrategia.upper()}'.", ft.Icons.SWAP_HORIZ
         )
-        # Notificar a las pantallas cacheadas para sincronizar su estado
-        for v in vistas.values():
-            if hasattr(v, "al_cambiar_estrategia_global"):
-                v.al_cambiar_estrategia_global(nueva_estrategia)
-        cambiar_vista(rail_navegacion.selected_index)
+        for vista in self.vistas.values():
+            if hasattr(vista, "al_cambiar_estrategia_global"):
+                vista.al_cambiar_estrategia_global(nueva_estrategia)
+        self.cambiar_vista(self.rail_navegacion.selected_index)
 
-    # 4. Instanciar panel de estado persistente con botón explicativo
-    panel_estado = PanelEstado(
-        on_cambiar_estrategia=al_conmutar_estrategia,
-        on_mostrar_ayuda_modos=abrir_modal_ayuda_modos,
-    )
-    actualizar_panel(dataset="demo_oral.json")
 
-    # 5. Contenedor dinámico central y caché de vistas para persistencia total de estado
-    contenedor_pantalla = ft.Container(expand=True, bgcolor=COLOR_FONDO_APP)
-    vistas: dict[int, ft.Control] = {}
-
-    def notificar_recarga_dataset(nombre_dataset: str) -> None:
-        """Propaga la carga de un nuevo dataset a todas las vistas cacheadas."""
-        for idx, vista in list(vistas.items()):
-            if idx != 0 and hasattr(vista, "al_recargar_dataset"):
-                vista.al_recargar_dataset()
-
-    def obtener_vista(indice: int) -> ft.Control:
-        if indice not in vistas:
-            if indice == 0:
-                vistas[indice] = PantallaInicio(
-                    motor,
-                    actualizar_panel,
-                    notificar,
-                    on_dataset_cambiado=notificar_recarga_dataset,
-                )
-            elif indice == 1:
-                vistas[indice] = PantallaCatalogo(motor, actualizar_panel, notificar)
-            elif indice == 2:
-                vistas[indice] = PantallaPedidos(motor, actualizar_panel, notificar)
-            elif indice == 3:
-                vistas[indice] = PantallaAgrupacion(motor, actualizar_panel, notificar)
-            elif indice == 4:
-                vistas[indice] = PantallaTopProductos(motor, actualizar_panel, notificar)
-            elif indice == 5:
-                vistas[indice] = PantallaAlternativas(motor, actualizar_panel, notificar)
-            elif indice == 6:
-                vistas[indice] = PantallaComparacion(motor, actualizar_panel, notificar)
-            else:
-                vistas[indice] = PantallaInicio(motor, actualizar_panel, notificar)
-        return vistas[indice]
-
-    def cambiar_vista(indice: int) -> None:
-        contenedor_pantalla.content = obtener_vista(indice)
-        page.update()
-
-    def al_cambiar_rail(e):
-        cambiar_vista(rail_navegacion.selected_index)
-
-    # 6. Rail de navegación lateral accesible
-    rail_navegacion = ft.NavigationRail(
-        selected_index=0,
-        label_type=ft.NavigationRailLabelType.ALL,
-        min_width=112,
-        min_extended_width=168,
-        bgcolor=COLOR_NAV,
-        indicator_color=COLOR_NAV_HOVER,
-        selected_label_text_style=ft.TextStyle(
-            size=12,
-            weight=ft.FontWeight.W_700,
-            color=COLOR_MARCA,
-        ),
-        unselected_label_text_style=ft.TextStyle(
-            size=12,
-            weight=ft.FontWeight.W_500,
-            color=COLOR_NAV_MUTED,
-        ),
-        destinations=[
-            ft.NavigationRailDestination(
-                icon=ft.Icon(ft.Icons.HOME_OUTLINED, color=COLOR_NAV_MUTED),
-                selected_icon=ft.Icon(ft.Icons.HOME_ROUNDED, color=COLOR_MARCA),
-                label="Inicio",
-            ),
-            ft.NavigationRailDestination(
-                icon=ft.Icon(ft.Icons.INVENTORY_2_OUTLINED, color=COLOR_NAV_MUTED),
-                selected_icon=ft.Icon(ft.Icons.INVENTORY_2_ROUNDED, color=COLOR_MARCA),
-                label="Catálogo",
-            ),
-            ft.NavigationRailDestination(
-                icon=ft.Icon(ft.Icons.SHOPPING_BAG_OUTLINED, color=COLOR_NAV_MUTED),
-                selected_icon=ft.Icon(ft.Icons.SHOPPING_BAG_ROUNDED, color=COLOR_MARCA),
-                label="Pedidos",
-            ),
-            ft.NavigationRailDestination(
-                icon=ft.Icon(ft.Icons.ALL_INBOX_OUTLINED, color=COLOR_NAV_MUTED),
-                selected_icon=ft.Icon(ft.Icons.ALL_INBOX_ROUNDED, color=COLOR_MARCA),
-                label="Agrupación",
-            ),
-            ft.NavigationRailDestination(
-                icon=ft.Icon(ft.Icons.LEADERBOARD_OUTLINED, color=COLOR_NAV_MUTED),
-                selected_icon=ft.Icon(ft.Icons.LEADERBOARD_ROUNDED, color=COLOR_MARCA),
-                label="Top-N",
-            ),
-            ft.NavigationRailDestination(
-                icon=ft.Icon(ft.Icons.SWAP_HORIZ_OUTLINED, color=COLOR_NAV_MUTED),
-                selected_icon=ft.Icon(ft.Icons.SWAP_HORIZ_ROUNDED, color=COLOR_MARCA),
-                label="Alternativas",
-            ),
-            ft.NavigationRailDestination(
-                icon=ft.Icon(ft.Icons.COMPARE_ARROWS_OUTLINED, color=COLOR_NAV_MUTED),
-                selected_icon=ft.Icon(ft.Icons.COMPARE_ARROWS_ROUNDED, color=COLOR_MARCA),
-                label="Comparativa",
-            ),
-        ],
-        on_change=al_cambiar_rail,
-    )
-
-    # Cargar vista inicial (Inicio)
-    contenedor_pantalla.content = obtener_vista(0)
-
-    # 7. Composición global de la página
-    cuerpo_principal = ft.Row(
-        controls=[
-            rail_navegacion,
-            contenedor_pantalla,
-        ],
-        spacing=0,
-        expand=True,
-    )
-
-    page.add(
-        ft.Column(
-            controls=[
-                panel_estado,
-                cuerpo_principal,
-            ],
-            spacing=0,
-            expand=True,
-        )
-    )
+def main(page: ft.Page) -> None:
+    """Punto de entrada de la aplicación de escritorio Flet."""
+    AplicacionInventario(page).montar()
 
 
 if __name__ == "__main__":
