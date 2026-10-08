@@ -12,6 +12,7 @@ baseline vs optimizado y secuencial vs pool de procesos, con datos reales de uso
 | Spans | `pool.armar_fragmentos`, `pool.evaluar`, `lotes.procesar_archivo` | `span()` en los procesadores |
 | Etiquetas | `estrategia`, `productos`, `pedidos`, `dataset`, `tamano_lote`, `workers`, `concurrente`, `cubiertos` | `MotorInventario._etiquetar` |
 | Errores | Excepciones de las operaciones, `BrokenProcessPool`, `logging.error(...)` | `src/observabilidad/apm.py` |
+| Métricas | CPU y memoria del proceso y del sistema, cada 30 s (requiere `psutil`) | Agente de `elastic-apm` |
 
 Si una operación se llama dentro de otra transacción (por ejemplo, el escenario completo
 de la pantalla de inicio o `scripts/demo_apm.py`), aparece como un span de esa transacción.
