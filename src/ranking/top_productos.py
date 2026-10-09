@@ -10,13 +10,14 @@ from __future__ import annotations
 import heapq
 from collections.abc import Sequence
 
+from src.inventario.protocolo import Catalogo
 from src.modelos.pedido import Pedido
 from src.modelos.producto import Producto
 
 
 def calcular_top_solicitados_lineal(
     pedidos: Sequence[Pedido],
-    catalogo,
+    catalogo: Catalogo,
     k: int = 10,
 ) -> list[tuple[Producto, int]]:
     """Calcula los k productos más solicitados utilizando ordenamiento total (Baseline).
@@ -49,17 +50,17 @@ def calcular_top_solicitados_lineal(
     top_k_items = items_ordenados[:k]
 
     resultado: list[tuple[Producto, int]] = []
-    for id_prod, total in top_k_items:
-        prod = catalogo.buscar_por_id(id_prod)
-        if prod is not None:
-            resultado.append((prod, total))
+    for id_producto, total in top_k_items:
+        producto = catalogo.buscar_por_id(id_producto)
+        if producto is not None:
+            resultado.append((producto, total))
 
     return resultado
 
 
 def calcular_top_solicitados_heap(
     pedidos: Sequence[Pedido],
-    catalogo,
+    catalogo: Catalogo,
     k: int = 10,
 ) -> list[tuple[Producto, int]]:
     """Calcula los k productos más solicitados utilizando un Min/Max Heap (Optimizado).
@@ -93,17 +94,17 @@ def calcular_top_solicitados_heap(
     )
 
     resultado: list[tuple[Producto, int]] = []
-    for id_prod, total in top_k_items:
-        prod = catalogo.buscar_por_id(id_prod)
-        if prod is not None:
-            resultado.append((prod, total))
+    for id_producto, total in top_k_items:
+        producto = catalogo.buscar_por_id(id_producto)
+        if producto is not None:
+            resultado.append((producto, total))
 
     return resultado
 
 
 def calcular_top_solicitados(
     pedidos: Sequence[Pedido],
-    catalogo,
+    catalogo: Catalogo,
     k: int = 10,
     metodo: str = "heap",
 ) -> list[tuple[Producto, int]]:

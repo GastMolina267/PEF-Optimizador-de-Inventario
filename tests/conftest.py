@@ -177,7 +177,7 @@ def productos_muestra() -> list[Producto]:
 
 @pytest.fixture
 def pedidos_muestra() -> list[Pedido]:
-    """Conjunto controlado de pedidos con combinaciones de líneas cubiertas, parciales y faltantes."""
+    """Pedidos controlados con líneas cubiertas, parciales y faltantes."""
     return [
         Pedido(
             id=101,

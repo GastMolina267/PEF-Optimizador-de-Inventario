@@ -23,18 +23,19 @@ class CatalogoLineal:
         """
         self._productos: list[Producto] = []
         if productos:
-            for prod in productos:
-                self.agregar(prod)
+            for producto in productos:
+                self.agregar(producto)
 
     def agregar(self, producto: Producto) -> None:
         """Agrega un producto al catálogo previa verificación de identificador único.
 
         Complejidad temporal: O(n) debido a la verificación de unicidad en la lista.
         """
-        for p in self._productos:
-            if p.id == producto.id:
+        for existente in self._productos:
+            if existente.id == producto.id:
                 raise ValueError(
-                    f"Conflicto de identificador: ya existe un producto con id #{producto.id} ({p.nombre})"
+                    f"Conflicto de identificador: ya existe un producto con id #{producto.id} "
+                    f"({existente.nombre})"
                 )
         self._productos.append(producto)
 
@@ -51,7 +52,8 @@ class CatalogoLineal:
     def buscar_por_nombre(self, texto: str) -> list[Producto]:
         """Busca productos cuyo nombre contenga el texto buscado (insensible a mayúsculas).
 
-        Complejidad temporal: O(n * L), donde n es la cantidad de productos y L la longitud media del texto.
+        Complejidad temporal: O(n * L), con n la cantidad de productos y L la longitud media
+        del nombre.
         """
         texto_norm = texto.lower()
         coincidencias: list[Producto] = []
@@ -109,7 +111,7 @@ class CatalogoLineal:
 
     def clonar(self) -> CatalogoLineal:
         """Genera una réplica profunda e independiente del catálogo lineal."""
-        copias = [p.clonar() for p in self._productos]
+        copias = [producto.clonar() for producto in self._productos]
         catalogo_nuevo = CatalogoLineal()
         catalogo_nuevo._productos = copias
         return catalogo_nuevo

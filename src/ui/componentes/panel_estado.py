@@ -25,6 +25,9 @@ from src.ui.tema import (
     padding_symmetric,
 )
 
+# Posición del conmutador Baseline/Optimizado dentro de la fila del panel.
+POSICION_CONMUTADOR = 4
+
 
 class PanelEstado(ft.Container):
     """Barra superior persistente de métricas y control de estrategia."""
@@ -75,7 +78,9 @@ class PanelEstado(ft.Container):
             icon=ft.Icons.HELP_OUTLINE,
             icon_color=COLOR_MARCA,
             icon_size=18,
-            tooltip="¿Qué cambia entre Modo Optimizado O(1) y Modo Baseline? Clic para ver comparativa",
+            tooltip=(
+                "¿Qué cambia entre Modo Optimizado O(1) y Modo Baseline? Clic para ver comparativa"
+            ),
             on_click=lambda _: self._abrir_ayuda_modos(),
         )
 
@@ -180,8 +185,8 @@ class PanelEstado(ft.Container):
     def _reconstruir_conmutador(self) -> None:
         self._pintar_conmutador()
         fila = self.content
-        if isinstance(fila, ft.Row) and len(fila.controls) >= 5:
-            fila.controls[4] = ft.Row(
+        if isinstance(fila, ft.Row) and len(fila.controls) > POSICION_CONMUTADOR:
+            fila.controls[POSICION_CONMUTADOR] = ft.Row(
                 controls=[self.btn_baseline, self.btn_optimizado, self.btn_info_modos],
                 spacing=4,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,

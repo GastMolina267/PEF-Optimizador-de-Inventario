@@ -71,7 +71,7 @@ def leer_productos_streaming_jsonl(
     ruta: str | Path,
     tamano_buffer: int = TAMANO_BUFFER_DEFECTO,
 ) -> Iterator[Producto]:
-    """Lee productos desde un archivo .jsonl línea a línea en streaming sin cargar el archivo en RAM.
+    """Lee productos de un archivo .jsonl en streaming, sin cargar el archivo en memoria.
 
     Cada línea debe ser un objeto JSON válido con campos id, nombre, categoria, stock, precio.
     Lanza ValueError si alguna línea contiene JSON inválido o campos obligatorios faltantes.
@@ -86,7 +86,7 @@ def leer_productos_streaming_jsonl(
             if not linea_limpia:
                 continue
             try:
-                d = json.loads(linea_limpia)
+                datos = json.loads(linea_limpia)
             except json.JSONDecodeError as e:
                 raise ValueError(
                     f"Error de sintaxis JSON en línea {num_linea} de {path_archivo.name}: {e}"
@@ -94,15 +94,16 @@ def leer_productos_streaming_jsonl(
 
             try:
                 yield Producto(
-                    id=int(d["id"]),
-                    nombre=str(d["nombre"]),
-                    categoria=str(d["categoria"]),
-                    stock=int(d["stock"]),
-                    precio=float(d["precio"]),
+                    id=int(datos["id"]),
+                    nombre=str(datos["nombre"]),
+                    categoria=str(datos["categoria"]),
+                    stock=int(datos["stock"]),
+                    precio=float(datos["precio"]),
                 )
             except (KeyError, TypeError, ValueError) as e:
                 raise ValueError(
-                    f"Estructura inválida de Producto en línea {num_linea} de {path_archivo.name}: {e}"
+                    f"Estructura inválida de Producto en línea {num_linea} de "
+                    f"{path_archivo.name}: {e}"
                 ) from e
 
 
@@ -112,8 +113,8 @@ def leer_pedidos_streaming_jsonl(
 ) -> Iterator[Pedido]:
     """Lee pedidos desde un archivo .jsonl línea a línea en streaming sin materializar la lista.
 
-    Cada línea debe ser un objeto JSON con id y lineas (lista de objetos con id_producto y cantidad).
-    Lanza ValueError si alguna línea contiene datos corruptos.
+    Cada línea debe ser un objeto JSON con ``id`` y ``lineas`` (lista de objetos con
+    ``id_producto`` y ``cantidad``). Lanza ValueError si alguna línea está corrupta.
     """
     path_archivo = Path(ruta)
     if not path_archivo.is_file():
@@ -125,7 +126,7 @@ def leer_pedidos_streaming_jsonl(
             if not linea_limpia:
                 continue
             try:
-                d = json.loads(linea_limpia)
+                datos = json.loads(linea_limpia)
             except json.JSONDecodeError as e:
                 raise ValueError(
                     f"Error de sintaxis JSON en línea {num_linea} de {path_archivo.name}: {e}"
@@ -134,15 +135,16 @@ def leer_pedidos_streaming_jsonl(
             try:
                 lineas_pedido = [
                     LineaPedido(
-                        id_producto=int(lp["id_producto"]),
-                        cantidad=int(lp["cantidad"]),
+                        id_producto=int(linea_datos["id_producto"]),
+                        cantidad=int(linea_datos["cantidad"]),
                     )
-                    for lp in d.get("lineas", [])
+                    for linea_datos in datos.get("lineas", [])
                 ]
-                yield Pedido(id=int(d["id"]), lineas=lineas_pedido)
+                yield Pedido(id=int(datos["id"]), lineas=lineas_pedido)
             except (KeyError, TypeError, ValueError) as e:
                 raise ValueError(
-                    f"Estructura inválida de Pedido en línea {num_linea} de {path_archivo.name}: {e}"
+                    f"Estructura inválida de Pedido en línea {num_linea} de "
+                    f"{path_archivo.name}: {e}"
                 ) from e
 
 
@@ -156,17 +158,17 @@ def escribir_productos_jsonl(
     lineas = (
         json.dumps(
             {
-                "id": p.id,
-                "nombre": p.nombre,
-                "categoria": p.categoria,
-                "stock": p.stock,
-                "precio": p.precio,
+                "id": elemento.id,
+                "nombre": elemento.nombre,
+                "categoria": elemento.categoria,
+                "stock": elemento.stock,
+                "precio": elemento.precio,
             },
             ensure_ascii=False,
             separators=(",", ":"),
         )
         + "\n"
-        for p in productos
+        for elemento in productos
     )
     return escribir_lineas_con_buffer(ruta, lineas, tamano_buffer, tamano_lote)
 
@@ -181,18 +183,61 @@ def escribir_pedidos_jsonl(
     lineas = (
         json.dumps(
             {
-                "id": p.id,
+                "id": elemento.id,
                 "lineas": [
-                    {"id_producto": lp.id_producto, "cantidad": lp.cantidad} for lp in p.lineas
+                    {"id_producto": linea_datos.id_producto, "cantidad": linea_datos.cantidad}
+                    for linea_datos in elemento.lineas
                 ],
             },
             ensure_ascii=False,
             separators=(",", ":"),
         )
         + "\n"
-        for p in pedidos
+        for elemento in pedidos
     )
     return escribir_lineas_con_buffer(ruta, lineas, tamano_buffer, tamano_lote)
+
+
+def _fila_picking_desde_diccionario(datos: dict[str, Any]) -> list[Any]:
+    """Fila CSV desde ``a_diccionario()`` o un diccionario equivalente."""
+    if "pedidos_solicitantes" in datos:
+        total_pedidos = len(datos["pedidos_solicitantes"])
+    else:
+        total_pedidos = datos.get("total_pedidos", 0)
+    return [
+        datos.get("id_producto", 0),
+        datos.get("nombre_producto", datos.get("nombre", "")),
+        datos.get("categoria", ""),
+        datos.get("cantidad_total", datos.get("total_demandado", 0)),
+        datos.get("stock_disponible", 0),
+        total_pedidos,
+    ]
+
+
+def _fila_picking_desde_atributos(item: Any) -> list[Any]:
+    """Fila CSV desde un objeto con atributos (por ejemplo, un ítem sin ``a_diccionario``)."""
+    producto = getattr(item, "producto", None)
+    if hasattr(item, "demandas_por_pedido"):
+        total_pedidos = len(item.demandas_por_pedido)
+    else:
+        total_pedidos = getattr(item, "total_pedidos", 0)
+    return [
+        getattr(item, "id_producto", 0),
+        producto.nombre if producto else getattr(item, "nombre", ""),
+        producto.categoria if producto else getattr(item, "categoria", ""),
+        getattr(item, "cantidad_total", getattr(item, "total_demandado", 0)),
+        producto.stock if producto else getattr(item, "stock_disponible", 0),
+        total_pedidos,
+    ]
+
+
+def _fila_picking(item: Any) -> list[Any]:
+    """Convierte un ítem de picking (objeto o diccionario) en una fila del CSV."""
+    if hasattr(item, "a_diccionario"):
+        return _fila_picking_desde_diccionario(item.a_diccionario())
+    if isinstance(item, dict):
+        return _fila_picking_desde_diccionario(item)
+    return _fila_picking_desde_atributos(item)
 
 
 def exportar_picking_csv_con_buffer(
@@ -228,39 +273,7 @@ def exportar_picking_csv_con_buffer(
         )
 
         for item in items_picking:
-            if hasattr(item, "a_diccionario"):
-                d = item.a_diccionario()
-                id_prod = d.get("id_producto", 0)
-                nombre = d.get("nombre_producto", "")
-                cat = d.get("categoria", "")
-                demandado = d.get("cantidad_total", 0)
-                stock = d.get("stock_disponible", 0)
-                pedidos_cnt = len(d.get("pedidos_solicitantes", []))
-            elif isinstance(item, dict):
-                id_prod = item.get("id_producto", 0)
-                nombre = item.get("nombre_producto", item.get("nombre", ""))
-                cat = item.get("categoria", "")
-                demandado = item.get("cantidad_total", item.get("total_demandado", 0))
-                stock = item.get("stock_disponible", 0)
-                pedidos_cnt = (
-                    len(item.get("pedidos_solicitantes", []))
-                    if "pedidos_solicitantes" in item
-                    else item.get("total_pedidos", 0)
-                )
-            else:
-                prod = getattr(item, "producto", None)
-                id_prod = getattr(item, "id_producto", 0)
-                nombre = prod.nombre if prod else getattr(item, "nombre", "")
-                cat = prod.categoria if prod else getattr(item, "categoria", "")
-                demandado = getattr(item, "cantidad_total", getattr(item, "total_demandado", 0))
-                stock = prod.stock if prod else getattr(item, "stock_disponible", 0)
-                pedidos_cnt = (
-                    len(getattr(item, "demandas_por_pedido", []))
-                    if hasattr(item, "demandas_por_pedido")
-                    else getattr(item, "total_pedidos", 0)
-                )
-
-            escritor.writerow([id_prod, nombre, cat, demandado, stock, pedidos_cnt])
+            escritor.writerow(_fila_picking(item))
             filas_escritas += 1
 
     return filas_escritas

@@ -21,11 +21,13 @@ classifiers = [
 ]
 dependencies = [
     "flet>=0.25.0",
+    "flet-desktop>=0.25.0",
     "elastic-apm>=6.26.0",
     "psutil>=5.9.0",
 ]
 
 [project.optional-dependencies]
+# Tests, lint y profilers. Las versiones exactas quedan fijadas en uv.lock.
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
@@ -33,9 +35,13 @@ dev = [
     "line_profiler>=4.1.0",
     "memory_profiler>=0.61.0",
     "scalene>=1.5.0",
+    "ruff>=0.4.0",
+    "complexipy>=5.0",
+]
+# Empaquetado del ejecutable (PyInstaller) y del paquete Python.
+empaquetado = [
     "pyinstaller>=6.4.0",
     "build>=1.1.0",
-    "ruff>=0.4.0",
 ]
 
 [project.scripts]
@@ -85,14 +91,28 @@ select = [
     "B",    # flake8-bugbear (errores probables)
     "SIM",  # flake8-simplify
     "UP",   # pyupgrade (sintaxis moderna para py310)
+    "D",    # pydocstyle (docstrings)
+    "C90",  # mccabe (complejidad ciclomática)
+    "PLR2004",  # números mágicos: usar constantes con nombre
 ]
-# E501: las líneas largas que el formateador no puede partir (strings y comentarios)
-# se corrigen a mano en la fase F7 (legibilidad). Ver docs/planificacion-parcial-2.md.
-ignore = ["E501"]
+ignore = [
+    "D107",  # los argumentos del constructor se documentan en la docstring de la clase
+]
 
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E402"]
 "benchmarks/perfilar_scalene.py" = ["E402"]
+# En los tests el nombre de la función ya describe el caso y los valores esperados
+# son literales a propósito.
+"tests/**" = ["D1", "PLR2004"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pydocstyle]
+# Estilo Google con secciones en español (Argumentos, Retorna, Lanza): las interpreta
+# Sphinx con napoleon_custom_sections (fase F8).
+convention = "google"
 
 [tool.ruff.lint.isort]
 known-first-party = ["src", "automations", "benchmarks", "scripts"]
@@ -100,3 +120,8 @@ known-first-party = ["src", "automations", "benchmarks", "scripts"]
 [tool.ruff.format]
 quote-style = "double"
 line-ending = "lf"
+
+[tool.complexipy]
+# Complejidad cognitiva máxima por función: el mismo umbral que usa SonarQube (S3776).
+paths = ["src", "automations", "benchmarks", "scripts", "main.py"]
+max-complexity-allowed = 15

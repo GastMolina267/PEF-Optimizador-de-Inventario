@@ -162,7 +162,7 @@ class TestOrdenamientoYDesplieguePantallas:
         assert len(pantalla.col_tabla_comparativa.controls) == 4
 
     def test_alternativas_grande_no_recursion_error(self):
-        """Verifica que buscar_alternativas en un dataset masivo (10.000 items) no desborde la pila."""
+        """buscar_alternativas no desborda la pila con un dataset de 10.000 productos."""
         motor_grande = MotorInventario()
         motor_grande.cargar_dataset(DATASETS_DIR / "grande.json")
         res = motor_grande.buscar_alternativas("Ferretería y Herramientas", 45000.0)

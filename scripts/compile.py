@@ -46,8 +46,19 @@ def limpiar_directorios() -> None:
             spec_file.unlink()
 
 
+# Modo de empaquetado -> flag de PyInstaller. El comando solo recibe valores de esta
+# tabla, nunca el texto que llega por línea de comandos.
+FLAGS_MODO = {"onedir": "--onedir", "onefile": "--onefile"}
+
+
 def construir_comando(mode: str, debug: bool) -> list[str]:
-    """Genera la lista de argumentos para ejecutar PyInstaller."""
+    """Genera la lista de argumentos para ejecutar PyInstaller.
+
+    Lanza:
+        ValueError: Si ``mode`` no es ``onedir`` ni ``onefile``.
+    """
+    if mode not in FLAGS_MODO:
+        raise ValueError(f"Modo de empaquetado inválido: {mode!r}")
     sep = ";" if sys.platform.startswith("win") else ":"
 
     cmd = [
@@ -57,7 +68,7 @@ def construir_comando(mode: str, debug: bool) -> list[str]:
         "--noconfirm",
         "--name",
         APP_NAME,
-        f"--{mode}",
+        FLAGS_MODO[mode],
     ]
 
     # Modo sin consola en producción a menos que se active debug
@@ -111,12 +122,13 @@ def construir_comando(mode: str, debug: bool) -> list[str]:
 
 
 def main() -> int:
+    """Arma y ejecuta el comando de PyInstaller; devuelve su código de salida."""
     parser = argparse.ArgumentParser(
         description="Compila y empaqueta el Optimizador de Inventario usando PyInstaller."
     )
     parser.add_argument(
         "--mode",
-        choices=["onedir", "onefile"],
+        choices=sorted(FLAGS_MODO),
         default="onedir",
         help="Modo de empaquetado: 'onedir' (recomendado) o 'onefile'.",
     )
@@ -142,7 +154,7 @@ def main() -> int:
         limpiar_directorios()
 
     cmd = construir_comando(args.mode, args.debug)
-    cmd_str = " ".join(f'"{c}"' if " " in c else c for c in cmd)
+    comando_legible = " ".join(f'"{c}"' if " " in c else c for c in cmd)
 
     print("=" * 70)
     print("OPTMIZADOR DE INVENTARIO — COMPILACIÓN Y EMPAQUETADO")
@@ -150,7 +162,7 @@ def main() -> int:
     print(f"Sistema Operativo: {sys.platform}")
     print(f"Modo:              {args.mode}")
     print(f"Punto de Entrada:  {ENTRY_POINT.name}")
-    print(f"Comando PyInstaller:\n  {cmd_str}\n")
+    print(f"Comando PyInstaller:\n  {comando_legible}\n")
 
     if args.dry_run:
         print("[DRY-RUN] Comando validado con éxito. No se realizaron cambios.")

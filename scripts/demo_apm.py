@@ -54,6 +54,7 @@ def provocar_error_de_carga() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Envía las vueltas de actividad y el error de prueba; devuelve el código de salida."""
     parser = argparse.ArgumentParser(description="Actividad de ejemplo para Elastic APM.")
     parser.add_argument("--vueltas", type=int, default=3, choices=range(1, 21))
     args = parser.parse_args(argv)

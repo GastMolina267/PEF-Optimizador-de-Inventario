@@ -26,9 +26,13 @@ on:
 
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+  UV_PYTHON_PREFERENCE: only-system
+  # Inputs del disparo manual como variables de entorno: nunca se interpolan en scripts.
+  MODO_EMPAQUETADO: ${{ inputs.mode || 'onedir' }}
 
+# Solo lectura por defecto; el job que publica el Release pide escritura.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # =========================================================================
@@ -52,29 +56,34 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Python 3.11
+      - name: Configurar Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: "3.13"
 
-      - name: Instalar dependencias y empaquetador
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Instalar dependencias y empaquetador desde uv.lock
+        run: uv sync --locked --no-build --extra empaquetado
 
       - name: Compilar aplicación con PyInstaller (Windows)
         if: matrix.os == 'windows-latest'
+        env:
+          ARCHIVO: ${{ matrix.archive_file }}
         run: |
-          python scripts/compile.py --mode ${{ inputs.mode || 'onedir' }} --clean
-          Compress-Archive -Path dist/OptimizadorInventario* -DestinationPath dist/${{ matrix.archive_file }}
+          uv run --no-sync python scripts/compile.py --mode "$env:MODO_EMPAQUETADO" --clean
+          Compress-Archive -Path dist/OptimizadorInventario* -DestinationPath "dist/$env:ARCHIVO"
 
       - name: Compilar aplicación con PyInstaller (Linux)
         if: matrix.os == 'ubuntu-latest'
+        env:
+          ARCHIVO: ${{ matrix.archive_file }}
         run: |
-          python scripts/compile.py --mode ${{ inputs.mode || 'onedir' }} --clean
-          tar -czvf dist/${{ matrix.archive_file }} -C dist $(ls dist)
+          uv run --no-sync python scripts/compile.py --mode "$MODO_EMPAQUETADO" --clean
+          tar -czvf "dist/$ARCHIVO" -C dist $(ls dist)
 
       - name: Subir binario compilado como artefacto
         uses: actions/upload-artifact@v4
@@ -93,20 +102,11 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Instalar herramientas de empaquetado estándar
-        run: |
-          python -m pip install --upgrade pip
-          pip install build
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
 
       - name: Compilar Wheel y SDist (PEP 517)
-        run: |
-          python -m build
+        run: uv build
 
       - name: Subir paquetes Python como artefactos
         uses: actions/upload-artifact@v4
@@ -123,6 +123,8 @@ jobs:
     needs: [build-binaries, build-python-packages]
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
@@ -140,10 +142,18 @@ jobs:
 
       - name: Determinar etiqueta de versión (tag)
         id: resolver_tag
+        env:
+          # El tag lo escribe quien dispara el workflow: va por variable de entorno y se
+          # valida, nunca se interpola en el script (evita inyección de comandos).
+          TAG_MANUAL: ${{ inputs.tag_name }}
         run: |
-          if [ -n "${{ inputs.tag_name }}" ]; then
-            TAG="${{ inputs.tag_name }}"
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [ -n "$TAG_MANUAL" ]; then
+            if [[ ! "$TAG_MANUAL" =~ ^v[0-9A-Za-z._-]+$ ]]; then
+              echo "::error::tag_name inválido: debe empezar con v y usar solo letras, números, . _ -"
+              exit 1
+            fi
+            TAG="$TAG_MANUAL"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
           else
             VERSION=$(python -c "import re; m=re.search(r'version\s*=\s*\"([^\"]+)\"', open('pyproject.toml').read()); print(m.group(1))")
@@ -153,7 +163,7 @@ jobs:
           echo "Etiqueta para el Release: $TAG"
 
       - name: Publicar Release en GitHub con Binarios Adjuntos
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: ${{ steps.resolver_tag.outputs.tag }}
           target_commitish: ${{ github.sha }}

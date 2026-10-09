@@ -112,7 +112,7 @@ def test_propiedad_busqueda_por_id_y_nombre(prods: list[Producto], consulta_id: 
 @settings(max_examples=25, deadline=None)
 @given(data=st.data())
 def test_propiedad_top_n_sort_vs_heap(data):
-    """calcular_top_solicitados_lineal y calcular_top_solicitados_heap producen idéntico ranking."""
+    """Las versiones lineal y heap de calcular_top_solicitados dan el mismo ranking."""
     prods = data.draw(lista_productos_unicos(min_size=5, max_size=20))
     pedidos = data.draw(lista_pedidos_sobre_productos(prods, min_pedidos=2, max_pedidos=10))
     k = data.draw(st.integers(min_value=1, max_value=10))
@@ -156,7 +156,7 @@ def test_propiedad_agrupacion_batch_picking(data):
 @settings(max_examples=20, deadline=None)
 @given(data=st.data())
 def test_propiedad_procesamiento_secuencial_vs_concurrente_sin_descuento(data):
-    """Sin descuento de stock, el procesamiento secuencial y concurrente arrojan resultados idénticos."""
+    """Sin descuento de stock, el secuencial y el concurrente dan resultados idénticos."""
     prods = data.draw(lista_productos_unicos(min_size=3, max_size=15))
     pedidos = data.draw(lista_pedidos_sobre_productos(prods, min_pedidos=1, max_pedidos=8))
 

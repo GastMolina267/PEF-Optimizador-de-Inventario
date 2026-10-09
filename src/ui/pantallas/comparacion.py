@@ -19,8 +19,6 @@ from src.ui.tema import (
     COLOR_BORDE,
     COLOR_EXITO,
     COLOR_PELIGRO,
-    COLOR_PRIMARIO,
-    COLOR_SECUNDARIO,
     COLOR_TARJETA,
     COLOR_TEXTO_PRIMARIO,
     COLOR_TEXTO_SECUNDARIO,
@@ -83,15 +81,25 @@ class PantallaComparacion(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Desafío Experimental: Baseline vs. Optimizado",
-                    "Medición empírica rigurosa de tiempo, memoria y aceleración (Speedup) sobre el mismo dataset",
+                    (
+                        "Medición empírica rigurosa de tiempo, memoria y aceleración (Speedup) "
+                        "sobre el mismo dataset"
+                    ),
                     self.btn_comparar,
                 ),
                 crear_banner_explicativo(
                     titulo="Desafío Experimental y Comparación Obligatoria",
-                    descripcion="Medición empírica rigurosa de las 4 operaciones fundamentales sobre el mismo dataset para evaluar la aceleración real (Speedup = Tiempo_base / Tiempo_opt).",
+                    descripcion=(
+                        "Medición empírica rigurosa de las 4 operaciones fundamentales sobre el "
+                        "mismo dataset para evaluar la aceleración real (Speedup = Tiempo_base / "
+                        "Tiempo_opt)."
+                    ),
                     complejidad_base="O(n), O(N log N), O(P·L), O(2^N)",
                     complejidad_opt="O(1), O(N log k), Multi-Proceso, O(N·P)",
-                    por_que_importa="Satisface el requisito central de la rúbrica del parcial y suministra la evidencia empírica directa para la exposición oral.",
+                    por_que_importa=(
+                        "Satisface el requisito central de la rúbrica del parcial y suministra la "
+                        "evidencia empírica directa para la exposición oral."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -115,7 +123,7 @@ class PantallaComparacion(PantallaBase):
         actualizar_control(self)
 
     def al_cambiar_estrategia_global(self, nueva_estrategia: str) -> None:
-        pass
+        """No hace nada: la comparativa siempre mide las dos estrategias."""
 
     def _aplicar_ordenamiento(self):
         if not self.filas_medidas:
@@ -138,10 +146,10 @@ class PantallaComparacion(PantallaBase):
         self._renderizar_tabla()
 
     def _ejecutar_comparativa(self):
-        prods = self.motor.catalogo.obtener_todos()
-        peds = self.motor.pedidos
+        productos = self.motor.catalogo.obtener_todos()
+        pedidos = self.motor.pedidos
 
-        if not prods or not peds:
+        if not productos or not pedidos:
             self.notificar(
                 "Cargue un dataset primero desde la pantalla de Inicio.", ft.Icons.WARNING
             )
@@ -155,7 +163,7 @@ class PantallaComparacion(PantallaBase):
         palabra_muestra = "a"
         t0 = time.perf_counter()
         for _ in range(5):
-            _ = [p for p in prods if palabra_muestra in p.nombre.lower()]
+            _ = [p for p in productos if palabra_muestra in p.nombre.lower()]
         t_busq_base = ((time.perf_counter() - t0) / 5) * 1000.0
 
         t0 = time.perf_counter()
@@ -166,24 +174,24 @@ class PantallaComparacion(PantallaBase):
         # 2. Top-N (Sort vs Heap)
         k = 5
         t0 = time.perf_counter()
-        calcular_top_solicitados_lineal(peds, self.motor.catalogo, k=k)
+        calcular_top_solicitados_lineal(pedidos, self.motor.catalogo, k=k)
         t_top_base = (time.perf_counter() - t0) * 1000.0
 
         t0 = time.perf_counter()
-        calcular_top_solicitados_heap(peds, self.motor.catalogo, k=k)
+        calcular_top_solicitados_heap(pedidos, self.motor.catalogo, k=k)
         t_top_opt = (time.perf_counter() - t0) * 1000.0
 
         # 3. Preparación de pedidos (Secuencial vs Concurrente)
         t0 = time.perf_counter()
-        _ = procesar_pedidos_secuencial(self.motor.catalogo, peds, descontar_stock=False)
+        _ = procesar_pedidos_secuencial(self.motor.catalogo, pedidos, descontar_stock=False)
         t_ped_base = (time.perf_counter() - t0) * 1000.0
 
         t0 = time.perf_counter()
-        _ = procesar_pedidos_concurrente(self.motor.catalogo, peds, descontar_stock=False)
+        _ = procesar_pedidos_concurrente(self.motor.catalogo, pedidos, descontar_stock=False)
         t_ped_opt = (time.perf_counter() - t0) * 1000.0
 
         # 4. Alternativas (Recursivo puro vs DP Memoizado)
-        cat_ejemplo = prods[0].categoria
+        cat_ejemplo = productos[0].categoria
         t0 = time.perf_counter()
         _ = self.motor.buscar_alternativas(
             cat_ejemplo, 35000.0, forzar_memoizacion=False, max_combinaciones=10
@@ -215,29 +223,21 @@ class PantallaComparacion(PantallaBase):
                 "Aceleración Búsqueda",
                 f"{sp_busq:.1f}x",
                 "Hash O(1) vs. Lista O(n)",
-                ft.Icons.ROCKET_LAUNCH,
-                COLOR_PRIMARIO,
             ),
             crear_tarjeta_kpi(
                 "Aceleración Top-N",
                 f"{sp_top:.1f}x",
                 "Heap vs. Sort total",
-                ft.Icons.TRENDING_UP,
-                COLOR_SECUNDARIO,
             ),
             crear_tarjeta_kpi(
                 "Aceleración Alternativas",
                 f"{sp_alt:.1f}x",
                 "DP Memo vs. Recursión pura",
-                ft.Icons.PSYCHOLOGY,
-                COLOR_EXITO,
             ),
             crear_tarjeta_kpi(
                 "Memoria Heap Activa",
                 f"{mem_mb:.2f} MB",
                 "Estructuras en memoria",
-                ft.Icons.MEMORY,
-                COLOR_PRIMARIO,
             ),
         ]
 
@@ -277,8 +277,8 @@ class PantallaComparacion(PantallaBase):
 
         self.on_actualizar_panel(
             dataset="activo",
-            n_productos=len(prods),
-            n_pedidos=len(peds),
+            n_productos=len(productos),
+            n_pedidos=len(pedidos),
             estrategia="comparativa",
             tiempo_ms=t_busq_opt + t_top_opt + t_ped_opt + t_alt_opt,
             memoria_mb=mem_mb,

@@ -9,6 +9,7 @@ from __future__ import annotations
 import time
 from collections.abc import Sequence
 
+from src.inventario.protocolo import Catalogo
 from src.modelos.pedido import (
     Pedido,
     PoliticaDescuento,
@@ -24,7 +25,7 @@ from src.pedidos.evaluador import (
 
 
 def procesar_pedidos_secuencial(
-    catalogo,
+    catalogo: Catalogo,
     pedidos: Sequence[Pedido],
     descontar_stock: bool = False,
     politica_descuento: PoliticaDescuento | str = PoliticaDescuento.SOLO_CUBIERTOS,

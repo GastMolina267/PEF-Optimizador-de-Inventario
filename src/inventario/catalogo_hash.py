@@ -1,9 +1,10 @@
 """Catálogo de inventario optimizado basado en Tablas Hash (O(1)).
 
-Utiliza un diccionario principal (hash map) para acceso por identificador en tiempo O(1) promedio,
-un índice secundario agrupado por categoría en O(1), y un índice invertido de palabras para acelerar
-búsquedas por texto.
-Mantiene exactamente la misma API pública que CatalogoLineal para permitir la sustitución transparente.
+Usa un diccionario principal (hash map) para acceder por identificador en O(1) promedio,
+un índice secundario por categoría en O(1) y un índice invertido de palabras para acelerar
+las búsquedas por texto.
+
+Mantiene la misma API pública que CatalogoLineal, así que uno reemplaza al otro sin cambios.
 """
 
 from __future__ import annotations
@@ -27,8 +28,8 @@ class CatalogoHash:
         self._indice_palabras: dict[str, set[int]] = {}
 
         if productos:
-            for prod in productos:
-                self.agregar(prod)
+            for producto in productos:
+                self.agregar(producto)
 
     def _indexar_nombre(self, producto: Producto) -> None:
         """Descompone el nombre del producto en palabras clave para el índice invertido."""
@@ -85,32 +86,31 @@ class CatalogoHash:
         texto_norm = texto.lower().strip()
         if not texto_norm:
             return []
+        # Candidatos por intersección de conjuntos del índice invertido (hash, O(1) por palabra),
+        # verificando la subcadena para dar exactamente lo mismo que CatalogoLineal.
+        coincidencias = [
+            self._productos_por_id[id_producto]
+            for id_producto in self._candidatos_por_indice(texto_norm)
+            if texto_norm in self._productos_por_id[id_producto].nombre.lower()
+        ]
+        # Fallback: el índice no encontró nada (p. ej. la consulta es parte de una palabra).
+        return coincidencias or self._buscar_por_subcadena(texto_norm)
 
-        palabras_busqueda = re.findall(r"\w+", texto_norm)
-        if palabras_busqueda:
-            # Candidatos por intersección de conjuntos hash O(1)
-            conjuntos_candidatos = [
-                self._indice_palabras.get(palabra, set()) for palabra in palabras_busqueda
-            ]
-            if any(len(c) == 0 for c in conjuntos_candidatos):
-                # Si alguna palabra no existe en ningún producto, comprobamos subcadena
-                candidatos_ids = set()
-            else:
-                candidatos_ids = set.intersection(*conjuntos_candidatos)
+    def _candidatos_por_indice(self, texto_norm: str) -> set[int]:
+        """Ids de productos cuyo nombre contiene todas las palabras de la consulta."""
+        conjuntos = [
+            self._indice_palabras.get(palabra, set()) for palabra in re.findall(r"\w+", texto_norm)
+        ]
+        if not conjuntos or not all(conjuntos):
+            return set()
+        return set.intersection(*conjuntos)
 
-            # Si el índice invertido arrojó resultados, los devolvemos verificando la subcadena
-            if candidatos_ids:
-                coincidencias = [
-                    self._productos_por_id[pid]
-                    for pid in candidatos_ids
-                    if texto_norm in self._productos_por_id[pid].nombre.lower()
-                ]
-                if coincidencias:
-                    return coincidencias
-
-        # Fallback de coincidencia general por subcadena sobre el universo
+    def _buscar_por_subcadena(self, texto_norm: str) -> list[Producto]:
+        """Recorre todo el catálogo comparando por subcadena (O(n · m))."""
         return [
-            prod for prod in self._productos_por_id.values() if texto_norm in prod.nombre.lower()
+            producto
+            for producto in self._productos_por_id.values()
+            if texto_norm in producto.nombre.lower()
         ]
 
     def buscar_por_categoria(self, categoria: str) -> list[Producto]:

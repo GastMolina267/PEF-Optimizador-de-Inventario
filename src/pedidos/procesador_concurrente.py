@@ -31,6 +31,7 @@ from collections.abc import Sequence
 from concurrent.futures import Executor
 from concurrent.futures.process import BrokenProcessPool
 
+from src.inventario.protocolo import Catalogo
 from src.modelos.pedido import (
     Pedido,
     PoliticaDescuento,
@@ -111,7 +112,7 @@ def _evaluar_en_pool(
 
 
 def procesar_pedidos_concurrente(
-    catalogo,
+    catalogo: Catalogo,
     pedidos: Sequence[Pedido],
     max_workers: int | None = None,
     descontar_stock: bool = False,

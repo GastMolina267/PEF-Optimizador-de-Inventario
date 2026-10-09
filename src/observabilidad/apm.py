@@ -217,6 +217,7 @@ class ManejadorErroresAPM(logging.Handler):
         super().__init__(level=logging.ERROR)
 
     def emit(self, record: logging.LogRecord) -> None:
+        """Envía el registro como excepción (si trae una) o como mensaje de error."""
         if _cliente is None:
             return
         try:

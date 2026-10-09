@@ -22,6 +22,7 @@ from automations.proponer_mejoras import ejecutar as ejecutar_propuestas
 
 
 def construir_parser() -> argparse.ArgumentParser:
+    """Define los argumentos de línea de comandos de las automatizaciones."""
     parser = argparse.ArgumentParser(
         description="Regenera el análisis de complejidad y/o las propuestas de mejora."
     )
@@ -45,6 +46,7 @@ def construir_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Corre una o ambas automatizaciones y devuelve el código de salida."""
     if sys.stdout and hasattr(sys.stdout, "reconfigure"):
         with contextlib.suppress(Exception):
             sys.stdout.reconfigure(encoding="utf-8", errors="replace")

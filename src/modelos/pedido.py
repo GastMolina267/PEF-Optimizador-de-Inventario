@@ -38,7 +38,8 @@ class LineaPedido:
         """Valida que la cantidad y el identificador sean válidos."""
         if not isinstance(self.id_producto, int) or self.id_producto <= 0:
             raise ValueError(
-                f"El id_producto de la línea debe ser un entero positivo, recibido: {self.id_producto}"
+                "El id_producto de la línea debe ser un entero positivo, recibido: "
+                f"{self.id_producto}"
             )
         if not isinstance(self.cantidad, int) or self.cantidad <= 0:
             raise ValueError(

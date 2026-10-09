@@ -1,9 +1,10 @@
-"""Resume y compara dos perfiles de Scalene (antes / después) en Markdown.
+r"""Resume y compara dos perfiles de Scalene (antes / después) en Markdown.
 
 Uso::
 
     python -m benchmarks.resumir_scalene
-    python -m benchmarks.resumir_scalene --antes a.json --despues b.json --entorno "Windows 11, 8 núcleos"
+    python -m benchmarks.resumir_scalene --antes a.json --despues b.json \\
+        --entorno "Windows 11, 8 núcleos"
 
 Genera ``docs/mediciones/scalene/resumen.md``. Los porcentajes de Scalene son relativos al
 tiempo total de cada corrida: sirven para ver dónde se va el tiempo dentro de un perfil;
@@ -16,6 +17,8 @@ import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
+
+from benchmarks.rutas import ruta_en_proyecto
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SCALENE_DIR = BASE_DIR / "docs" / "mediciones" / "scalene"
@@ -35,6 +38,7 @@ class PerfilFuncion:
 
     @property
     def total(self) -> float:
+        """Porcentaje total: Python + nativo + sistema."""
         return self.python + self.nativo + self.sistema
 
 
@@ -53,21 +57,6 @@ def _ruta_relativa(archivo: str) -> str:
         if carpeta in normalizado:
             return carpeta.strip("/") + "/" + normalizado.split(carpeta, 1)[1]
     return normalizado.rsplit("/", 1)[-1]
-
-
-def ruta_en_proyecto(ruta: Path) -> Path:
-    """Resuelve ``ruta`` y exige que quede dentro del repositorio.
-
-    Los argumentos de línea de comandos no deben poder leer ni escribir archivos fuera
-    del proyecto (por ejemplo, con ``../../``).
-
-    Lanza:
-        ValueError: Si la ruta resuelta queda fuera del repositorio.
-    """
-    absoluta = (ruta if ruta.is_absolute() else BASE_DIR / ruta).resolve()
-    if not absoluta.is_relative_to(BASE_DIR.resolve()):
-        raise ValueError(f"La ruta {ruta} queda fuera del proyecto")
-    return absoluta
 
 
 def cargar_perfil(ruta: Path) -> Perfil:
@@ -125,7 +114,8 @@ def generar_resumen(antes: Perfil, despues: Perfil, entorno: str) -> str:
         reverse=True,
     )
     filas = [
-        f"| `{clave}` | {_celda(antes.funciones.get(clave))} | {_celda(despues.funciones.get(clave))} |"
+        f"| `{clave}` | {_celda(antes.funciones.get(clave))} "
+        f"| {_celda(despues.funciones.get(clave))} |"
         for clave in claves[:MAX_FILAS]
         if max(
             antes.funciones.get(clave, PerfilFuncion(0, 0, 0, 0)).total,
@@ -176,6 +166,7 @@ de {UMBRAL_PORCENTAJE:.0f} %.
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Lee los dos perfiles indicados y escribe el resumen comparativo."""
     parser = argparse.ArgumentParser(description="Compara dos perfiles de Scalene.")
     parser.add_argument("--antes", type=Path, default=SCALENE_DIR / "scalene_antes.json")
     parser.add_argument("--despues", type=Path, default=SCALENE_DIR / "scalene_despues.json")

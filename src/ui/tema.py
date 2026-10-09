@@ -9,6 +9,10 @@ import contextlib
 
 import flet as ft
 
+# Umbrales de color de los chips de duración (verde / ámbar / naranja).
+TIEMPO_RAPIDO_MS = 1.0
+TIEMPO_MODERADO_MS = 20.0
+
 # Cromo de consola (top nav + side nav)
 COLOR_NAV = "#161D26"
 COLOR_NAV_HOVER = "#232F3E"
@@ -218,7 +222,7 @@ def crear_dropdown(
     width: float | None = None,
     **kwargs,
 ) -> ft.Dropdown:
-    """Crea un Dropdown compatible con versiones antiguas (on_change) y nuevas (on_select) de Flet."""
+    """Crea un Dropdown compatible con Flet antiguo (on_change) y nuevo (on_select)."""
     params = {
         "label": label,
         "options": options,
@@ -281,8 +285,6 @@ def crear_tarjeta_kpi(
     titulo: str,
     valor: str,
     subtitulo: str | None = None,
-    icono: str = ft.Icons.INFO_OUTLINE,
-    color_icono: str = COLOR_PRIMARIO,
 ) -> ft.Container:
     """Celda de métrica: etiqueta, valor, nota."""
     controles = [
@@ -325,11 +327,12 @@ def crear_tarjeta_kpi(
 def crear_badge_tiempo(tiempo_ms: float, speedup: float | None = None) -> ft.Container:
     """Chip de duración como en el panel Performance. Sin emoji."""
     tiempo_texto = formatear_tiempo_ms(tiempo_ms)
-    color_tiempo = (
-        COLOR_EXITO
-        if tiempo_ms < 1.0
-        else (COLOR_ADVERTENCIA if tiempo_ms < 20.0 else COLOR_PRIMARIO)
-    )
+    if tiempo_ms < TIEMPO_RAPIDO_MS:
+        color_tiempo = COLOR_EXITO
+    elif tiempo_ms < TIEMPO_MODERADO_MS:
+        color_tiempo = COLOR_ADVERTENCIA
+    else:
+        color_tiempo = COLOR_PRIMARIO
 
     controles = [
         ft.Text(
@@ -492,7 +495,7 @@ def crear_columna_corrida(titulo: str, tiempo_ms: float, es_baseline: bool) -> f
 
 
 def crear_dialogo_explicativo_modos(page: ft.Page) -> ft.AlertDialog:
-    """Genera un modal interactivo completo con la comparativa conceptual entre Modo Baseline y Optimizado."""
+    """Genera el modal con la comparativa conceptual entre el modo Baseline y el Optimizado."""
     filas_tabla = [
         ft.DataRow(
             cells=[
@@ -746,8 +749,9 @@ def crear_dialogo_explicativo_modos(page: ft.Page) -> ft.AlertDialog:
             content=ft.Column(
                 controls=[
                     ft.Text(
-                        "El sistema implementa dos versiones simultáneas para cada operación fundamental del almacén. "
-                        "Esto permite contrastar empíricamente en la defensa oral cómo la elección de algoritmos y estructuras de datos "
+                        "El sistema implementa dos versiones simultáneas para cada operación "
+                        "fundamental del almacén. Esto permite contrastar empíricamente en la "
+                        "defensa oral cómo la elección de algoritmos y estructuras de datos "
                         "transforma la escalabilidad y el consumo de recursos:",
                         size=13,
                         color=COLOR_TEXTO_SECUNDARIO,

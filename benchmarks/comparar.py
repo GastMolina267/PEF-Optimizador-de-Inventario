@@ -37,6 +37,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATASETS_DIR = BASE_DIR / "data" / "datasets"
 MEDICIONES_DIR = BASE_DIR / "docs" / "mediciones"
 
+# Con catálogos grandes se acota la búsqueda exhaustiva de alternativas (O(2^N)).
+PRODUCTOS_PARA_ACOTAR_ALTERNATIVAS = 500
+MAX_CANDIDATOS_ALTERNATIVAS = 14
+
 
 def _agrupacion_lineal_ingenua(pedidos, catalogo_lineal):
     """Implementación ingenua O(P * L * n) que busca linealmente por cada línea."""
@@ -55,7 +59,11 @@ def _agrupacion_lineal_ingenua(pedidos, catalogo_lineal):
 def medir_tiempo_y_memoria(
     func, *args, iteraciones: int = 3, **kwargs
 ) -> tuple[float, float, Any]:
-    """Ejecuta una función múltiples veces y retorna (tiempo_promedio_ms, memoria_pico_kb, resultado)."""
+    """Ejecuta una función varias veces y mide tiempo y memoria.
+
+    Retorna:
+        Tupla ``(tiempo_promedio_ms, memoria_pico_kb, resultado)``.
+    """
     # Calentamiento
     res = func(*args, **kwargs)
 
@@ -193,7 +201,9 @@ def ejecutar_benchmarks_dataset(nombre_archivo: str) -> list[dict[str, Any]]:
 
     # 5. Alternativas / Sustitutos (Recursión O(2^N) vs DP Memo O(N*P))
     # Se evalúa el mismo subconjunto de candidatos para evidenciar la poda de estados
-    max_cands = 14 if n_prods >= 500 else None
+    max_cands = (
+        MAX_CANDIDATOS_ALTERNATIVAS if n_prods >= PRODUCTOS_PARA_ACOTAR_ALTERNATIVAS else None
+    )
     t_base, m_base, r_base = medir_tiempo_y_memoria(
         buscador_alt.buscar_alternativas,
         cat_ejemplo,
@@ -262,16 +272,26 @@ def formatear_tabla_markdown(resultados: list[dict[str, Any]]) -> str:
         "# Tabla Comparativa Oficial: Baseline vs. Optimizado",
         "",
         "> [!NOTE]",
-        "> Mediciones empíricas realizadas con `time.perf_counter()` y `tracemalloc` sobre los mismos datasets.",
-        "> **Speedup** = Tiempo Baseline / Tiempo Optimizado. Valores > 1.0x representan aceleración efectiva.",
+        (
+            "> Mediciones empíricas realizadas con `time.perf_counter()` y `tracemalloc` sobre "
+            "los mismos datasets."
+        ),
+        (
+            "> **Speedup** = Tiempo Baseline / Tiempo Optimizado. Valores > 1.0x representan "
+            "aceleración efectiva."
+        ),
         "",
-        "| Dataset | Operación | Complejidad Base | Complejidad Opt | Tiempo Base (ms) | Tiempo Opt (ms) | Speedup | Memoria Base (KB) | Memoria Opt (KB) | Observaciones |",
+        (
+            "| Dataset | Operación | Complejidad Base | Complejidad Opt | Tiempo Base (ms) | "
+            "Tiempo Opt (ms) | Speedup | Memoria Base (KB) | Memoria Opt (KB) | Observaciones |"
+        ),
         "|---|---|:---:|:---:|---:|---:|:---:|---:|---:|---|",
     ]
 
     for f in resultados:
         lineas.append(
-            f"| `{f['dataset']}` | **{f['operacion']}** | `{f['complejidad_base']}` | `{f['complejidad_opt']}` | "
+            f"| `{f['dataset']}` | **{f['operacion']}** | "
+            f"`{f['complejidad_base']}` | `{f['complejidad_opt']}` | "
             f"{f['t_base_ms']:.3f} | {f['t_opt_ms']:.3f} | **{f['speedup']:.2f}x** | "
             f"{f['mem_base_kb']:.1f} | {f['mem_opt_kb']:.1f} | {f['detalle']} |"
         )
@@ -280,19 +300,28 @@ def formatear_tabla_markdown(resultados: list[dict[str, Any]]) -> str:
     lineas.append("---")
     lineas.append("### Conclusiones Principales del Benchmarking")
     lineas.append(
-        "1. **Catálogo:** La transición de lista $O(n)$ a tabla hash $O(1)$ muestra aceleraciones de órdenes de magnitud a medida que $n$ crece (superando 100x en `grande.json`)."
+        "1. **Catálogo:** La transición de lista $O(n)$ a tabla hash $O(1)$ muestra "
+        "aceleraciones de órdenes de magnitud a medida que $n$ crece (superando 100x en "
+        "`grande.json`)."
     )
     lineas.append(
-        "2. **Batch Picking:** Evitar el producto cartesiano de búsquedas repetidas $O(P \\cdot L \\cdot n)$ mediante consolidación en una sola pasada con hash map $O(L)$ elimina por completo el cuello de botella crítico en almacén."
+        "2. **Batch Picking:** Evitar el producto cartesiano de búsquedas repetidas $O(P "
+        "\\cdot L \\cdot n)$ mediante consolidación en una sola pasada con hash map $O(L)$ "
+        "elimina por completo el cuello de botella crítico en almacén."
     )
     lineas.append(
-        "3. **Top-N:** `heapq.nlargest` $O(N \\log k)$ mantiene memoria acotada a $k$ elementos frente a la lista completa de ordenamiento $O(N \\log N)$."
+        "3. **Top-N:** `heapq.nlargest` $O(N \\log k)$ mantiene memoria acotada a $k$ "
+        "elementos frente a la lista completa de ordenamiento $O(N \\log N)$."
     )
     lineas.append(
-        "4. **Sustitutos:** La memoización de estados DP convierte un árbol exponencial $O(2^N)$ en tiempo pseudo-polinomial $O(N \\cdot P)$, permitiendo explorar cientos de combinaciones en milisegundos."
+        "4. **Sustitutos:** La memoización de estados DP convierte un árbol exponencial "
+        "$O(2^N)$ en tiempo pseudo-polinomial $O(N \\cdot P)$, permitiendo explorar cientos "
+        "de combinaciones en milisegundos."
     )
     lineas.append(
-        "5. **Concurrencia:** La fila de preparación usa el **mismo** `CatalogoHash` a ambos lados para no confundir IPC con la ganancia O(n)→O(1). En lotes chicos el overhead de procesos/pickle domina; el pool solo paga cuando P·L cubre ese costo fijo."
+        "5. **Concurrencia:** La fila de preparación usa el **mismo** `CatalogoHash` a ambos "
+        "lados para no confundir IPC con la ganancia O(n)→O(1). En lotes chicos el overhead "
+        "de procesos/pickle domina; el pool solo paga cuando P·L cubre ese costo fijo."
     )
     lineas.append("")
 

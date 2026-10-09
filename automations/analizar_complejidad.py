@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ast
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,6 +37,9 @@ _NOMBRES_DICT = (
     "mapa_stock",
     "mapa_posicion_original",
 )
+
+# Desde esta profundidad de bucles anidados se considera un recorrido pedido × línea.
+PROFUNDIDAD_BUCLE_ANIDADO = 2
 
 
 @dataclass
@@ -90,7 +94,7 @@ class _VisitanteCuerpo(ast.NodeVisitor):
         if "producto" in objetivo and "_productos" in iterable:
             self.evidencia.recorre_lista_productos = True
         if (
-            self._profundidad >= 2
+            self._profundidad >= PROFUNDIDAD_BUCLE_ANIDADO
             and any("pedido" in n for n in self._nombres_for)
             and "linea" in objetivo
         ):
@@ -120,7 +124,7 @@ class _VisitanteCuerpo(ast.NodeVisitor):
 
     def visit_Call(self, nodo: ast.Call) -> None:
         calificado = _nombre_llamada(nodo.func)
-        if calificado.endswith("sorted") or calificado.endswith(".sort"):
+        if calificado.endswith(("sorted", ".sort")):
             self.evidencia.llamadas_sorted = True
         if "heapq.nlargest" in calificado or "heapq.nsmallest" in calificado:
             self.evidencia.llamadas_heapq = True
@@ -196,7 +200,7 @@ def _extraer_complejidad_docstring(doc: str | None) -> str | None:
     if not doc:
         return None
     patron = re.search(
-        r"Complejidad temporal[^:]*:\s*(.+?)(?:\n|$)",
+        r"Complejidad temporal[^:]*:\s*([^\n]+)",
         doc,
         flags=re.IGNORECASE,
     )
@@ -205,19 +209,22 @@ def _extraer_complejidad_docstring(doc: str | None) -> str | None:
     return None
 
 
-def _localizar_funcion(arbol: ast.AST, nombre_calificado: str) -> ast.FunctionDef | None:
+def _buscar_funcion(nodos: list[ast.stmt], nombre: str) -> ast.FunctionDef | None:
+    return next(
+        (nodo for nodo in nodos if isinstance(nodo, ast.FunctionDef) and nodo.name == nombre),
+        None,
+    )
+
+
+def _localizar_funcion(arbol: ast.Module, nombre_calificado: str) -> ast.FunctionDef | None:
+    """Busca ``funcion`` o ``Clase.metodo`` en el nivel superior del módulo."""
     partes = nombre_calificado.split(".")
     if len(partes) == 1:
-        for nodo in arbol.body:
-            if isinstance(nodo, ast.FunctionDef) and nodo.name == partes[0]:
-                return nodo
-        return None
+        return _buscar_funcion(arbol.body, partes[0])
     clase, metodo = partes[0], partes[1]
     for nodo in arbol.body:
         if isinstance(nodo, ast.ClassDef) and nodo.name == clase:
-            for miembro in nodo.body:
-                if isinstance(miembro, ast.FunctionDef) and miembro.name == metodo:
-                    return miembro
+            return _buscar_funcion(nodo.body, metodo)
     return None
 
 
@@ -244,145 +251,228 @@ def inspeccionar_funcion(raiz: Path, spec: FuncionFundamental) -> tuple[Evidenci
     return visitante.evidencia, fuente
 
 
+ESPACIO_AUX_K = "O(k) aux."
+ESPACIO_AUX_CONSTANTE = "O(1) aux."
+
+
+@dataclass(frozen=True)
+class _Cotas:
+    """Cotas asintóticas y su justificación, antes de sumar el comentario del grupo."""
+
+    mejor: str
+    promedio: str
+    peor: str
+    espacial: str
+    justificacion: str
+
+
+def _cotas_process_pool(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    return _Cotas(
+        "O(P · L)",
+        "O((P · L)/C + C_IPC)",
+        "O(P · L + C_IPC)",
+        "O(P · L + C · chunk)",
+        "El cuerpo instancia `ProcessPoolExecutor` y parte el lote en fragmentos. "
+        "El trabajo útil por pedido es lineal en sus líneas; el término `C_IPC` "
+        "aparece porque cada worker recibe un snapshot serializado del stock. "
+        "Con pocos pedidos el overhead de creación de procesos domina; con muchos "
+        "el costo se reparte entre `C` núcleos.",
+    )
+
+
+def _cotas_recursion_memoizada(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    return _Cotas(
+        "Ω(1) (hit de memo)",
+        "Θ(N · P)",
+        "O(N · P)",
+        "O(N · P) (tabla de estados)",
+        "La función se llama a sí misma y consulta `_memo_cache` indexado por "
+        "`(indice, presupuesto_restante)`. Cada estado se resuelve a lo sumo una "
+        "vez; el espacio de estados es el producto de candidatos `N` por el "
+        "presupuesto discretizado `P`, de ahí la cota pseudo-polinomial O(N · P).",
+    )
+
+
+def _cotas_recursion(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    return _Cotas(
+        "Ω(N)",
+        "Θ(2^N)",
+        "O(2^N)",
+        "O(N) (pila de llamadas)",
+        "Hay recursión sobre el índice del candidato y no se observa tabla de "
+        "memoización. Cada elemento admite incluirlo o excluirlo, lo que genera "
+        "un árbol de decisión de hasta 2^N hojas. El docstring del grupo coincide "
+        "con esta derivación.",
+    )
+
+
+def _cotas_heap(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    return _Cotas(
+        "Ω(L + N)",
+        "Θ(L + N log k)",
+        "O(L + N log k)",
+        "O(N + k)",
+        "Se recorren las líneas de pedidos para armar un mapa de frecuencias "
+        "(una pasada O(L)) y luego se invoca `heapq.nlargest`. Un min-heap de "
+        "tamaño `k` hace un sift-down O(log k) por cada una de las N claves, "
+        "de modo que la selección es O(N log k) y no O(N log N).",
+    )
+
+
+def _cotas_ordenamiento_completo(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    return _Cotas(
+        "Ω(L + N)",
+        "Θ(L + N log N)",
+        "O(L + N log N)",
+        "O(N)",
+        "Tras acumular frecuencias en un diccionario (O(L)), el cuerpo llama a "
+        "`sorted` sobre las N claves. Timsort impone Θ(N log N) comparaciones; "
+        "después se recortan los primeros k elementos.",
+    )
+
+
+def _cotas_busqueda_por_linea(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    return _Cotas(
+        "Ω(P · L)",
+        "Θ(P · L · T_búsqueda)",
+        "O(P · L · T_búsqueda)",
+        "O(P · L)",
+        "Hay un `for` sobre pedidos y otro anidado sobre líneas, y cada línea "
+        "invoca `buscar_por_id`. La cota se descompone: T_búsqueda = O(n) si el "
+        "catálogo es lineal y O(1) promedio si es hash. Por eso el baseline "
+        "escala a O(P · L · n) y el optimizado a O(P · L).",
+    )
+
+
+def _cotas_acumulacion_hash(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    extra_sort = (
+        " Tras la pasada se ordenan los U productos únicos (O(U log U))."
+        if ev.llamadas_sorted
+        else ""
+    )
+    return _Cotas(
+        "Ω(L)",
+        "Θ(L + U)",
+        "O(L + U log U)" if ev.llamadas_sorted else "O(L + U)",
+        "O(U)",
+        "Doble bucle sobre pedidos y líneas con acumulación en un diccionario "
+        "hash (inserción/actualización O(1) promedio por línea). La cota se "
+        "desacopla del tamaño del catálogo n." + extra_sort,
+    )
+
+
+def _cotas_indice_con_bucle(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    return _Cotas(
+        "Ω(1)",
+        "Θ(k)",
+        "O(n) (fallback lineal)",
+        ESPACIO_AUX_K,
+        "Hay accesos a índices hash y un bucle acotado (palabras de la consulta "
+        f"o verificación de k candidatos; profundidad {ev.profundidad_bucles}). "
+        "El caso típico es O(k) con k ≪ n; si el índice no filtra, el fallback "
+        "recorre el universo y vuelve a O(n).",
+    )
+
+
+def _cotas_recorrido_lineal(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    por_nombre = "nombre" in spec.nombre_calificado
+    factor_texto = " · m" if por_nombre else ""
+    cierre = (
+        "; la prueba de subcadena añade un factor m (longitud media del nombre)."
+        if por_nombre
+        else "."
+    )
+    return _Cotas(
+        "Ω(1)" if "id" in spec.nombre_calificado else f"Ω(n{factor_texto})",
+        f"Θ(n{factor_texto})",
+        f"O(n{factor_texto})",
+        ESPACIO_AUX_K if por_nombre else ESPACIO_AUX_CONSTANTE,
+        f"El AST muestra un `for` sobre `self._productos` (profundidad "
+        f"{ev.profundidad_bucles}) y no hay tabla hash de ids. Cada consulta "
+        f"compara contra hasta n productos" + cierre,
+    )
+
+
+def _cotas_acceso_hash_directo(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    return _Cotas(
+        "Ω(1)",
+        "Θ(1)",
+        "O(n) (colisión patológica)",
+        ESPACIO_AUX_CONSTANTE,
+        "No hay bucles sobre el catálogo. El cuerpo resuelve la consulta con "
+        f"acceso hash ({', '.join(ev.accesos_hash[:3]) or 'dict.get / in'}). "
+        "Con factor de carga acotado el costo esperado es constante; el peor "
+        "caso teórico de una tabla hash degenerada es O(n).",
+    )
+
+
+def _cotas_constantes(spec: FuncionFundamental, ev: EvidenciaAST) -> _Cotas:
+    return _Cotas(
+        "Ω(1)",
+        "Θ(1)",
+        "O(1)",
+        "O(1)",
+        "El cuerpo no recorre colecciones del dominio ni dispara recursión: "
+        "son asignaciones, purgas de caché o accesos puntuales.",
+    )
+
+
+def _ordena_sin_acumulador(ev: EvidenciaAST) -> bool:
+    return (
+        ev.llamadas_sorted
+        and ev.bucles_anidados_pedido_linea
+        and not any("acumulador" in acceso for acceso in ev.accesos_hash)
+    )
+
+
+# Reglas en orden de prioridad: gana la primera cuyo predicado se cumple.
+_REGLAS_COMPLEJIDAD: tuple[
+    tuple[Callable[[EvidenciaAST], bool], Callable[[FuncionFundamental, EvidenciaAST], _Cotas]],
+    ...,
+] = (
+    (lambda ev: ev.usa_process_pool, _cotas_process_pool),
+    (lambda ev: ev.es_recursiva and ev.usa_memo, _cotas_recursion_memoizada),
+    (lambda ev: ev.es_recursiva, _cotas_recursion),
+    (lambda ev: ev.llamadas_heapq, _cotas_heap),
+    (_ordena_sin_acumulador, _cotas_ordenamiento_completo),
+    (
+        lambda ev: (
+            ev.bucles_anidados_pedido_linea and ev.llama_buscar_por_id and not ev.accesos_hash
+        ),
+        _cotas_busqueda_por_linea,
+    ),
+    (lambda ev: ev.bucles_anidados_pedido_linea, _cotas_acumulacion_hash),
+    (lambda ev: bool(ev.accesos_hash) and ev.profundidad_bucles >= 1, _cotas_indice_con_bucle),
+    (
+        lambda ev: ev.recorre_lista_productos or ev.profundidad_bucles >= 1,
+        _cotas_recorrido_lineal,
+    ),
+    (lambda ev: bool(ev.accesos_hash), _cotas_acceso_hash_directo),
+)
+
+
 def derivar_complejidad(spec: FuncionFundamental, ev: EvidenciaAST) -> InformeComplejidad:
     """Deriva mejor/promedio/peor a partir de la evidencia del AST, no de un catálogo fijo.
 
-    El docstring se cita como comentario del grupo; la cota publicada sale del cuerpo.
+    Aplica la primera regla de ``_REGLAS_COMPLEJIDAD`` cuyo predicado se cumple. El
+    docstring de la función se cita como comentario del grupo; la cota publicada sale
+    del cuerpo.
     """
-    if ev.usa_process_pool:
-        mejor, promedio, peor = "O(P · L)", "O((P · L)/C + C_IPC)", "O(P · L + C_IPC)"
-        espacial = "O(P · L + C · chunk)"
-        justificacion = (
-            "El cuerpo instancia `ProcessPoolExecutor` y parte el lote en fragmentos. "
-            "El trabajo útil por pedido es lineal en sus líneas; el término `C_IPC` "
-            "aparece porque cada worker recibe un snapshot serializado del stock. "
-            "Con pocos pedidos el overhead de creación de procesos domina; con muchos "
-            "el costo se reparte entre `C` núcleos."
-        )
-    elif ev.es_recursiva and ev.usa_memo:
-        mejor, promedio, peor = "Ω(1) (hit de memo)", "Θ(N · P)", "O(N · P)"
-        espacial = "O(N · P) (tabla de estados)"
-        justificacion = (
-            "La función se llama a sí misma y consulta `_memo_cache` indexado por "
-            "`(indice, presupuesto_restante)`. Cada estado se resuelve a lo sumo una "
-            "vez; el espacio de estados es el producto de candidatos `N` por el "
-            "presupuesto discretizado `P`, de ahí la cota pseudo-polinomial O(N · P)."
-        )
-    elif ev.es_recursiva:
-        mejor, promedio, peor = "Ω(N)", "Θ(2^N)", "O(2^N)"
-        espacial = "O(N) (pila de llamadas)"
-        justificacion = (
-            "Hay recursión sobre el índice del candidato y no se observa tabla de "
-            "memoización. Cada elemento admite incluirlo o excluirlo, lo que genera "
-            "un árbol de decisión de hasta 2^N hojas. El docstring del grupo coincide "
-            "con esta derivación."
-        )
-    elif ev.llamadas_heapq:
-        mejor, promedio, peor = "Ω(L + N)", "Θ(L + N log k)", "O(L + N log k)"
-        espacial = "O(N + k)"
-        justificacion = (
-            "Se recorren las líneas de pedidos para armar un mapa de frecuencias "
-            "(una pasada O(L)) y luego se invoca `heapq.nlargest`. Un min-heap de "
-            "tamaño `k` hace un sift-down O(log k) por cada una de las N claves, "
-            "de modo que la selección es O(N log k) y no O(N log N)."
-        )
-    elif (
-        ev.llamadas_sorted
-        and ev.bucles_anidados_pedido_linea
-        and not any("acumulador" in a for a in ev.accesos_hash)
-    ):
-        mejor, promedio, peor = "Ω(L + N)", "Θ(L + N log N)", "O(L + N log N)"
-        espacial = "O(N)"
-        justificacion = (
-            "Tras acumular frecuencias en un diccionario (O(L)), el cuerpo llama a "
-            "`sorted` sobre las N claves. Timsort impone Θ(N log N) comparaciones; "
-            "después se recortan los primeros k elementos."
-        )
-    elif ev.bucles_anidados_pedido_linea and ev.llama_buscar_por_id and not ev.accesos_hash:
-        mejor, promedio, peor = "Ω(P · L)", "Θ(P · L · T_búsqueda)", "O(P · L · T_búsqueda)"
-        espacial = "O(P · L)"
-        justificacion = (
-            "Hay un `for` sobre pedidos y otro anidado sobre líneas, y cada línea "
-            "invoca `buscar_por_id`. La cota se descompone: T_búsqueda = O(n) si el "
-            "catálogo es lineal y O(1) promedio si es hash. Por eso el baseline "
-            "escala a O(P · L · n) y el optimizado a O(P · L)."
-        )
-    elif ev.bucles_anidados_pedido_linea:
-        extra_sort = (
-            " Tras la pasada se ordenan los U productos únicos (O(U log U))."
-            if ev.llamadas_sorted
-            else ""
-        )
-        mejor, promedio, peor = (
-            "Ω(L)",
-            "Θ(L + U)",
-            "O(L + U log U)" if ev.llamadas_sorted else "O(L + U)",
-        )
-        espacial = "O(U)"
-        justificacion = (
-            "Doble bucle sobre pedidos y líneas con acumulación en un diccionario "
-            "hash (inserción/actualización O(1) promedio por línea). La cota se "
-            "desacopla del tamaño del catálogo n." + extra_sort
-        )
-    elif ev.accesos_hash and ev.profundidad_bucles >= 1:
-        mejor, promedio, peor = "Ω(1)", "Θ(k)", "O(n) (fallback lineal)"
-        espacial = "O(k) aux."
-        justificacion = (
-            "Hay accesos a índices hash y un bucle acotado (palabras de la consulta "
-            f"o verificación de k candidatos; profundidad {ev.profundidad_bucles}). "
-            "El caso típico es O(k) con k ≪ n; si el índice no filtra, el fallback "
-            "recorre el universo y vuelve a O(n)."
-        )
-    elif ev.recorre_lista_productos or (ev.profundidad_bucles >= 1 and not ev.accesos_hash):
-        factor_texto = " · m" if "nombre" in spec.nombre_calificado else ""
-        mejor = "Ω(1)" if "id" in spec.nombre_calificado else f"Ω(n{factor_texto})"
-        promedio, peor = f"Θ(n{factor_texto})", f"O(n{factor_texto})"
-        espacial = "O(k) aux." if "nombre" in spec.nombre_calificado else "O(1) aux."
-        justificacion = (
-            f"El AST muestra un `for` sobre `self._productos` (profundidad "
-            f"{ev.profundidad_bucles}) y no hay tabla hash de ids. Cada consulta "
-            f"compara contra hasta n productos"
-            + (
-                "; la prueba de subcadena añade un factor m (longitud media del nombre)."
-                if factor_texto
-                else "."
-            )
-        )
-    elif ev.accesos_hash and ev.profundidad_bucles == 0:
-        mejor, promedio, peor = "Ω(1)", "Θ(1)", "O(n) (colisión patológica)"
-        espacial = "O(1) aux."
-        justificacion = (
-            "No hay bucles sobre el catálogo. El cuerpo resuelve la consulta con "
-            f"acceso hash ({', '.join(ev.accesos_hash[:3]) or 'dict.get / in'}). "
-            "Con factor de carga acotado el costo esperado es constante; el peor "
-            "caso teórico de una tabla hash degenerada es O(n)."
-        )
-    elif ev.accesos_hash:
-        mejor, promedio, peor = "Ω(1)", "Θ(k)", "O(n) (fallback lineal)"
-        espacial = "O(k) aux."
-        justificacion = (
-            "Hay accesos a índices hash y un bucle acotado (palabras de la consulta "
-            f"o verificación de k candidatos; profundidad {ev.profundidad_bucles}). "
-            "El caso típico es O(k) con k ≪ n; si el índice no filtra, el fallback "
-            "recorre el universo y vuelve a O(n)."
-        )
-    else:
-        mejor, promedio, peor = "Ω(1)", "Θ(1)", "O(1)"
-        espacial = "O(1)"
-        justificacion = (
-            "El cuerpo no recorre colecciones del dominio ni dispara recursión: "
-            "son asignaciones, purgas de caché o accesos puntuales."
-        )
-
+    construir = next(
+        (constructor for aplica, constructor in _REGLAS_COMPLEJIDAD if aplica(ev)),
+        _cotas_constantes,
+    )
+    cotas = construir(spec, ev)
+    justificacion = cotas.justificacion
     if ev.docstring_complejidad:
         justificacion += f" Comentario del grupo (docstring): {ev.docstring_complejidad}"
 
     return InformeComplejidad(
         funcion=spec,
-        mejor=mejor,
-        promedio=promedio,
-        peor=peor,
-        espacial=espacial,
+        mejor=cotas.mejor,
+        promedio=cotas.promedio,
+        peor=cotas.peor,
+        espacial=cotas.espacial,
         justificacion=justificacion,
         evidencia=ev,
         fuente=spec.ruta_relativa,
@@ -399,6 +489,28 @@ def analizar_repositorio(raiz: Path | None = None) -> list[InformeComplejidad]:
     return informes
 
 
+# Señales del AST que se listan en la columna "Evidencia AST" (en este orden).
+_RASTROS_BOOLEANOS = (
+    ("llamadas_sorted", "sorted"),
+    ("llamadas_heapq", "heapq"),
+    ("es_recursiva", "recursión"),
+    ("usa_memo", "memo"),
+    ("usa_process_pool", "ProcessPool"),
+    ("llama_buscar_por_id", "buscar_por_id"),
+)
+
+
+def _rastros_evidencia(ev: EvidenciaAST) -> list[str]:
+    """Etiquetas cortas de lo que se encontró en el cuerpo de la función."""
+    rastros: list[str] = []
+    if ev.profundidad_bucles:
+        rastros.append(f"bucles×{ev.profundidad_bucles}")
+    if ev.accesos_hash:
+        rastros.append("hash")
+    rastros.extend(etiqueta for atributo, etiqueta in _RASTROS_BOOLEANOS if getattr(ev, atributo))
+    return rastros
+
+
 def renderizar_markdown(informes: list[InformeComplejidad], raiz: Path) -> str:
     """Genera el bloque que se inserta entre las marcas Origin."""
     ahora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -407,8 +519,14 @@ def renderizar_markdown(informes: list[InformeComplejidad], raiz: Path) -> str:
         MARCA_INICIO,
         "",
         "<!-- Bloque generado por la automatización Origin 1 (análisis de complejidad). -->",
-        "<!-- No editar a mano: se regenera con `python -m automations.ejecutar --complejidad`. -->",
-        "<!-- El comentario del grupo (secciones 1-8) permanece intacto por encima de este bloque. -->",
+        (
+            "<!-- No editar a mano: se regenera con `python -m automations.ejecutar "
+            "--complejidad`. -->"
+        ),
+        (
+            "<!-- El comentario del grupo (secciones 1-8) permanece intacto por encima de este "
+            "bloque. -->"
+        ),
         "",
         f"**Commit analizado:** `{sha}` · **Generado:** {ahora}",
         "",
@@ -421,24 +539,7 @@ def renderizar_markdown(informes: list[InformeComplejidad], raiz: Path) -> str:
     ]
     for inf in informes:
         ev = inf.evidencia
-        rastros: list[str] = []
-        if ev.profundidad_bucles:
-            rastros.append(f"bucles×{ev.profundidad_bucles}")
-        if ev.accesos_hash:
-            rastros.append("hash")
-        if ev.llamadas_sorted:
-            rastros.append("sorted")
-        if ev.llamadas_heapq:
-            rastros.append("heapq")
-        if ev.es_recursiva:
-            rastros.append("recursión")
-        if ev.usa_memo:
-            rastros.append("memo")
-        if ev.usa_process_pool:
-            rastros.append("ProcessPool")
-        if ev.llama_buscar_por_id:
-            rastros.append("buscar_por_id")
-        evidencia_txt = ", ".join(rastros) or "cuerpo trivial"
+        evidencia_txt = ", ".join(_rastros_evidencia(ev)) or "cuerpo trivial"
         lineas.append(
             f"| {inf.funcion.operacion} | `{inf.funcion.nombre_calificado}` "
             f"(L{ev.lineas[0]}–{ev.lineas[1]}) | {inf.mejor} | {inf.promedio} | "

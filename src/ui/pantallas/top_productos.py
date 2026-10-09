@@ -37,6 +37,9 @@ from src.ui.tema import (
     padding_symmetric,
 )
 
+# Color del número de puesto para los tres primeros del ranking.
+COLORES_PODIO = (COLOR_PRIMARIO, COLOR_SECUNDARIO, "#F59E0B")
+
 
 class PantallaTopProductos(PantallaBase):
     """Vista comparativa de Top-N: Min-Heap O(N log k) vs Ordenamiento Total O(N log N)."""
@@ -107,15 +110,24 @@ class PantallaTopProductos(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Ranking de Productos Más Solicitados (Top-N)",
-                    "Comparación algorítmica: Heap O(N log k) acotado en memoria vs. Ordenamiento global O(N log N)",
+                    (
+                        "Comparación algorítmica: Heap O(N log k) acotado en memoria vs. "
+                        "Ordenamiento global O(N log N)"
+                    ),
                     self.btn_calcular,
                 ),
                 crear_banner_explicativo(
                     titulo="Ranking Top-N y Priorización de Inventario",
-                    descripcion="Identifica los artículos con mayor volumen de demanda acumulada para ubicarlos estratégicamente en zonas de picking rápido.",
+                    descripcion=(
+                        "Identifica los artículos con mayor volumen de demanda acumulada para "
+                        "ubicarlos estratégicamente en zonas de picking rápido."
+                    ),
                     complejidad_base="Ordenamiento Total O(N log N)",
                     complejidad_opt="Min-Heap acotado O(N log k)",
-                    por_que_importa="El algoritmo con Heap mantiene únicamente los k elementos en memoria, ahorrando espacio y tiempo sin ordenar el catálogo completo.",
+                    por_que_importa=(
+                        "El algoritmo con Heap mantiene únicamente los k elementos en memoria, "
+                        "ahorrando espacio y tiempo sin ordenar el catálogo completo."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -189,29 +201,21 @@ class PantallaTopProductos(PantallaBase):
                 "Productos en Ranking",
                 f"{len(resultados)} / {k}",
                 f"Top-{k} solicitado",
-                ft.Icons.LEADERBOARD,
-                COLOR_PRIMARIO,
             ),
             crear_tarjeta_kpi(
                 "Demanda Acumulada",
                 f"{demanda_total_top:,}",
                 "Unidades requeridas",
-                ft.Icons.TRENDING_UP,
-                COLOR_EXITO,
             ),
             crear_tarjeta_kpi(
                 "Tiempo de Cómputo",
                 formatear_tiempo_ms(duracion_ms),
                 alg_desc,
-                ft.Icons.SPEED,
-                COLOR_SECUNDARIO,
             ),
             crear_tarjeta_kpi(
                 "Cota de Complejidad",
                 "O(N log k)" if metodo == "heap" else "O(N log N)",
                 "Consumo acotado a k" if metodo == "heap" else "Ordena universo N",
-                ft.Icons.MEMORY,
-                COLOR_PRIMARIO,
             ),
         ]
 
@@ -220,7 +224,9 @@ class PantallaTopProductos(PantallaBase):
 
         self._publicar_resultado(
             tiempo_ms=duracion_ms,
-            resultado_negocio=f"Top-{k} calculado con {metodo.upper()} en {formatear_tiempo_ms(duracion_ms)}",
+            resultado_negocio=(
+                f"Top-{k} calculado con {metodo.upper()} en {formatear_tiempo_ms(duracion_ms)}"
+            ),
         )
         actualizar_control(self)
 
@@ -229,11 +235,7 @@ class PantallaTopProductos(PantallaBase):
         max_demanda = max((cant for _, cant in self.ranking_actual), default=1)
 
         for i, (prod, cantidad) in enumerate(self.ranking_actual, 1):
-            color_medalla = (
-                COLOR_PRIMARIO
-                if i == 1
-                else (COLOR_SECUNDARIO if i == 2 else ("#F59E0B" if i == 3 else COLOR_TEXTO_MUTED))
-            )
+            color_medalla = COLORES_PODIO[i - 1] if i <= len(COLORES_PODIO) else COLOR_TEXTO_MUTED
             fraccion_demanda = (cantidad / max_demanda) if max_demanda > 0 else 0.0
 
             barra_demanda = ft.ProgressBar(
@@ -261,7 +263,10 @@ class PantallaTopProductos(PantallaBase):
                                     ),
                                     crear_columna_titulo_detalle(
                                         prod.nombre,
-                                        f"#{prod.id} | {prod.categoria} | Stock: {prod.stock} Unidades",
+                                        (
+                                            f"#{prod.id} | {prod.categoria} | Stock: {prod.stock} "
+                                            "Unidades"
+                                        ),
                                     ),
                                     ft.Column(
                                         controls=[

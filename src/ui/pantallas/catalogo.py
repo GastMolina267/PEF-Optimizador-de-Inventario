@@ -37,6 +37,12 @@ from src.ui.tema import (
     padding_symmetric,
 )
 
+TEXTO_BUSQUEDA_LINEAL = "Búsqueda Lineal O(n)"
+TEXTO_BUSQUEDA_HASH = "Búsqueda Hash O(1) con LRU"
+
+# Por encima de este stock el producto se muestra en verde; entre 1 y este valor, en ámbar.
+STOCK_HOLGADO = 10
+
 
 class PantallaCatalogo(PantallaBase):
     """Vista de catálogo con búsquedas comparativas entre catálogo lineal y hash."""
@@ -86,9 +92,7 @@ class PantallaCatalogo(PantallaBase):
                         color=COLOR_EXITO if self.motor.es_optimizado else COLOR_ADVERTENCIA,
                     ),
                     ft.Text(
-                        "Búsqueda Hash O(1) con LRU"
-                        if self.motor.es_optimizado
-                        else "Búsqueda Lineal O(n)",
+                        TEXTO_BUSQUEDA_HASH if self.motor.es_optimizado else TEXTO_BUSQUEDA_LINEAL,
                         size=12,
                         weight=ft.FontWeight.BOLD,
                         color=COLOR_EXITO if self.motor.es_optimizado else COLOR_ADVERTENCIA,
@@ -138,7 +142,7 @@ class PantallaCatalogo(PantallaBase):
         )
         self.contenedor_badge_tiempo = ft.Row(spacing=6)
         self.txt_estado_cache = ft.Text("Caché: --", size=13, color=COLOR_TEXTO_MUTED)
-        self.txt_resultados_count = ft.Text(
+        self.txt_total_resultados = ft.Text(
             "Total: -- productos", size=13, color=COLOR_TEXTO_SECUNDARIO
         )
 
@@ -152,15 +156,24 @@ class PantallaCatalogo(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Catálogo de Productos",
-                    "Comparación en tiempo real: Búsqueda Lineal O(n) vs. Búsqueda Hash O(1) con LRU",
+                    (
+                        "Comparación en tiempo real: Búsqueda Lineal O(n) vs. Búsqueda Hash O(1) "
+                        "con LRU"
+                    ),
                     self.badge_estrategia,
                 ),
                 crear_banner_explicativo(
                     titulo="Acceso a Catálogo e Índices de Búsqueda",
-                    descripcion="Demostración del desafío experimental: recorrido secuencial de lista frente a tabla Hash con índice invertido tokenizado y caché LRU.",
-                    complejidad_base="Búsqueda Lineal O(n)",
+                    descripcion=(
+                        "Demostración del desafío experimental: recorrido secuencial de lista "
+                        "frente a tabla Hash con índice invertido tokenizado y caché LRU."
+                    ),
+                    complejidad_base=TEXTO_BUSQUEDA_LINEAL,
                     complejidad_opt="Búsqueda Hash O(1) amortizado",
-                    por_que_importa="En catálogos de 10.000+ artículos, la búsqueda O(1) reduce el tiempo de varios milisegundos a fracciones de milisegundo (speedup > 2000x).",
+                    por_que_importa=(
+                        "En catálogos de 10.000+ artículos, la búsqueda O(1) reduce el tiempo de "
+                        "varios milisegundos a fracciones de milisegundo (speedup > 2000x)."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -175,7 +188,7 @@ class PantallaCatalogo(PantallaBase):
                 ),
                 ft.Row(
                     controls=[
-                        self.txt_resultados_count,
+                        self.txt_total_resultados,
                         self.contenedor_badge_tiempo,
                         self.txt_estado_cache,
                     ],
@@ -248,7 +261,7 @@ class PantallaCatalogo(PantallaBase):
                         color=color_badge,
                     ),
                     ft.Text(
-                        "Búsqueda Hash O(1) con LRU" if es_opt else "Búsqueda Lineal O(n)",
+                        TEXTO_BUSQUEDA_HASH if es_opt else TEXTO_BUSQUEDA_LINEAL,
                         size=12,
                         weight=ft.FontWeight.BOLD,
                         color=color_badge,
@@ -329,7 +342,7 @@ class PantallaCatalogo(PantallaBase):
         inicio = time.perf_counter()
         hits_antes = self._hits_cache_busquedas()
 
-        prods = self.motor.buscar_por_nombre(texto, usar_cache=True)
+        productos_encontrados = self.motor.buscar_por_nombre(texto, usar_cache=True)
         duracion_ms = (time.perf_counter() - inicio) * 1000.0
 
         hits_despues = self._hits_cache_busquedas()
@@ -344,8 +357,10 @@ class PantallaCatalogo(PantallaBase):
             self.txt_estado_cache.value = "Caché: DESHABILITADA (Baseline)"
             self.txt_estado_cache.color = COLOR_TEXTO_MUTED
 
-        self.txt_resultados_count.value = f"Total: {len(prods)} productos encontrados"
-        self.productos_actuales = list(prods)
+        self.txt_total_resultados.value = (
+            f"Total: {len(productos_encontrados)} productos encontrados"
+        )
+        self.productos_actuales = list(productos_encontrados)
         self._aplicar_ordenamiento()
 
     def _ejecutar_busqueda_id(self):
@@ -356,7 +371,7 @@ class PantallaCatalogo(PantallaBase):
 
         id_num = int(txt_id)
         inicio = time.perf_counter()
-        prod = self.motor.buscar_por_id(id_num)
+        producto = self.motor.buscar_por_id(id_num)
         duracion_ms = (time.perf_counter() - inicio) * 1000.0
 
         self.txt_tiempo_busqueda.value = f"Tiempo: {formatear_tiempo_ms(duracion_ms)}"
@@ -365,30 +380,34 @@ class PantallaCatalogo(PantallaBase):
         self.txt_estado_cache.value = f"Búsqueda directa por ID ({modo})"
         self.txt_estado_cache.color = COLOR_PRIMARIO
 
-        prods = [prod] if prod else []
-        if prod is None:
+        productos_encontrados = [producto] if producto else []
+        if producto is None:
             self.notificar(f"No existe un producto con ID {id_num}.", ft.Icons.WARNING)
-        self.txt_resultados_count.value = f"Total: {len(prods)} producto encontrado"
-        self.productos_actuales = list(prods)
+        self.txt_total_resultados.value = (
+            f"Total: {len(productos_encontrados)} producto encontrado"
+        )
+        self.productos_actuales = list(productos_encontrados)
         self._aplicar_ordenamiento()
 
     def _mostrar_todos(self):
         self.input_busqueda.value = ""
         self.input_id.value = ""
-        prods = self.motor.catalogo.obtener_todos()
-        self.txt_resultados_count.value = f"Total: {len(prods)} productos en catálogo"
+        productos_encontrados = self.motor.catalogo.obtener_todos()
+        self.txt_total_resultados.value = (
+            f"Total: {len(productos_encontrados)} productos en catálogo"
+        )
         self.txt_tiempo_busqueda.value = f"Tiempo: {formatear_tiempo_ms(0.0)}"
         self.contenedor_badge_tiempo.controls = [crear_badge_tiempo(0.0)]
         self.txt_estado_cache.value = "Vista completa"
         self.txt_estado_cache.color = COLOR_TEXTO_MUTED
-        self.productos_actuales = list(prods)
+        self.productos_actuales = list(productos_encontrados)
         self._aplicar_ordenamiento()
 
     def _renderizar_lista(self, productos):
         items = []
         max_mostrar = 150
         for p in productos[:max_mostrar]:
-            if p.stock > 10:
+            if p.stock > STOCK_HOLGADO:
                 stock_color = COLOR_EXITO
                 stock_fondo = COLOR_FONDO_EXITO
             elif p.stock > 0:

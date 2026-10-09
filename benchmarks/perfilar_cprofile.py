@@ -90,7 +90,8 @@ def perfilar_dataset(nombre_dataset: str) -> tuple[str, Path]:
     return resumen, ruta_prof
 
 
-def main():
+def main() -> None:
+    """Perfila los escenarios con cProfile y escribe el resumen en docs/mediciones/."""
     MEDICIONES_DIR.mkdir(parents=True, exist_ok=True)
     ruta_informe = MEDICIONES_DIR / "cprofile_resumen.txt"
 

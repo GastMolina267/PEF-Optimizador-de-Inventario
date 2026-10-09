@@ -39,7 +39,8 @@ DATASETS_DIR = BASE_DIR / "data" / "datasets"
 MEDICIONES_DIR = BASE_DIR / "docs" / "mediciones"
 
 
-def main():
+def main() -> None:
+    """Perfila línea por línea las funciones críticas y escribe el resumen."""
     MEDICIONES_DIR.mkdir(parents=True, exist_ok=True)
     ruta_dataset = DATASETS_DIR / "mediano.json"
     productos, pedidos = cargar_dataset_json(ruta_dataset)

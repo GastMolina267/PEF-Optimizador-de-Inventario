@@ -65,7 +65,6 @@ class TestTemaYComponentes:
             titulo="Total Pedidos",
             valor="150",
             subtitulo="Escenario mediano",
-            icono=ft.Icons.SHOPPING_BAG,
         )
         assert isinstance(card, ft.Container)
 

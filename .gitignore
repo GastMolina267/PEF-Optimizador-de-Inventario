@@ -51,3 +51,6 @@ scalene-profile.html
 
 # Credenciales locales (Elastic APM, etc.)
 .env
+
+# Caché de complexipy (complejidad cognitiva)
+.complexipy_cache/

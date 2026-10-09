@@ -131,7 +131,8 @@ def analizar_huella_cache_lru() -> dict[str, float]:
     }
 
 
-def main():
+def main() -> None:
+    """Mide la huella de memoria de cada estructura y escribe el resumen."""
     MEDICIONES_DIR.mkdir(parents=True, exist_ok=True)
     ruta_salida = MEDICIONES_DIR / "memoria_resumen.txt"
 
@@ -172,18 +173,39 @@ def main():
                 f" DATASET: {ds_nombre} ({len(prods)} productos, {len(peds)} pedidos)",
                 "--------------------------------------------------------------------------------",
                 " 1. Estructura de Catálogo:",
-                f"    - Catálogo Lineal (Lista): Actual = {stats_cat['lineal_actual_kb']:.2f} KB | Pico = {stats_cat['lineal_pico_kb']:.2f} KB",
-                f"    - Catálogo Hash (Diccionarios + Índices): Actual = {stats_cat['hash_actual_kb']:.2f} KB | Pico = {stats_cat['hash_pico_kb']:.2f} KB",
-                f"    * Trade-off: El catálogo hash invierte ~{stats_cat['hash_actual_kb'] - stats_cat['lineal_actual_kb']:.1f} KB adicionales para brindar búsquedas O(1).",
+                (
+                    f"    - Catálogo Lineal (Lista): Actual = {stats_cat['lineal_actual_kb']:.2f} "
+                    f"KB | Pico = {stats_cat['lineal_pico_kb']:.2f} KB"
+                ),
+                (
+                    "    - Catálogo Hash (Diccionarios + Índices): Actual = "
+                    f"{stats_cat['hash_actual_kb']:.2f} KB | Pico = "
+                    f"{stats_cat['hash_pico_kb']:.2f} KB"
+                ),
+                (
+                    "    * Trade-off: El catálogo hash invierte ~"
+                    f"{stats_cat['hash_actual_kb'] - stats_cat['lineal_actual_kb']:.1f} KB "
+                    "adicionales para brindar búsquedas O(1)."
+                ),
                 "",
                 " 2. Ranking Top-N (k=5):",
                 f"    - Ordenamiento Total (sorted): Pico = {stats_top['sort_pico_kb']:.2f} KB",
-                f"    - Min-Heap Acotado (heapq.nlargest): Pico = {stats_top['heap_pico_kb']:.2f} KB",
-                f"    * Ahorro de memoria con Min-Heap: {stats_top['ahorro_kb']:.2f} KB (mantiene solo k elementos en memoria).",
+                (
+                    "    - Min-Heap Acotado (heapq.nlargest): Pico = "
+                    f"{stats_top['heap_pico_kb']:.2f} KB"
+                ),
+                (
+                    f"    * Ahorro de memoria con Min-Heap: {stats_top['ahorro_kb']:.2f} KB "
+                    "(mantiene solo k elementos en memoria)."
+                ),
                 "",
                 " 3. Alternativas Sustitutas (DP Memoización vs. Recursión Pura):",
                 f"    - Árbol Recursivo Puro: Pico = {stats_memo['recursion_pico_kb']:.2f} KB",
-                f"    - DP Memoizada: Pico = {stats_memo['memo_pico_kb']:.2f} KB (Entradas memo creadas: {stats_memo['entradas_memo']}, Hits: {stats_memo['hits_memo']})",
+                (
+                    f"    - DP Memoizada: Pico = {stats_memo['memo_pico_kb']:.2f} KB (Entradas "
+                    f"memo creadas: {stats_memo['entradas_memo']}, Hits: {stats_memo['hits_memo']}"
+                    ")"
+                ),
                 "",
             ]
         )
@@ -197,10 +219,19 @@ def main():
             " COMPORTAMIENTO DE LA CACHÉ LRU (GESTIÓN REACTIVA DE MEMORIA)",
             "--------------------------------------------------------------------------------",
             " - Capacidad máxima acotada: 50 búsquedas, 20 top-N, 20 alternativas",
-            f" - Huella de memoria llena: {stats_cache['cache_llena_kb']:.2f} KB (Pico: {stats_cache['cache_pico_kb']:.2f} KB)",
-            f" - Huella tras invalidación reactiva por mutación de stock: {stats_cache['cache_post_inval_kb']:.2f} KB",
+            (
+                f" - Huella de memoria llena: {stats_cache['cache_llena_kb']:.2f} KB (Pico: "
+                f"{stats_cache['cache_pico_kb']:.2f} KB)"
+            ),
+            (
+                " - Huella tras invalidación reactiva por mutación de stock: "
+                f"{stats_cache['cache_post_inval_kb']:.2f} KB"
+            ),
             " * Conclusión: La política de desalojo LRU previene fugas de memoria (memory leaks),",
-            "   garantizando un límite superior estricto de memoria O(C) independiente del volumen de consultas.",
+            (
+                "   garantizando un límite superior estricto de memoria O(C) independiente del "
+                "volumen de consultas."
+            ),
             "",
         ]
     )

@@ -67,6 +67,16 @@ RUTA_INFORME = BASE_DIR / "docs" / "mediciones" / "archivos_grandes.md"
 
 BYTES_POR_MB = 1024.0 * 1024.0
 BUFFER_EXPLICITO = 1024 * 1024
+# Rangos válidos de los argumentos de línea de comandos.
+LIMITES_ARGUMENTOS = {
+    "productos": (1, 1_000_000),
+    "pedidos": (1, 10_000_000),
+    "lotes": (1, 1_000_000),
+    "repeticiones": (1, 50),
+    "workers": (1, 64),
+}
+# Diferencia (%) a partir de la cual el buffer explícito se considera más rápido.
+DIFERENCIA_SIGNIFICATIVA_PCT = 5.0
 BUFFER_POR_DEFECTO = -1  # el buffer que elige Python (io.DEFAULT_BUFFER_SIZE)
 
 
@@ -228,7 +238,7 @@ def _conclusion_lotes(filas: list[dict[str, float]], workers: int) -> str:
 def _conclusion_csv(csv: dict[str, float]) -> str:
     base = f"Se exportaron {csv['filas']:,} filas ({csv['kb']:.1f} KB)."
     diferencia = 100.0 * (csv["defecto_ms"] - csv["explicito_ms"]) / csv["defecto_ms"]
-    if diferencia > 5:
+    if diferencia > DIFERENCIA_SIGNIFICATIVA_PCT:
         return base + (
             f" El buffer de 1 MB fue un {diferencia:.0f} % más rápido: agrupa las escrituras "
             "en menos llamadas al sistema operativo."
@@ -240,16 +250,55 @@ def _conclusion_csv(csv: dict[str, float]) -> str:
     )
 
 
+def fila_markdown(*celdas: object) -> str:
+    """Arma una fila de tabla Markdown: ``| a | b | c |``."""
+    return "| " + " | ".join(str(celda) for celda in celdas) + " |"
+
+
 def generar_informe(datos: dict[str, Any]) -> None:
     """Escribe ``docs/mediciones/archivos_grandes.md`` con los resultados."""
     lectura = datos["lectura"]
-    filas_lotes = "\n".join(
-        f"| {f['lote']:,} | {f['secuencial_ms']:.1f} | {f['paralelo_ms']:.1f} "
-        f"| **{f['speedup']:.2f}×** | {f['secuencial_mb']:.2f} | {f['paralelo_mb']:.2f} |"
-        for f in datos["lotes"]
-    )
     ram = datos["memoria_ram"]
     csv = datos["csv"]
+    entorno = (
+        f"{datos['sistema']} · Python {datos['python']} · "
+        f"{datos['nucleos']} núcleos lógicos · {datos['workers']} workers"
+    )
+    fila_carga_completa = fila_markdown(
+        "Carga completa (`json.loads` de todas las líneas a una lista)",
+        f"{lectura['completa_ms']:.1f}",
+        f"{lectura['completa_mb']:.2f}",
+    )
+    fila_streaming = fila_markdown(
+        "Streaming (`leer_pedidos_streaming_jsonl`)",
+        f"{lectura['streaming_ms']:.1f}",
+        f"{lectura['streaming_mb']:.2f}",
+    )
+    encabezado_lotes = fila_markdown(
+        "Lote (líneas)",
+        "Secuencial (ms)",
+        "Paralelo (ms)",
+        "Speedup",
+        "Pico secuencial (MB)",
+        "Pico paralelo (MB)",
+    )
+    filas_lotes = "\n".join(
+        fila_markdown(
+            f"{fila['lote']:,}",
+            f"{fila['secuencial_ms']:.1f}",
+            f"{fila['paralelo_ms']:.1f}",
+            f"**{fila['speedup']:.2f}×**",
+            f"{fila['secuencial_mb']:.2f}",
+            f"{fila['paralelo_mb']:.2f}",
+        )
+        for fila in datos["lotes"]
+    )
+    fila_ram = fila_markdown(
+        f"{ram['pedidos']:,}",
+        f"{ram['secuencial_ms']:.1f}",
+        f"{ram['paralelo_ms']:.1f}",
+        f"**{ram['speedup']:.2f}×**",
+    )
 
     contenido = f"""# Archivos grandes: streaming, buffering y paralelismo
 
@@ -258,7 +307,7 @@ a correr el script para actualizar los números.
 
 ## Entorno y datos
 
-- **Sistema:** {datos["sistema"]} · Python {datos["python"]} · {datos["nucleos"]} núcleos lógicos · {datos["workers"]} workers.
+- **Sistema:** {entorno}.
 - **Archivos generados** (semilla {datos["semilla"]}, en `data/generados/`, fuera de git):
   `productos.jsonl` con {datos["n_productos"]:,} productos ({datos["mb_productos"]:.2f} MB) y
   `pedidos.jsonl` con {datos["n_pedidos"]:,} pedidos ({datos["mb_pedidos"]:.2f} MB).
@@ -271,8 +320,8 @@ a correr el script para actualizar los números.
 
 | Estrategia | Tiempo (ms) | Pico de memoria (MB) |
 |---|---:|---:|
-| Carga completa (`json.loads` de todas las líneas a una lista) | {lectura["completa_ms"]:.1f} | {lectura["completa_mb"]:.2f} |
-| Streaming (`leer_pedidos_streaming_jsonl`) | {lectura["streaming_ms"]:.1f} | {lectura["streaming_mb"]:.2f} |
+{fila_carga_completa}
+{fila_streaming}
 
 {_conclusion_lectura(lectura)}
 
@@ -282,7 +331,7 @@ Cada lote se parsea, valida y evalúa con la misma función en ambas versiones. 
 paralela manda el stock una sola vez por worker (initializer) y mantiene como máximo dos
 lotes en vuelo por worker, así que su memoria no crece con el archivo.
 
-| Lote (líneas) | Secuencial (ms) | Paralelo (ms) | Speedup | Pico secuencial (MB) | Pico paralelo (MB) |
+{encabezado_lotes}
 |---:|---:|---:|---:|---:|---:|
 {filas_lotes}
 
@@ -292,7 +341,7 @@ lotes en vuelo por worker, así que su memoria no crece con el archivo.
 
 | Pedidos | Secuencial (ms) | Pool de procesos (ms) | Speedup |
 |---:|---:|---:|---:|
-| {ram["pedidos"]:,} | {ram["secuencial_ms"]:.1f} | {ram["paralelo_ms"]:.1f} | **{ram["speedup"]:.2f}×** |
+{fila_ram}
 
 Evaluar un pedido en memoria es un lookup O(1) por línea, más barato que serializarlo hacia
 un worker. Por eso `MotorInventario.procesar_pedidos` es secuencial por defecto y el pool
@@ -370,6 +419,7 @@ def ejecutar_benchmark_archivos_grandes(
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Valida los argumentos de línea de comandos y corre el benchmark."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--productos", type=int, default=5000)
     parser.add_argument("--pedidos", type=int, default=200_000)
@@ -377,18 +427,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--repeticiones", type=int, default=5)
     parser.add_argument("--workers", type=int, default=None)
     args = parser.parse_args(argv)
-    limites = {
-        "productos": (1, 1_000_000),
-        "pedidos": (1, 10_000_000),
-        "repeticiones": (1, 50),
-        "workers": (1, 64),
-    }
-    for nombre, (minimo, maximo) in limites.items():
-        valor = getattr(args, nombre)
-        if valor is not None and not minimo <= valor <= maximo:
-            parser.error(f"--{nombre} debe estar entre {minimo} y {maximo}")
-    if args.lotes and not all(1 <= lote <= 1_000_000 for lote in args.lotes):
-        parser.error("--lotes debe tener valores entre 1 y 1000000")
+    for nombre, (minimo, maximo) in LIMITES_ARGUMENTOS.items():
+        valores = getattr(args, nombre)
+        for valor in valores if isinstance(valores, list) else [valores]:
+            if valor is not None and not minimo <= valor <= maximo:
+                parser.error(f"--{nombre} debe estar entre {minimo} y {maximo}")
     ejecutar_benchmark_archivos_grandes(
         n_productos=args.productos,
         n_pedidos=args.pedidos,

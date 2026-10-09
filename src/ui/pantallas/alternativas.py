@@ -1,3 +1,5 @@
+"""Pantalla de alternativas sustitutas: recursión exhaustiva vs programación dinámica."""
+
 from __future__ import annotations
 
 import contextlib
@@ -11,7 +13,6 @@ from src.ui.tema import (
     COLOR_EXITO,
     COLOR_PELIGRO,
     COLOR_PRIMARIO,
-    COLOR_SECUNDARIO,
     COLOR_TARJETA,
     COLOR_TEXTO_MUTED,
     COLOR_TEXTO_PRIMARIO,
@@ -33,6 +34,9 @@ from src.ui.tema import (
     padding_symmetric,
 )
 
+# Categoría que se muestra si el dataset no trae ninguna.
+CATEGORIA_POR_DEFECTO = "Ferretería y Herramientas"
+
 
 class PantallaAlternativas(PantallaBase):
     """Vista para encontrar combinaciones de sustitutos con y sin memoización."""
@@ -45,7 +49,7 @@ class PantallaAlternativas(PantallaBase):
 
         categorias_disponibles = sorted({p.categoria for p in self.motor.catalogo.obtener_todos()})
         cat_inicial = (
-            categorias_disponibles[0] if categorias_disponibles else "Ferretería y Herramientas"
+            categorias_disponibles[0] if categorias_disponibles else CATEGORIA_POR_DEFECTO
         )
 
         self.dropdown_categoria = crear_dropdown(
@@ -106,15 +110,24 @@ class PantallaAlternativas(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Cálculo de Alternativas y Combinaciones Sustitutas",
-                    "Demostración experimental de Memoización: Árbol recursivo exhaustivo O(2^N) vs. Programación Dinámica O(N * P)",
+                    (
+                        "Demostración experimental de Memoización: Árbol recursivo exhaustivo "
+                        "O(2^N) vs. Programación Dinámica O(N * P)"
+                    ),
                     self.btn_buscar,
                 ),
                 crear_banner_explicativo(
                     titulo="Sustitutos y Programación Dinámica",
-                    descripcion="Explora combinaciones de productos dentro de una categoría para suplir faltantes de stock respetando un presupuesto máximo.",
+                    descripcion=(
+                        "Explora combinaciones de productos dentro de una categoría para suplir "
+                        "faltantes de stock respetando un presupuesto máximo."
+                    ),
                     complejidad_base="Árbol Recursivo Exhaustivo O(2^N)",
                     complejidad_opt="Programación Dinámica Memoizada O(N·P)",
-                    por_que_importa="La memoización de subproblemas previene la explosión exponencial O(2^N), permitiendo encontrar combinaciones óptimas en menos de 1 milisegundo.",
+                    por_que_importa=(
+                        "La memoización de subproblemas previene la explosión exponencial O(2^N), "
+                        "permitiendo encontrar combinaciones óptimas en menos de 1 milisegundo."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -139,7 +152,7 @@ class PantallaAlternativas(PantallaBase):
         """Callback al recargar dataset."""
         categorias_disponibles = sorted({p.categoria for p in self.motor.catalogo.obtener_todos()})
         cat_inicial = (
-            categorias_disponibles[0] if categorias_disponibles else "Ferretería y Herramientas"
+            categorias_disponibles[0] if categorias_disponibles else CATEGORIA_POR_DEFECTO
         )
         self.dropdown_categoria.options = [
             ft.dropdown.Option(cat, cat) for cat in categorias_disponibles
@@ -175,7 +188,7 @@ class PantallaAlternativas(PantallaBase):
         self._renderizar_combinaciones()
 
     def _ejecutar_busqueda(self):
-        categoria = self.dropdown_categoria.value or "Ferretería y Herramientas"
+        categoria = self.dropdown_categoria.value or CATEGORIA_POR_DEFECTO
         try:
             presupuesto = float(self.input_presupuesto.value or "45000")
         except ValueError:
@@ -204,29 +217,21 @@ class PantallaAlternativas(PantallaBase):
                 "Combinaciones Halladas",
                 f"{resultado.total_combinaciones:,}",
                 f"Presupuesto: ${presupuesto:,.0f}",
-                ft.Icons.AUTO_AWESOME,
-                COLOR_PRIMARIO,
             ),
             crear_tarjeta_kpi(
                 "Tiempo de Exploración",
                 formatear_tiempo_ms(resultado.tiempo_ejecucion_ms),
                 f"{'DP con Memo' if usar_memo else 'Árbol Recursivo'}",
-                ft.Icons.SPEED,
-                COLOR_EXITO,
             ),
             crear_tarjeta_kpi(
                 "Llamadas Reutilizadas",
                 f"{resultado.hits_memo:,}",
                 "Subproblemas cacheados",
-                ft.Icons.SAVED_SEARCH,
-                COLOR_SECUNDARIO,
             ),
             crear_tarjeta_kpi(
                 "Complejidad Teórica",
                 "O(N * P)" if usar_memo else "O(2^N)",
                 "Pseudo-polinomial" if usar_memo else "Exponencial",
-                ft.Icons.FUNCTIONS,
-                COLOR_PRIMARIO,
             ),
         ]
 
@@ -307,7 +312,10 @@ class PantallaAlternativas(PantallaBase):
                     color=COLOR_TEXTO_PRIMARIO,
                 ),
                 subtitle=ft.Text(
-                    f"Total: ${costo_total:,.2f} ({porc_uso:.1f}% del presupuesto) | Remanente: ${diferencia:,.2f}",
+                    (
+                        f"Total: ${costo_total:,.2f} ({porc_uso:.1f}% del presupuesto) | "
+                        f"Remanente: ${diferencia:,.2f}"
+                    ),
                     size=12,
                     color=COLOR_TEXTO_SECUNDARIO,
                 ),
@@ -331,7 +339,10 @@ class PantallaAlternativas(PantallaBase):
             items.append(
                 ft.Container(
                     content=ft.Text(
-                        "No se hallaron combinaciones viables dentro del presupuesto en esta categoría.",
+                        (
+                            "No se hallaron combinaciones viables dentro del presupuesto en esta "
+                            "categoría."
+                        ),
                         size=13,
                         color=COLOR_TEXTO_MUTED,
                     ),

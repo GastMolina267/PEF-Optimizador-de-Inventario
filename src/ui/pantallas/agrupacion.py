@@ -13,7 +13,6 @@ from src.ui.tema import (
     COLOR_EXITO,
     COLOR_PELIGRO,
     COLOR_PRIMARIO,
-    COLOR_SECUNDARIO,
     COLOR_TARJETA,
     COLOR_TEXTO_MUTED,
     COLOR_TEXTO_PRIMARIO,
@@ -32,6 +31,20 @@ from src.ui.tema import (
     formatear_tiempo_ms,
     padding_symmetric,
 )
+
+
+def _stock_de(item) -> int:
+    return item.producto.stock if item.producto else 0
+
+
+# Claves de orden de la tabla de picking según el criterio elegido.
+CLAVES_ORDEN_PICKING = {
+    "cantidad": lambda item: item.cantidad_total,
+    "nombre": lambda item: item.producto.nombre.lower() if item.producto else "",
+    "stock": _stock_de,
+    # 0 = faltante, 1 = cubierto.
+    "estado": lambda item: 1 if _stock_de(item) >= item.cantidad_total else 0,
+}
 
 
 class PantallaAgrupacion(PantallaBase):
@@ -78,15 +91,24 @@ class PantallaAgrupacion(PantallaBase):
             controls=[
                 crear_encabezado(
                     "Batch Picking Consolidado",
-                    "Fusión de demandas en una sola pasada O(L) mediante acumulación en tablas Hash",
+                    (
+                        "Fusión de demandas en una sola pasada O(L) mediante acumulación en "
+                        "tablas Hash"
+                    ),
                     self.btn_agrupar,
                 ),
                 crear_banner_explicativo(
                     titulo="Batch Picking Consolidado en Almacén",
-                    descripcion="Consolida las demandas de todos los pedidos en una única lista de recolección para que el operario visite cada posición una sola vez.",
+                    descripcion=(
+                        "Consolida las demandas de todos los pedidos en una única lista de "
+                        "recolección para que el operario visite cada posición una sola vez."
+                    ),
                     complejidad_base="Agrupación Anidada O(P·L·n)",
                     complejidad_opt="Agrupación Hash O(L)",
-                    por_que_importa="En depósitos con miles de pedidos, elimina búsquedas cuadráticas repetidas y reduce la distancia física recorrida en almacén.",
+                    por_que_importa=(
+                        "En depósitos con miles de pedidos, elimina búsquedas cuadráticas "
+                        "repetidas y reduce la distancia física recorrida en almacén."
+                    ),
                 ),
                 crear_barra_herramientas(
                     [
@@ -112,21 +134,7 @@ class PantallaAgrupacion(PantallaBase):
 
     def _aplicar_ordenamiento(self):
         criterio = self.dropdown_orden.value or "cantidad"
-
-        def clave(item):
-            prod = item.producto
-            if criterio == "cantidad":
-                return item.cantidad_total
-            elif criterio == "nombre":
-                return prod.nombre.lower() if prod else ""
-            elif criterio == "stock":
-                return prod.stock if prod else 0
-            elif criterio == "estado":
-                # Faltantes primero o cubiertos primero
-                stock_disp = prod.stock if prod else 0
-                return 1 if stock_disp >= item.cantidad_total else 0
-            return item.id_producto
-
+        clave = CLAVES_ORDEN_PICKING.get(criterio, lambda item: item.id_producto)
         self.items_consolidados_actuales.sort(key=clave, reverse=not self.orden_ascendente)
         self._renderizar_items()
 
@@ -141,29 +149,21 @@ class PantallaAgrupacion(PantallaBase):
                 "Pedidos Consolidados",
                 f"{lote.total_pedidos:,}",
                 "Órdenes agrupadas",
-                ft.Icons.LOCAL_SHIPPING,
-                COLOR_PRIMARIO,
             ),
             crear_tarjeta_kpi(
                 "Productos Únicos",
                 f"{lote.total_productos_distintos:,}",
                 "Posiciones a visitar",
-                ft.Icons.CATEGORY,
-                COLOR_SECUNDARIO,
             ),
             crear_tarjeta_kpi(
                 "Unidades Totales",
                 f"{lote.total_unidades:,}",
                 "Cantidad agregada",
-                ft.Icons.INVENTORY_2,
-                COLOR_EXITO,
             ),
             crear_tarjeta_kpi(
                 "Tiempo de Consolidación",
                 formatear_tiempo_ms(duracion_ms),
                 "Cómputo en una pasada O(L)",
-                ft.Icons.SPEED,
-                COLOR_PRIMARIO,
             ),
         ]
 
@@ -172,7 +172,10 @@ class PantallaAgrupacion(PantallaBase):
 
         self._publicar_resultado(
             tiempo_ms=duracion_ms,
-            resultado_negocio=f"Batch Picking: {lote.total_unidades} Unidades en {lote.total_productos_distintos} productos",
+            resultado_negocio=(
+                f"Batch Picking: {lote.total_unidades} Unidades en "
+                f"{lote.total_productos_distintos} productos"
+            ),
         )
         actualizar_control(self)
 
@@ -209,7 +212,10 @@ class PantallaAgrupacion(PantallaBase):
                             ),
                             crear_columna_titulo_detalle(
                                 nombre,
-                                f"{categoria} | {item.total_pedidos_solicitantes} pedidos solicitantes",
+                                (
+                                    f"{categoria} | {item.total_pedidos_solicitantes} pedidos "
+                                    "solicitantes"
+                                ),
                             ),
                             ft.Column(
                                 controls=[
@@ -242,7 +248,10 @@ class PantallaAgrupacion(PantallaBase):
         if len(self.items_consolidados_actuales) > max_mostrar:
             items_visuales.append(
                 ft.Text(
-                    f"Mostrando los primeros {max_mostrar} de {len(self.items_consolidados_actuales)} productos consolidados...",
+                    (
+                        f"Mostrando los primeros {max_mostrar} de "
+                        f"{len(self.items_consolidados_actuales)} productos consolidados..."
+                    ),
                     size=12,
                     color=COLOR_TEXTO_MUTED,
                     text_align=ft.TextAlign.CENTER,

@@ -88,6 +88,7 @@ def ejecutar_escenario_scalene(nombre_dataset: str = "grande.json", iteraciones:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """Lee los argumentos y corre el escenario que perfila Scalene."""
     parser = argparse.ArgumentParser(description="Escenario de perfilado para Scalene.")
     parser.add_argument("--dataset", default="grande.json")
     parser.add_argument("--iteraciones", type=int, default=30)
