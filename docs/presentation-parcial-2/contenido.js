@@ -108,6 +108,22 @@
     return pts.join(' ');
   }
 
+  // Tarjeta de resumen de sección ("Qué se hizo en esta sección")
+  function tarjetaResumen(faseTema, items) {
+    return `
+      <div class="summary-card rv" style="--i:0">
+        <div class="sc-head">
+          <span class="sc-badge">${esc(faseTema)}</span>
+          <strong class="sc-title">Qué se hizo en esta sección</strong>
+        </div>
+        <div class="sc-body">
+          <ul>
+            ${items.map((it) => '<li>' + it + '</li>').join('')}
+          </ul>
+        </div>
+      </div>`;
+  }
+
   /* ------------------------------------------------------------------------
      Ilustraciones de los objetos (viewBox 0 0 120 120)
      ------------------------------------------------------------------------ */
@@ -318,6 +334,17 @@
     { m: 'Páginas de documentación (Sphinx)', a: 0, b: 20, fmt: (v) => String(v), mejor: 'mas', nota: 'build con -W: 0 advertencias' }
   ];
 
+  const COMPARATIVA_SPEEDUP = [
+    { op: 'Búsqueda por Nombre', base: '20,68 ms', opt: '0,012 ms', delta: '1.692×', bigo: 'O(n) → O(1) amort.', nota: 'Índice invertido tokenizado + caché LRU de 128 slots' },
+    { op: 'Búsqueda por ID', base: '0,369 ms', opt: '0,008 ms', delta: '47,1×', bigo: 'O(n) → O(1)', nota: 'Acceso hash indexado vs escaneo de lista' },
+    { op: 'Batch Picking Consolidado', base: '827,5 ms', opt: '106,1 ms', delta: '7,80×', bigo: 'O(P·L·n) → O(L)', nota: 'Una sola pasada hash sin producto cartesiano' },
+    { op: 'Combinaciones Sustitutas (DP)', base: '42,30 ms', opt: '21,88 ms', delta: '1,93×', bigo: 'O(2ⁿ) → O(N·P)', nota: 'Memoización podando ramas idénticas del árbol' },
+    { op: 'Ranking Top-N (k=5)', base: '15,15 ms', opt: '9,01 ms', delta: '1,68×', bigo: 'O(N log N) → O(N log k)', nota: 'heapq.nlargest acota la memoria a k' },
+    { op: 'Lectura Archivo Masivo (RAM)', base: '195,59 MB', opt: '1,02 MB', delta: '−99,5%', bigo: 'O(N) → O(1)', nota: 'Generador streaming línea a línea (JSONL)' },
+    { op: 'Lotes Paralelos en Archivos', base: '995,5 ms', opt: '654,2 ms', delta: '1,52×', bigo: 'O(L) → O(L/C)', nota: 'Parseo JSONL CPU-bound en ProcessPool' },
+    { op: 'Multiproceso en Memoria (Windows)', base: '65,7 ms', opt: '535,7 ms', delta: '0,12×', bigo: 'Overhead IPC', nota: 'Amdahl: spawn e IPC superan cómputo en RAM' }
+  ];
+
   const FASES = [
     { f: 'F0', n: 'Plan', rama: 'p2/f0-plan', tema: 'Planificación',
       hizo: ['Plan del parcial por fases con criterio de cierre', 'Evaluación de las 5 propuestas de las automatizaciones Origin: se eligió la 1 (overhead de IPC)', 'Hallazgo del error de concurrencia con descuento de stock'],
@@ -483,6 +510,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'El Parcial 2 no reemplaza al Parcial 1: lo recibe, lo limpia y lo vuelve a despachar auditado',
       evidencia: 'docs/Parcial-II.txt · docs/planificacion-parcial-2.md',
       html: () => `
+        ${tarjetaResumen('F0 · Planificación y Consigna', [
+          '<strong>Preservación de la Línea Base:</strong> El Parcial 1 quedó intacto como referencia (commit <code>e3230a1</code>); no se sobreescribió nada para comparar científicamente el código original contra las mejoras.',
+          '<strong>Plan en 10 fases encadenadas:</strong> Dividimos el trabajo de menor a mayor riesgo (F0 a F9). Cada etapa tuvo su propia rama Git y un Pull Request (PR) individual con criterios de cierre medibles.',
+          '<strong>Problema central a resolver:</strong> Elegimos mitigar el <em>overhead</em> de IPC (el tiempo que pierde Windows comunicando procesos entre sí), que hacía que el procesamiento concurrente fuera más lento que el secuencial.'
+        ])}
         <div class="grid-split">
           <div class="panel rv" style="--i:0">
             <h3>Envío recibido</h3>
@@ -552,6 +584,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'Lo que mostró la línea base del Parcial 1 al pasarle las mismas 9 herramientas que usamos al cierre',
       evidencia: LB1 + ' · docs/mediciones/tabla_comparativa.md',
       html: () => `
+        ${tarjetaResumen('F0 / F1 · Diagnóstico y Deuda Técnica', [
+          '<strong>Medición inicial con 9 herramientas:</strong> Antes de tocar el código, ejecutamos linters y analizadores estáticos para medir objetivamente la deuda técnica heredada del Parcial 1.',
+          '<strong>Deuda técnica identificada:</strong> Detectamos 19 fallos de sintaxis en Ruff, 8 bloques duplicados y 3 funciones con <strong>Complejidad Ciclomática (CC)</strong> grado D (código con demasiadas bifurcaciones, con CC de hasta 30).',
+          '<strong>Bug latente de concurrencia:</strong> Hallamos un fallo silencioso: al procesar pedidos paralelos descontando stock, dos procesos descontaban el mismo producto a la vez y daban ambos como cubiertos sin stock suficiente.'
+        ])}
         <div class="grid-split diag">
           <div class="panel rv" style="--i:0">
             <h3>Lo que llegó funcionando</h3>
@@ -612,6 +649,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'Diez fases encadenadas: los tests llegan antes que el refactor y cada PR tiene que pasar CI, cobertura y Quality Gate',
       evidencia: 'docs/planificacion-parcial-2.md · historial de git (59 commits sobre parcial-1)',
       html: () => `
+        ${tarjetaResumen('F0 → F9 · Metodología de Desarrollo', [
+          '<strong>Ramas aisladas por fase:</strong> Cada etapa se desarrolló en su rama <code>p2/fN-nombre</code> y se integró mediante Pull Requests (PRs) apilados hacia <code>parcial-2</code>, manteniendo un historial limpio y reproducible.',
+          '<strong>Quality Gate estricto:</strong> Ningún cambio entraba al repositorio sin pasar la Integración Continua (CI en GitHub Actions): pruebas en Windows y Ubuntu, cobertura de tests ≥ 85 % y validación de SonarQube.',
+          '<strong>Historial limpio (git blame):</strong> El formateo masivo de estilo con <code>ruff format</code> se aisló en un único commit en F1 y se registró en <code>.git-blame-ignore-revs</code> para preservar la autoría de cada línea.'
+        ])}
         <div class="tour-bar rv" style="--i:0"><span>Clic en una fase para fijarla</span><button type="button" class="mini-btn" data-tour>▶ Recorrer solo</button></div>
         <div class="timeline rv" style="--i:0">
           <div class="tl-track"><div class="tl-fill" id="tl-fill"></div></div>
@@ -658,6 +700,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'SonarQube Cloud, ruff y complexipy deciden si un cambio entra; no depende de que alguien se acuerde de revisarlo',
       evidencia: '.github/workflows/verify.yml · sonar-project.properties · .pre-commit-config.yaml',
       html: () => `
+        ${tarjetaResumen('F1 · F7 · Calidad y Reglas Automáticas', [
+          '<strong>SonarQube y Quality Gate:</strong> Conectamos el repositorio para evaluar cada PR. Si un cambio introduce duplicados, code smells críticos o baja la cobertura del 85 %, el Quality Gate (semáforo de calidad) bloquea el merge.',
+          '<strong>Complejidad Cognitiva (regla S3776):</strong> A diferencia de la ciclomática, mide <em>qué tan difícil es para un humano entender una función</em>. Fijamos un tope estricto de ≤ 15 puntos por función (verificado con <code>complexipy</code>).',
+          '<strong>Seguridad del pipeline y pre-commit:</strong> Configuramos <code>pre-commit</code> para frenar errores de PEP 8 antes de commitear, y fijamos dependencias reproducibles con <code>uv.lock</code> y acciones GitHub por hash SHA.'
+        ])}
         <div class="tour-bar rv" style="--i:0"><span>Clic en una estación para fijarla</span><button type="button" class="mini-btn" data-tour>▶ Recorrer solo</button></div>
         <div class="pipeline rv" style="--i:0">
           <div class="belt" aria-hidden="true"><span class="belt-box" id="belt-box"></span></div>
@@ -707,40 +754,127 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'Primero blindamos el comportamiento; después cambiamos la estructura con la suite en verde',
       evidencia: 'tests/ · ' + LB2 + 'cobertura.txt · tests/pedidos/test_procesador_concurrente.py',
       html: () => `
+        ${tarjetaResumen('F2 · F9 · Red de Seguridad de Pruebas', [
+          '<strong>Blindaje antes del refactor:</strong> Duplicamos la suite (+130 %, de 84 a 193 tests) y subimos la cobertura al 90 %, organizando las pruebas en 11 paquetes por dominio para no romper nada durante las refactorizaciones.',
+          '<strong>Pruebas automáticas con Hypothesis:</strong> Usamos tests basados en propiedades, generando miles de pedidos y catálogos aleatorios para comprobar matemáticamente que el código optimizado da exactamente el mismo resultado que el original.',
+          '<strong>Captura del bug y microbenchmarks:</strong> Fijamos el bug de concurrencia con <code>xfail(strict=True)</code> (falla esperada documentada) y medimos operaciones críticas en nanosegundos con <code>pytest-benchmark</code>.'
+        ])}
         <div class="grid-split tests">
           <div class="kpi-grid rv" style="--i:0">
             <div class="kpi"><span class="k-lbl">Tests</span><span class="k-from">84</span><span class="k-big" data-count="193">193</span></div>
             <div class="kpi"><span class="k-lbl">Cobertura src/</span><span class="k-from">80 %</span><span class="k-big" data-count="90" data-suf=" %">90 %</span></div>
             <div class="kpi"><span class="k-lbl">Umbral en CI</span><span class="k-from">75 %</span><span class="k-big" data-count="85" data-suf=" %">85 %</span></div>
             <div class="kpi"><span class="k-lbl">Organización</span><span class="k-from">test_etapa_*.py</span><span class="k-mid">11 subpaquetes por dominio</span></div>
-            <div class="kpi"><span class="k-lbl">Hypothesis</span><span class="k-mid">Baseline ≡ Optimizado con datos aleatorios</span></div>
-            <div class="kpi"><span class="k-lbl">pytest-benchmark</span><span class="k-mid">Regresión de rendimiento: hash ≈ 90 ns, lineal ≈ 1 µs</span></div>
+            <div class="kpi"><span class="k-lbl">Hypothesis</span><span class="k-mid">Equivalencia estricta con datos aleatorios</span></div>
+            <div class="kpi"><span class="k-lbl">pytest-benchmark</span><span class="k-mid">Regresión continua en nanosegundos</span></div>
           </div>
           <div class="panel bug-lab rv" style="--i:1">
-            <h3>El error que atrapó la red <span class="chip chip-crimson">correctitud</span></h3>
-            <div class="bug-setup">
-              <span class="stock-chip">Producto #1 · stock <b id="bug-stock">5</b></span>
-              <span>Pedido #1 pide 5</span><span>Pedido #2 pide 5</span><span><code>descontar_stock=True</code></span>
+            <div class="panel-subseg">
+              <div class="seg small" id="lab-tab-seg">
+                <button type="button" class="active" data-tab="bug">Bug de Concurrencia</button>
+                <button type="button" data-tab="bench">Microbenchmarks (pytest-benchmark)</button>
+              </div>
+              <span class="chip chip-crimson" id="lab-tab-badge">correctitud · F2 / F4</span>
             </div>
-            <div class="seg" role="tablist">
-              <button type="button" class="active" data-m="p1">Concurrente · Parcial 1</button>
-              <button type="button" data-m="p2">Concurrente · Parcial 2</button>
-              <button type="button" data-m="seq">Secuencial (referencia)</button>
+            <div id="bug-tab-wrap">
+              <div class="bug-setup">
+                <span class="stock-chip">Producto #1 · stock <b id="bug-stock">5</b></span>
+                <span>Pedido #1 pide 5</span><span>Pedido #2 pide 5</span><span><code>descontar_stock=True</code></span>
+              </div>
+              <div class="seg" role="tablist">
+                <button type="button" class="active" data-m="p1">Concurrente · Parcial 1</button>
+                <button type="button" data-m="p2">Concurrente · Parcial 2</button>
+                <button type="button" data-m="seq">Secuencial (referencia)</button>
+              </div>
+              <div class="bug-lanes" id="bug-lanes"></div>
+              <p class="bug-explain" id="bug-explain"></p>
+              <ol class="lifecycle">
+                <li><code>xfail(strict=True)</code><span>F2 documenta el error</span></li>
+                <li>Corrección<span>F4 separa evaluar de asignar</span></li>
+                <li>«xpass» rompe el CI<span>obliga a quitar la marca</span></li>
+                <li class="ok">Test en verde<span>respeta el descuento</span></li>
+              </ol>
             </div>
-            <div class="bug-lanes" id="bug-lanes"></div>
-            <p class="bug-explain" id="bug-explain"></p>
-            <ol class="lifecycle">
-              <li><code>xfail(strict=True)</code><span>F2 documenta el error</span></li>
-              <li>Corrección<span>F4 separa evaluar de asignar</span></li>
-              <li>«xpass» rompe el CI<span>obliga a quitar la marca</span></li>
-              <li class="ok">Test en verde<span>respeta el descuento</span></li>
-            </ol>
+            <div class="bench-wrap" id="bench-tab-wrap" hidden>
+              <table class="bench-tbl">
+                <thead>
+                  <tr>
+                    <th>Operación Crítica</th>
+                    <th>Mediana</th>
+                    <th>OPS</th>
+                    <th>Speedup / Orden</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><b>Búsqueda Hash por ID</b></td>
+                    <td class="mono">87,0 ns</td>
+                    <td class="ops">10.729.841</td>
+                    <td><span class="speedup-chip hl">11,4×</span> <small>vs lineal O(1)</small></td>
+                  </tr>
+                  <tr>
+                    <td>Búsqueda Lineal por ID</td>
+                    <td class="mono">1.000,0 ns</td>
+                    <td class="ops">942.075</td>
+                    <td><span class="speedup-chip ref">1,0×</span> <small>referencia O(n)</small></td>
+                  </tr>
+                  <tr>
+                    <td><b>Ranking Top-N (Min-Heap k=5)</b></td>
+                    <td class="mono">9,80 µs</td>
+                    <td class="ops">98.772</td>
+                    <td><span class="speedup-chip">O(N log k)</span> <small>k acotado</small></td>
+                  </tr>
+                  <tr>
+                    <td><b>Combinaciones DP Memoizadas</b></td>
+                    <td class="mono">21,10 µs</td>
+                    <td class="ops">45.617</td>
+                    <td><span class="speedup-chip">O(N · P)</span> <small>poda de ramas</small></td>
+                  </tr>
+                  <tr>
+                    <td><b>Procesamiento de Pedidos</b></td>
+                    <td class="mono">30,00 µs</td>
+                    <td class="ops">31.551</td>
+                    <td><span class="speedup-chip">O(P · L)</span> <small>en memoria</small></td>
+                  </tr>
+                  <tr>
+                    <td><b>Batch Picking Consolidado</b></td>
+                    <td class="mono">29,50 µs</td>
+                    <td class="ops">32.220</td>
+                    <td><span class="speedup-chip">O(L)</span> <small>acumulación hash</small></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="bench-foot">
+                <p><b>Regresión continua en CI:</b> <code>pytest-benchmark</code> alerta si una refactorización degrada los nanosegundos. Invariantes validados con <b>Hypothesis</b>.</p>
+              </div>
+            </div>
           </div>
         </div>`,
       init(root, api) {
         const lanes = root.querySelector('#bug-lanes');
         const exp = root.querySelector('#bug-explain');
         const stock = root.querySelector('#bug-stock');
+        const labTabs = root.querySelectorAll('#lab-tab-seg button');
+        const bugWrap = root.querySelector('#bug-tab-wrap');
+        const benchWrap = root.querySelector('#bench-tab-wrap');
+        const badge = root.querySelector('#lab-tab-badge');
+
+        labTabs.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            labTabs.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+            bugWrap.hidden = tab !== 'bug';
+            benchWrap.hidden = tab !== 'bench';
+            if (tab === 'bug') {
+              badge.textContent = 'correctitud · F2 / F4';
+              badge.className = 'chip chip-crimson';
+            } else {
+              badge.textContent = 'nanosegundos · F9';
+              badge.className = 'chip chip-green';
+            }
+          });
+        });
+
         const MODOS = {
           p1: { w: ['Worker A lee la foto: stock 5', 'Worker B lee la misma foto: stock 5'], r: ['CUBIERTO', 'CUBIERTO'], bad: [false, true],
             t: 'Los dos workers evaluaron contra la misma foto inicial. El segundo descuento falló en silencio (descontar_stock devolvió False), pero el pedido #2 quedó informado como cubierto.' },
@@ -751,7 +885,7 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
         };
         const correr = (m) => {
           const d = MODOS[m];
-          root.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('active', b.dataset.m === m));
+          root.querySelectorAll('.bug-setup ~ .seg button').forEach((b) => b.classList.toggle('active', b.dataset.m === m));
           lanes.innerHTML = d.w.map((w, i) => `
             <div class="lane" style="--i:${i}">
               <span class="lane-w">${w}</span>
@@ -763,11 +897,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
           stock.textContent = '5';
           api.later(api.ms(700), () => { if (root.isConnected) stock.textContent = '0'; });
         };
-        root.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => correr(b.dataset.m)));
+        root.querySelectorAll('.bug-setup ~ .seg button').forEach((b) => b.addEventListener('click', () => correr(b.dataset.m)));
         correr('p1');
         root.querySelectorAll('[data-count]').forEach((el) => api.countUp(el, Number(el.dataset.count), el.dataset.suf || ''));
       },
-      notas: 'F2 fue la red de seguridad: fixtures compartidas, propiedades con Hypothesis que exigen que baseline y optimizado den lo mismo con datos aleatorios, y un test que reproducía el error de concurrencia marcado xfail(strict=True). Mostrar el laboratorio: con el código del Parcial 1, dos pedidos que piden 5 unidades de un producto con stock 5 salían los dos «cubiertos». En F4 se corrigió; el test pasó a xpass, el CI falló a propósito y se quitó la marca. Cierre: de 84 a 193 tests, de 80 a 90 % de cobertura y umbral 85 % en el CI.'
+      notas: 'F2 fue la red de seguridad y F9 la verificación de nanosegundos. En la pestaña «Bug de concurrencia»: con el Parcial 1 dos pedidos de 5 unidades con stock 5 salían los dos cubiertos; en F4 se resolvió desacoplando el cálculo puro de demanda de la asignación secuencial y atómica. En la pestaña «Microbenchmarks»: la suite continua de pytest-benchmark demuestra la aceleración de 11,4× en búsqueda hash (87 ns vs 1.000 ns lineal), ranking con min-heap en 9,8 µs y combinaciones DP en 21 µs. De 84 a 193 tests con 90 % de cobertura y umbral 85 % en CI.'
     },
 
     /* 06 ---------------------------------------------------------------- */
@@ -777,6 +911,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'pylint encontró 8 pares duplicados en el Parcial 1; hoy encuentra 0 (10,00 / 10)',
       evidencia: 'src/pedidos/evaluador.py · ' + LB1 + 'pylint_duplicados.txt · ' + LB2 + 'pylint_duplicados.txt',
       html: () => `
+        ${tarjetaResumen('F3 · Eliminación de Redundancia', [
+          '<strong>Unificación del núcleo de evaluación:</strong> Había 28 líneas copiadas textualmente entre el procesador secuencial y el concurrente. Las extrajimos a una única función pura en <code>evaluador.py</code> que ambos comparten.',
+          '<strong>Validadores y pantallas comunes:</strong> Fusionamos 2 validadores idénticos en <code>ValidadorDataset</code> y creamos <code>PantallaBase</code> para que 6 vistas de la interfaz gráfica Flet reutilicen la misma lógica de inicialización.',
+          '<strong>Cero duplicación (Pylint 10/10):</strong> Los 8 bloques duplicados que detectaba Pylint bajaron a 0. Eliminamos imports y variables huérfanas detectadas por <code>vulture</code>, conservando el baseline intacto para comparar.'
+        ])}
         <div class="merge rv" style="--i:0" id="merge">
           <div class="code-card side">
             <div class="cc-head"><span>procesador_secuencial.py</span><span class="chip">Parcial 1</span></div>
@@ -829,6 +968,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'Separa Python, código nativo y tiempo de sistema: el costo del pool no estaba en nuestro código, estaba en esperar y serializar',
       evidencia: 'docs/mediciones/scalene/resumen.md · docs/mediciones/archivos_grandes.md §3',
       html: () => `
+        ${tarjetaResumen('F4 · Diagnóstico de Rendimiento y Amdahl', [
+          '<strong>Perfilado con Scalene:</strong> Desglosa el tiempo en CPU Python, código nativo y tiempo de sistema (llamadas al SO y esperas). Reveló que el 28,1 % del tiempo se perdía esperando al sistema operativo.',
+          '<strong>¿Qué es el overhead de IPC?:</strong> <em>Inter-Process Communication</em> es el costo en milisegundos de abrir procesos en Windows, empaquetar con <code>pickle</code> y transferir datos por tuberías. En memoria (donde una búsqueda toma 87 ns), este costo supera al cómputo.',
+          '<strong>Mejoras del GestorPool y tuplas compactas:</strong> Enviamos el stock una sola vez (vía <code>initializer</code>) y reemplazamos objetos pesados (dataclasses) por <em>tuplas compactas</em> de enteros <code>(id, cantidad)</code>. Serializar tuplas primitivas con <code>pickle</code> es mucho más liviano y bajó el tiempo de sistema del 28,1 % al 20,6 %.'
+        ])}
         <div class="grid-split scalene">
           <div class="panel rv" style="--i:0">
             <h3>Mismo escenario, antes y después de la propuesta Origin 1</h3>
@@ -852,21 +996,21 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
             <h3>Los 5 cambios de la propuesta</h3>
             <ol class="numbered">
               <li><b>Separar evaluar de asignar:</b> los workers solo calculan; el stock se asigna en orden</li>
-              <li><b>Mandar menos datos:</b> stock una vez por worker (<code>initializer</code>) y resultados como tuplas compactas</li>
+              <li><b>Mandar menos datos (tuplas compactas):</b> stock una vez por worker (<code>initializer</code>) y resultados como tuplas compactas de enteros <code>(id, cantidad)</code> en vez de dataclasses pesadas, aligerando el costo de <code>pickle</code></li>
               <li><b>Sin <code>sort</code> final:</b> los fragmentos son contiguos y vuelven en orden</li>
               <li><b>Umbral medido, no supuesto:</b> se eliminó el <code>P ≥ 50</code></li>
               <li><b><code>GestorPool</code>:</b> ciclo de vida explícito en lugar de variables globales</li>
             </ol>
             <div class="honest">
-              <span class="h-tag">Resultado honesto</span>
-              <p>Con 2.000 pedidos ya en memoria el pool sigue perdiendo: <b>5,2 ms</b> secuencial contra <b>14,0 ms</b> con pool (<b>0,37×</b>). Por eso el motor es <b>secuencial por defecto</b> y el pool quedó para los archivos grandes.</p>
+              <span class="h-tag">Diagnóstico Científico · Ley de Amdahl</span>
+              <p><b>¿Por qué el pool pierde en memoria?</b> Una búsqueda hash en RAM tarda <b>~87 ns</b> (<i>O(1)</i>). El overhead de procesos en Windows (<code>CreateProcess</code> vía spawn + serialización <code>pickle</code> de dataclasses + pipes IPC) insume <b>milisegundos</b>. Cuando la tarea unitaria es ultra-ligera, el costo de comunicación satura el canal y resulta <b>28× más lento</b>. El pool quedó para tareas pesadas: lotes de archivos y DP.</p>
             </div>
           </div>
         </div>`,
       init(root) {
         root.querySelectorAll('.sc-row').forEach((r) => r.classList.add('go'));
       },
-      notas: 'Scalene distingue tiempo de Python, tiempo nativo y tiempo de sistema. En el escenario completo, antes de F4, el 28 % era sistema: el proceso principal esperando a los workers y moviendo datos por el canal IPC. Después de los cinco cambios bajó a 20,6 % y el escenario tardó 17 % menos. Ser honestos: con pedidos ya cargados en memoria el pool sigue sin compensar (0,37×). Por eso el default es secuencial y el paralelismo se reservó para archivos, que es la lámina siguiente.'
+      notas: 'Scalene distingue tiempo de Python, tiempo nativo y tiempo de sistema. En el escenario completo, antes de F4, el 28 % era sistema: el proceso principal esperando a los workers y moviendo datos por el canal IPC. Después de los cinco cambios bajó a 20,6 % y el escenario tardó 17 % menos. ¿Qué son las tuplas compactas? En el Parcial 1 se serializaban objetos dataclass enteros (Pedido, LineaPedido, ResultadoPedido) con todos sus atributos y metadatos por cada proceso hijo. En el Parcial 2 viajan como tuplas primitivas de números: (id_pedido, ((id_prod, cant), ...)), mucho más livianas de empaquetar con pickle. La lección teórica más valiosa: Ley de Amdahl demostrada empíricamente. Cuando el trabajo en memoria toma 87 ns, el overhead de spawn, pickle e IPC en Windows supera por 28 veces la ejecución mono-hilo. Por eso el default del motor es secuencial y el paralelismo se reservó para streaming y archivos en F5.'
     },
 
     /* 08 ---------------------------------------------------------------- */
@@ -876,6 +1020,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: '200.000 pedidos (20,96 MB) en JSON Lines: la memoria deja de depender del tamaño del archivo',
       evidencia: 'docs/mediciones/archivos_grandes.md · src/datos/streaming.py · src/datos/procesador_lotes_paralelo.py',
       html: () => `
+        ${tarjetaResumen('F5 · Archivos Grandes y Streaming', [
+          '<strong>Streaming con generadores (yield):</strong> En lugar de cargar todo el JSON de golpe en RAM (que consumía 195,6 MB), leemos línea por línea con un generador (JSONL), reduciendo el consumo de memoria a solo 1,02 MB (−99,5 %).',
+          '<strong>Lotes paralelos CPU-bound (1,52×):</strong> Al leer de disco, cada worker debe parsear texto y validar tipos (tarea pesada de CPU). Aquí el multiproceso sí compensó el costo de IPC, logrando una aceleración real de 1,52×.',
+          '<strong>Buffer de escritura masiva:</strong> Para exportar el picking a CSV, implementamos un buffer intermedio de 1 MB que agrupa la escritura, reduciendo en un 7 % las llamadas de entrada/salida al sistema operativo.'
+        ])}
         <div class="files-strip rv" style="--i:0">
           <span><code>productos.jsonl</code> 5.000 · 0,66 MB</span>
           <span><code>pedidos.jsonl</code> 200.000 · 20,96 MB</span>
@@ -896,6 +1045,9 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
               ${['1.000', '5.000', '20.000', '50.000'].map((l, i) => `<button type="button" data-i="${i}"${i === 1 ? ' class="active"' : ''}>${l}</button>`).join('')}
             </div>
             <div class="lote-bars" id="lote-bars"></div>
+            <div class="cpu-bound-callout">
+              <b>¿Por qué acá sí compensa (1,52×)?</b> A diferencia de pedidos en RAM, cada worker realiza trabajo <b>CPU-bound real</b>: parsea texto JSONL crudo de disco, valida tipos y evalúa stock, amortizando con creces el costo del proceso.
+            </div>
             <p class="foot-note">Con 2 workers el máximo teórico es 2×. Cada worker parsea, valida y evalúa su lote; como máximo dos lotes en vuelo por worker.</p>
           </div>
           <div class="panel rv" style="--i:3">
@@ -946,7 +1098,7 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
         };
         linea();
       },
-      notas: 'F5 generó archivos de verdad grandes: 200.000 pedidos en JSON Lines. Leer línea por línea con un generador usa 1 MB de memoria pico contra casi 196 MB de la carga completa, y además es más rápido. Con lotes, el pool por fin compensa, porque cada worker parsea, valida y evalúa: el mejor caso fue 1,52× con lotes de 5.000 (el techo con 2 workers es 2×). Elegir otro tamaño de lote para mostrar el barrido. La escritura con buffer de 1 MB bajó 7 % el tiempo de exportar el CSV.'
+      notas: 'F5 generó archivos de verdad grandes: 200.000 pedidos en JSON Lines. Leer línea por línea con un generador usa 1 MB de memoria pico contra casi 196 MB de la carga completa (−99,5 % de RAM con O(1)), y además es más rápido. Con lotes de archivos, el pool por fin compensa con 1,52×: a diferencia de pedidos ya cargados en memoria, parsear y validar texto JSONL desde el disco es intensivo en CPU, superando el costo de IPC. La escritura con buffer de 1 MB bajó 7 % el tiempo de exportar el CSV.'
     },
 
     /* 09 ---------------------------------------------------------------- */
@@ -956,6 +1108,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'Cada operación del motor es una transacción, los pasos costosos son spans y los errores llegan solos a Kibana',
       evidencia: 'src/observabilidad/apm.py · docs/observabilidad-apm.md · scripts/demo_apm.py',
       html: () => `
+        ${tarjetaResumen('F6 · Observabilidad en Producción', [
+          '<strong>¿Qué es Elastic APM?:</strong> <em>Application Performance Monitoring</em> es una herramienta que mide en tiempo real cómo rinde la aplicación en producción, registrando transacciones completas y cuellos de botella sin frenar el sistema.',
+          '<strong>Decorador no invasivo @medir:</strong> Envolvemos las operaciones clave del catálogo y pedidos con <code>@medir</code>. Si el servidor APM no está configurado, la función corre normalmente sin fallar (modo <em>no-op</em> transparente).',
+          '<strong>Spans y captura de excepciones:</strong> Medimos por separado el tiempo de cálculo del pool y la espera de IPC como <em>spans</em> individuales, enviando errores de validación y trazas directamente al panel de Kibana.'
+        ])}
         <div class="grid-split apm">
           <div class="panel rv" style="--i:0">
             <div class="seg" id="apm-seg">
@@ -1014,7 +1171,7 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
           view.innerHTML = VISTAS[m];
           view.classList.remove('in'); void view.offsetWidth; view.classList.add('in');
         };
-        root.querySelectorAll('#apm-seg button').forEach((b) => b.addEventListener('click', () => mostrar(b.dataset.m)));
+        root.querySelectorAll('#apm-seg button').forEach((b) => b.dataset.m && b.addEventListener('click', () => mostrar(b.dataset.m)));
         mostrar('ok');
       },
       notas: 'Elastic APM nos da la vista de producción que los benchmarks no dan. El decorador @medir convierte cada operación de la fachada en una transacción, o en un span si ya hay una transacción abierta. Los pasos del pool aparecen como spans, así en Kibana se ve cuánto es IPC. Mostrar las tres pestañas: operación normal, el error provocado con un dataset inválido y qué pasa sin servidor: el decorador llama a la función directo, así los tests y el CI no dependen de Elastic. Si hay conexión, correr python -m scripts.demo_apm y abrir Kibana. Recordar: la prueba de Elastic Cloud dura 14 días desde el 8/10.'
@@ -1027,6 +1184,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'Nueve paquetes con una responsabilidad cada uno, un Protocol en lugar de herencia y ninguna función por encima de complejidad 12',
       evidencia: LB2 + 'radon_complejidad.txt · ' + LB2 + 'ruff_pep8_docstrings.txt · src/inventario/protocolo.py',
       html: () => `
+        ${tarjetaResumen('F7 · Arquitectura y Reducción de Complejidad', [
+          '<strong>Complejidad bajo control (CC y Cognitiva):</strong> Eliminamos las 3 funciones de CC grado D (que tenían hasta 30 bifurcaciones; hoy el máximo es 12) y las 14 funciones que superaban la regla Sonar S3776 (Complejidad Cognitiva > 15, la peor era el main de UI con 46).',
+          '<strong>Protocolos e interfaces (PEP 544):</strong> Implementamos <code>CatalogoProtocol</code>. Mediante tipado estructural, el catálogo lineal y el optimizado son intercambiables en tiempo de ejecución sin forzar una herencia de clases rígida.',
+          '<strong>Docstrings y 73 constantes con nombre:</strong> Redujimos de 517 a 36 las observaciones de estilo PEP 8. Documentamos el 100 % de las funciones con docstrings estilo Google en español y reemplazamos números mágicos por constantes claras.'
+        ])}
         <div class="grid-split refactor">
           <div class="panel rv" style="--i:0">
             <h3>src/ en 9 paquetes <span class="hint-inline">clic para ver el contenido</span></h3>
@@ -1048,8 +1210,12 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
               <span><s>lineas_satisfechas_count</s> → <code>cantidad_lineas_satisfechas</code></span>
               <span><s>p</s>, <s>ped</s>, <s>prod</s>, <s>rl</s> → nombres completos</span>
             </div>
-            <pre class="code tiny">${py(COD_PROTOCOL, [2], 'new')}</pre>
-            <p class="small-p"><b>Framework Flet:</b> <code>main()</code> de 250 líneas → <code>AplicacionInventario</code> + tupla <code>SECCIONES</code> + <code>PantallaBase</code>.</p>
+            <div class="protocol-box">
+              <div class="pb-head"><b>Desacoplamiento con <code>CatalogoProtocol</code></b><span class="chip chip-green">tipado estructural (PEP 544)</span></div>
+              <p class="small-p"><code>CatalogoLineal</code> (baseline) y <code>CatalogoHash</code> (optimizado) no comparten herencia rígida: son intercambiables en tiempo de ejecución cumpliendo el mismo protocolo.</p>
+              <pre class="code tiny">${py(COD_PROTOCOL, [2], 'new')}</pre>
+            </div>
+            <p class="small-p"><b>Framework Flet:</b> <code>main()</code> de 250 líneas → <code>AplicacionInventario</code> + tupla <code>SECCIONES</code> + <code>PantallaBase</code>. 0 funciones CC grado D en Radon (máx CC ≤ 12).</p>
           </div>
         </div>`,
       init(root) {
@@ -1063,7 +1229,7 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
         pk.forEach((b) => b.addEventListener('click', () => mostrar(Number(b.dataset.i))));
         mostrar(4);
       },
-      notas: 'F7 fue legibilidad y refactor con la red de F2 debajo. Nueve paquetes con una responsabilidad cada uno; motor es la fachada. CatalogoLineal y CatalogoHash no comparten clase base: cumplen el Protocol Catalogo (tipado estructural). La función más compleja del proyecto era el main de la UI de Flet, con complejidad cognitiva 46: hoy es la clase AplicacionInventario con las pantallas declaradas en una tupla. Cada refactor de lógica se verificó contra la versión anterior: 864 casos de alternativas con salida idéntica. Docstrings estilo Google en español, nombres completos y 73 números mágicos convertidos en constantes.'
+      notas: 'F7 fue legibilidad y refactor con la red de F2 debajo. Nueve paquetes con una responsabilidad cada uno; motor es la fachada. CatalogoLineal y CatalogoHash no comparten clase base: cumplen el Protocol Catalogo (tipado estructural runtime-checkable). Erradicamos todas las funciones de complejidad ciclomática D (que llegaban a 30 en el parcial 1; hoy el máximo es 12). La función más compleja del proyecto era el main de la UI de Flet con CC 46: hoy es la clase AplicacionInventario. Cada refactor se verificó contra la versión anterior: 864 casos de alternativas con salida idéntica.'
     },
 
     /* 11 ---------------------------------------------------------------- */
@@ -1073,6 +1239,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'Los docstrings de F7 se convierten en la referencia de la API; las guías Markdown se incluyen sin duplicarse',
       evidencia: 'docs/sphinx/conf.py · .github/workflows/verify.yml (jobs docs y deploy-docs)',
       html: () => `
+        ${tarjetaResumen('F8 · Documentación Viva del Software', [
+          '<strong>Generación automática con Sphinx:</strong> Herramienta estándar de la industria que lee directamente los docstrings y tipos de Python para generar un portal web de documentación técnica con el tema moderno Furo.',
+          '<strong>Extensión Napoleon en español:</strong> Configurada para entender secciones en español (<em>Argumentos, Retorna, Lanza</em>), permitiendo documentar la API con naturalidad sin perder la estructura estándar.',
+          '<strong>Compilación estricta sin advertencias:</strong> El build en CI corre con la bandera <code>-W</code> (cualquier docstring mal formado o enlace roto frena el despliegue), publicando 20 páginas web actualizadas en GitHub Pages.'
+        ])}
         <div class="grid-split sphinx">
           <div class="flip-wrap rv" style="--i:0">
             <div class="flip" id="flip">
@@ -1138,29 +1309,74 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'Los mismos 9 comandos sobre el commit de cierre de cada parcial',
       evidencia: LB1 + 'README.md · ' + LB2 + 'README.md',
       html: () => `
+        ${tarjetaResumen('F9 · Auditoría y Resultados Medidos', [
+          '<strong>Comparativa sobre el mismo hardware:</strong> Ejecutamos las mismas 9 herramientas de auditoría sobre el commit final del Parcial 1 y del Parcial 2, garantizando mediciones 100 % reproducibles.',
+          '<strong>Salto en calidad de software:</strong> Erradicación total de código duplicado (8 → 0), funciones de alta complejidad eliminadas (CC D: 3 → 0), tests aumentados a 193 (+130 %) y 90 % de cobertura en el código fuente.',
+          '<strong>Aceleración algorítmica demostrada:</strong> En la vista de rendimiento, confirmamos aceleraciones de hasta <strong>1.692×</strong> en búsqueda por nombre (índice invertido con caché LRU) y reducción del 99,5 % de memoria en lectura masiva.'
+        ])}
         <div class="cert rv" style="--i:0">
-          <div class="cert-toggle">
-            <span>Mostrar</span>
-            <div class="seg small" id="cert-seg"><button type="button" data-v="a">Parcial 1</button><button type="button" class="active" data-v="b">Parcial 2</button></div>
+          <div class="cert-header-bar">
+            <div class="seg small" id="cert-view-seg">
+              <button type="button" class="active" data-view="calidad">Calidad y Mantenibilidad</button>
+              <button type="button" data-view="speedup">Rendimiento y Tiempos (Escala Masiva)</button>
+            </div>
+            <div class="cert-toggle" id="cert-toggle-wrap">
+              <span>Mostrar</span>
+              <div class="seg small" id="cert-seg"><button type="button" data-v="a">Parcial 1</button><button type="button" class="active" data-v="b">Parcial 2</button></div>
+            </div>
           </div>
-          <table class="cert-tbl">
-            <thead><tr><th>Métrica</th><th>Parcial 1</th><th>Parcial 2</th><th class="bar-col"></th><th>Nota</th></tr></thead>
-            <tbody>
-              ${COMPARATIVA.map((c, i) => `
-                <tr style="--i:${i}" class="${c.mejor}">
-                  <td>${c.m}</td>
-                  <td class="v a">${c.fmt(c.a)}</td>
-                  <td class="v b">${c.fmt(c.b)}</td>
-                  <td class="bar-col"><div class="cbar" data-a="${c.a}" data-b="${c.b}" data-max="${c.max || Math.max(c.a, c.b)}"><i></i></div></td>
-                  <td class="nota">${c.nota || ''}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-          <p class="foot-note">El código de <code>src/</code> creció de 5.375 a 7.604 líneas: más módulos, docstrings y el subsistema de archivos grandes. Más líneas, menos complejidad por función.</p>
+          <div id="view-calidad-wrap">
+            <table class="cert-tbl">
+              <thead><tr><th>Métrica de Calidad</th><th>Parcial 1</th><th>Parcial 2</th><th class="bar-col"></th><th>Nota</th></tr></thead>
+              <tbody>
+                ${COMPARATIVA.map((c, i) => `
+                  <tr style="--i:${i}" class="${c.mejor}">
+                    <td>${c.m}</td>
+                    <td class="v a">${c.fmt(c.a)}</td>
+                    <td class="v b">${c.fmt(c.b)}</td>
+                    <td class="bar-col"><div class="cbar" data-a="${c.a}" data-b="${c.b}" data-max="${c.max || Math.max(c.a, c.b)}"><i></i></div></td>
+                    <td class="nota">${c.nota || ''}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+            <p class="foot-note">El código de <code>src/</code> creció de 5.375 a 7.604 líneas: más módulos, docstrings y el subsistema de archivos grandes. Más líneas, menos complejidad por función.</p>
+          </div>
+          <div id="view-speedup-wrap" hidden>
+            <table class="cert-tbl cert-tbl-speedup">
+              <thead><tr><th>Operación (Dataset 10k Prod, 2k Pedidos)</th><th>Baseline (P1)</th><th>Optimizado (P2)</th><th>Speedup / Delta</th><th>Complejidad</th><th>Conclusión Algorítmica</th></tr></thead>
+              <tbody>
+                ${COMPARATIVA_SPEEDUP.map((s, i) => `
+                  <tr style="--i:${i}">
+                    <td><strong>${s.op}</strong></td>
+                    <td class="v base">${s.base}</td>
+                    <td class="v opt">${s.opt}</td>
+                    <td class="v speedup"><span class="speedup-chip hl">${s.delta}</span></td>
+                    <td class="mono bigo">${s.bigo}</td>
+                    <td class="nota">${s.nota}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+            <p class="foot-note">Mediciones reproducibles sobre dataset masivo (<code>docs/mediciones/tabla_comparativa.md</code>) y microbenchmarks con <code>pytest-benchmark</code>.</p>
+          </div>
           <div class="cert-stamp" id="cert-stamp"><span>INSPECCIONADO</span><b>PARCIAL 2</b><small>9 herramientas · 2 fotos</small></div>
         </div>`,
       init(root, api) {
         const barras = root.querySelectorAll('.cbar');
+        const viewCalidad = root.querySelector('#view-calidad-wrap');
+        const viewSpeedup = root.querySelector('#view-speedup-wrap');
+        const toggleWrap = root.querySelector('#cert-toggle-wrap');
+        const viewBtns = root.querySelectorAll('#cert-view-seg button');
+
+        viewBtns.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const v = btn.dataset.view;
+            viewBtns.forEach((b) => b.classList.toggle('active', b.dataset.view === v));
+            viewCalidad.hidden = v !== 'calidad';
+            viewSpeedup.hidden = v !== 'speedup';
+            toggleWrap.style.visibility = v === 'calidad' ? 'visible' : 'hidden';
+          });
+        });
+
         const pintar = (v) => {
           root.querySelectorAll('#cert-seg button').forEach((b) => b.classList.toggle('active', b.dataset.v === v));
           root.querySelector('.cert').dataset.v = v;
@@ -1184,7 +1400,7 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
           });
         });
       },
-      notas: 'La foto final: mismos 9 comandos, mismo repositorio, dos commits. La tabla arranca mostrando el Parcial 1 y pasa sola al Parcial 2; se puede alternar con el selector. Destacar las tres que más pesan: 3 funciones de complejidad D a 0, 8 duplicados a 0 y 84 a 193 tests con 90 % de cobertura. Aclarar la honesta: src/ creció en líneas porque hay más módulos y docstrings, pero cada función es más simple.'
+      notas: 'La foto final: mismos 9 comandos, mismo repositorio, dos commits. Tiene dos vistas: «Calidad y Mantenibilidad» (tests de 84 a 193, cobertura de 80 a 90 %, CC D de 3 a 0, duplicados de 8 a 0 y Sphinx de 0 a 20 páginas) y «Rendimiento y Tiempos» (la comparativa macroscópica en 10.000 productos: búsqueda por nombre 1.692×, búsqueda por ID 47,1×, batch picking 7,8×, DP 1,93× y streaming −99,5 % de RAM). Demuestra simultáneamente excelencia de ingeniería de software y aceleración algorítmica.'
     },
 
     /* 13 ---------------------------------------------------------------- */
@@ -1194,6 +1410,11 @@ def procesar_pedidos(self, pedidos=None, concurrente=False,
       sub: 'Qué rindió más, qué no salió como esperábamos y qué haríamos distinto en una tercera edición',
       evidencia: 'docs/resumen-parcial-2.md · docs/mediciones/',
       html: () => `
+        ${tarjetaResumen('Cierre · Balance Técnico y Aprendizajes', [
+          '<strong>Mayor acierto metodológico:</strong> Armar la red de seguridad de tests (F2) antes de refactorizar permitió transformar 7.600 líneas de código con total confianza de que la salida seguía siendo idéntica byte a byte.',
+          '<strong>Límites reales del paralelismo:</strong> Comprobamos empíricamente que en Windows el multiproceso no conviene para datos pequeños en memoria debido al costo de IPC; su verdadero valor está en tareas pesadas como archivos y streaming.',
+          '<strong>Madurez de ingeniería:</strong> Logramos un proyecto trazable de punta a punta, con pipeline automatizado, Quality Gate en la nube y documentación web viva, preparado para el despacho definitivo.'
+        ])}
         <div class="grid-3 concl">
           <div class="panel tint-green rv" style="--i:0">
             <h3>Mayor impacto</h3>
