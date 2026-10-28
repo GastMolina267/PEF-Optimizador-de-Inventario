@@ -60,3 +60,36 @@ def test_benchmark_procesamiento_pedidos(benchmark):
     cat = CatalogoHash(prods)
     resumen = benchmark(procesar_pedidos_secuencial, cat, peds, descontar_stock=False)
     assert resumen.pedidos_procesados == 20
+
+
+def test_speedup_hash_vs_lineal_asercion() -> None:
+    """Valida formalmente que la búsqueda por ID en tabla Hash supere a la lista lineal."""
+    import time
+
+    prods, _ = cargar_dataset_json(DATASETS_DIR / "pequeno.json")
+    cat_lineal = CatalogoLineal(prods)
+    cat_hash = CatalogoHash(prods)
+
+    # Warmup
+    for i in range(1, 50):
+        cat_lineal.buscar_por_id(i)
+        cat_hash.buscar_por_id(i)
+
+    t0 = time.perf_counter()
+    for _ in range(100):
+        for i in range(1, 100):
+            cat_lineal.buscar_por_id(i)
+    t_lineal = time.perf_counter() - t0
+
+    t0 = time.perf_counter()
+    for _ in range(100):
+        for i in range(1, 100):
+            cat_hash.buscar_por_id(i)
+    t_hash = time.perf_counter() - t0
+
+    speedup = t_lineal / max(t_hash, 1e-9)
+    # Exigir un speedup mínimo de 3.0x para prevenir regresiones algorítmicas hacia O(n)
+    assert speedup > 3.0, (
+        f"Alerta de regresión algorítmica: el speedup del catálogo hash ({speedup:.2f}x) "
+        "no alcanzó el umbral mínimo aceptable de 3.0x frente a la lista lineal."
+    )
