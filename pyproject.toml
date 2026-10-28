@@ -41,6 +41,7 @@ dev = [
     "bandit>=1.7.8",
     "bandit-sarif-formatter>=1.1.1",
     "pip-audit>=2.7.0",
+    "mypy>=1.10.0",
 ]
 # Empaquetado del ejecutable (PyInstaller) y del paquete Python.
 empaquetado = [
@@ -141,3 +142,22 @@ max-complexity-allowed = 15
 targets = ["src"]
 exclude_dirs = ["tests", "benchmarks", "automations", "scripts", "docs"]
 skips = []
+
+[tool.mypy]
+# Configuración de Tipado Estático Estricto (PEF 2026 - Parcial 3)
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "flet",
+    "flet.*",
+    "elasticapm",
+    "elasticapm.*",
+    "src.ui.*",
+]
+ignore_missing_imports = true
+ignore_errors = true

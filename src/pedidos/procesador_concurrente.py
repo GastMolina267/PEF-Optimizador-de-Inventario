@@ -78,7 +78,7 @@ def _evaluar_fragmento_compacto(
 
 
 def _armar_fragmentos(
-    catalogo, pedidos: Sequence[Pedido], workers: int
+    catalogo: Catalogo, pedidos: Sequence[Pedido], workers: int
 ) -> list[FragmentoCompacto]:
     """Parte los pedidos en fragmentos contiguos con su sub-mapa de stock."""
     stock_de = crear_consulta_stock(catalogo)

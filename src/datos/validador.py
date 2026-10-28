@@ -104,7 +104,9 @@ class ValidadorDataset:
         )
 
     @staticmethod
-    def _deserializar_unicos(items: list[Any], modelo: type, nombre: str) -> list:
+    def _deserializar_unicos(
+        items: list[Any], modelo: type[Producto] | type[Pedido], nombre: str
+    ) -> list[Any]:
         """Construye ``modelo`` desde cada diccionario y verifica que los ids no se repitan.
 
         Lanza:

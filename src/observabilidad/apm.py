@@ -177,7 +177,9 @@ def transaccion(
 
 
 @contextmanager
-def span(nombre: str, tipo: str = "app", etiquetas: Mapping[str, Any] | None = None):
+def span(
+    nombre: str, tipo: str = "app", etiquetas: Mapping[str, Any] | None = None
+) -> Iterator[None]:
     """Mide un paso interno dentro de la transacción activa (no hace nada sin APM)."""
     if _cliente is None or not _hay_transaccion_activa() or elasticapm is None:
         yield

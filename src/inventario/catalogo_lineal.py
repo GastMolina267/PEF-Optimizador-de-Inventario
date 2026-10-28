@@ -8,7 +8,7 @@ Sirve como línea base (baseline) para el desafío experimental frente a la tabl
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 
 from src.modelos.producto import Producto
 
@@ -120,6 +120,6 @@ class CatalogoLineal:
         """Cantidad total de productos registrados en el catálogo."""
         return len(self._productos)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Producto]:
         """Permite iterar sobre los productos del catálogo."""
         return iter(self._productos)

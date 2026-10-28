@@ -51,7 +51,9 @@ def _inicializar_worker(mapa_stock: dict[int, int]) -> None:
     _STOCK_WORKER = mapa_stock
 
 
-def _parsear_pedido(linea: str, mapa_stock: dict[int, int]):
+def _parsear_pedido(
+    linea: str, mapa_stock: dict[int, int]
+) -> tuple[int, tuple[tuple[int, int], ...]] | None:
     """Convierte una línea JSONL en ``(id_pedido, ((id_producto, cantidad), ...))``.
 
     Retorna ``None`` para líneas en blanco.
@@ -98,7 +100,8 @@ def _evaluar_lote_lineas_jsonl(
     for linea in lote_lineas:
         pedido = _parsear_pedido(linea, stock)
         if pedido is not None:
-            resultados.append(evaluar_pedido_compacto(*pedido, stock_de))
+            id_pedido, lineas_pedido = pedido
+            resultados.append(evaluar_pedido_compacto(id_pedido, lineas_pedido, stock_de))
     return resultados
 
 

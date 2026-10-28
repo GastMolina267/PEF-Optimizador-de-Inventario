@@ -10,7 +10,7 @@ Mantiene la misma API pública que CatalogoLineal, así que uno reemplaza al otr
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 
 from src.modelos.producto import Producto
 
@@ -156,6 +156,6 @@ class CatalogoHash:
         """Cantidad total de productos registrados en el catálogo hash."""
         return len(self._productos_por_id)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Producto]:
         """Itera sobre los productos del catálogo."""
         return iter(self._productos_por_id.values())
