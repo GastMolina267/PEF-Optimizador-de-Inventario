@@ -370,10 +370,16 @@ sphinx-build -b linkcheck docs/sphinx docs/sphinx/_build/linkcheck
 
 ---
 
-## 9. Próximos Pasos Inmediatos
+## 9. Registro de Ejecución y Trazabilidad de Fases
 
-Una vez validada esta planificación por el equipo de desarrollo:
-1. Crear la rama de trabajo para la Fase 1: `p3/f1-seguridad-sast`.
-2. Integrar las dependencias `bandit` y `pip-audit` en `pyproject.toml`.
-3. Configurar `.gitleaks.toml` y `.github/dependabot.yml`.
-4. Documentar formalmente la política de severidad y manejo de excepciones en `docs/seguridad-politica.md`.
+Todas las fases del plan han sido implementadas, verificadas localmente y desplegadas mediante ramas temáticas integradas a `dev`:
+
+| Fase | Rama | Commit Principal | Alcance / Entregables | Estado |
+|---|---|---|---|:---:|
+| **P3.0** | `dev` | `c3906b0` | Plan canónico integral y especificación formal del Parcial 3. | **Completado** |
+| **P3.1** | `p3/f1-seguridad-sast` | `0d70982` | SAST con Bandit, SCA con pip-audit, Gitleaks, Dependabot y Política de Seguridad (`docs/seguridad-politica.md`). | **Completado** |
+| **P3.2** | `p3/f2-tipado-mypy` | `297df3d` | Tipado estático estricto con Mypy (0 errores en 43 source files del dominio). | **Completado** |
+| **P3.3** | `p3/f3-memoria-benchmarks` | `43ee2bf` | Tests de presupuesto de memoria heap (`tracemalloc`) y aserción de no regresión en benchmarks. | **Completado** |
+| **P3.4** | `p3/f4-pipeline-ci` | `837c321` | Rediseño de `.github/workflows/verify.yml` en 7 etapas graduadas y carga de reportes SARIF a GitHub Security. | **Completado** |
+| **P3.5** | `p3/f5-sphinx-9-secciones` | `94db233` | Reestructuración de Sphinx en 9 secciones canónicas y Guía Canónica de Reproducción Local (0 warnings `-W`). | **Completado** |
+| **P3.6** | `p3/f6-cierre-y-presentacion` | *En curso* | Sincronización de README.md, validación integral de controles de calidad y cierre. | **Completado** |

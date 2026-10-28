@@ -5,18 +5,23 @@
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
 [![Mantenibilidad](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
 [![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=coverage)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
+[![SAST](https://img.shields.io/badge/SAST-Bandit%20SARIF-brightgreen.svg)](docs/seguridad-politica.md)
+[![Tipado Estático](https://img.shields.io/badge/typing-mypy%20strict-blue.svg)](pyproject.toml)
+[![Dependencias](https://img.shields.io/badge/SCA-pip--audit%20%26%20Dependabot-success.svg)](.github/dependabot.yml)
 
-**Primer Parcial – Programación Eficiente (Opción 6)**  
-*Universidad Blas Pascal (UBP)*  
-**Lenguaje:** Python 3  
+**Programación Eficiente — Tercer Parcial (Opción 6)**  
+*Universidad Blas Pascal (UBP, 2026)*  
+**Equipo de Desarrollo:** Edgar Karpowicz, Gastón Molina, Tomás Molina  
+**Lenguaje:** Python 3.14  
 **Interfaz de usuario:** Flet (Flutter para Python)  
 
 > [!TIP]
-> **Recursos Clave para la Defensa Oral:**
-> - 🖥️ **Presentación Interactiva (HTML + JSON + CSS):** [docs/presentation/index.html](docs/presentation/index.html)
-> - 📚 **Documentación Técnica Completa (Sphinx + Furo):** [gastmolina267.github.io/PEF-Optimizador-de-Inventario](https://gastmolina267.github.io/PEF-Optimizador-de-Inventario/)
-> - 📖 **Guía Canónica de Flujo de la Aplicación:** [docs/app-flow-explanation.md](docs/app-flow-explanation.md)
-> - 📊 **Enunciado y Rúbrica Oficial de Cátedra:** [docs/option-six-to-be-implemented.txt](docs/option-six-to-be-implemented.txt)
+> **Recursos Clave y Documentación Oficial:**
+> - 📚 **Documentación Técnica Completa (Sphinx + Furo, 9 Secciones Canónicas):** [gastmolina267.github.io/PEF-Optimizador-de-Inventario](https://gastmolina267.github.io/PEF-Optimizador-de-Inventario/)
+> - 🛡️ **Política de Seguridad y Clasificación de Vulnerabilidades:** [docs/seguridad-politica.md](docs/seguridad-politica.md)
+> - ⚙️ **Guía Canónica de Reproducción Local de Controles:** [docs/sphinx/secciones/09_mantenimiento.md](docs/sphinx/secciones/09_mantenimiento.md)
+> - 📋 **Planificación Integral del Parcial 3:** [docs/planificacion-parcial-3.md](docs/planificacion-parcial-3.md)
+> - 🖥️ **Presentación Interactiva de Defensa:** [docs/presentation/index.html](docs/presentation/index.html) | [docs/presentation-parcial-2/index.html](docs/presentation-parcial-2/index.html)
 
 ---
 
@@ -435,7 +440,17 @@ El binario compilado resultante se generará en la carpeta `dist/OptimizadorInve
 
 ## 15. Documentación Técnica del Proyecto (Sphinx)
 
-La documentación técnica del proyecto se genera automáticamente utilizando **Sphinx** con el tema **Furo**, soporte para docstrings estilo Google con **Napoleon** (secciones en español: *Argumentos*, *Retorna*, *Lanza*) y parseo de Markdown con **MyST-Parser**.
+La documentación técnica del proyecto se genera automáticamente utilizando **Sphinx** con el tema **Furo**, soporte para docstrings estilo Google con **Napoleon** (secciones en español: *Argumentos*, *Retorna*, *Lanza*) y parseo de Markdown con **MyST-Parser**. Se encuentra estructurada formalmente en las **9 secciones canónicas obligatorias** requeridas por la cátedra:
+
+1. **Descripción funcional:** Problema que resuelve el sistema, alcance y requisitos.
+2. **Arquitectura:** Módulos, responsabilidades, dependencias y diagramas Mermaid.
+3. **Instalación y ejecución:** Dependencias, configuración (uv / pip) y comandos paso a paso.
+4. **Diseño técnico:** Estructuras de datos (dict, heapq, set, list), algoritmos clave y complejidad Big-O.
+5. **API y contratos:** Interfaces del motor, entradas, salidas, tipos y ejemplos de uso.
+6. **Pruebas:** Estrategia de testing, suite modular (198 tests), cobertura (≥85%) y Property-Based Testing.
+7. **Rendimiento:** Benchmarks comparativos, profiling (CPU/líneas/memoria) y análisis de regresión.
+8. **Seguridad:** Matriz de severidad CVSS, SAST (Bandit), SCA (pip-audit), secretos (Gitleaks) y falsos positivos.
+9. **Mantenimiento y Reproducción Local:** Guía canónica para replicar el 100% de los controles del CI en la máquina de desarrollo.
 
 ### Construcción local
 
