@@ -42,7 +42,7 @@ SUFIJOS_PRODUCTOS: tuple[str, ...] = (
 
 def generar_lineas_productos(n_productos: int, seed: int = 42) -> Iterator[str]:
     """Genera strings JSONL para productos de forma lazy con semilla determinista."""
-    rnd = random.Random(seed)
+    rnd = random.Random(seed)  # nosec: B311
     for i in range(1, n_productos + 1):
         cat = rnd.choice(CATEGORIAS_DISPONIBLES)
         suf = rnd.choice(SUFIJOS_PRODUCTOS)
@@ -66,7 +66,7 @@ def generar_lineas_pedidos(
     seed: int = 42,
 ) -> Iterator[str]:
     """Genera strings JSONL para pedidos de forma lazy referenciando IDs válidos de productos."""
-    rnd = random.Random(seed + 100)
+    rnd = random.Random(seed + 100)  # nosec: B311
     for id_ped in range(1, n_pedidos + 1):
         cant_lineas = rnd.randint(1, max(1, lineas_por_pedido))
         ids_elegidos = rnd.sample(range(1, n_productos + 1), k=cant_lineas)

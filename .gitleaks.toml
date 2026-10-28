@@ -1,0 +1,26 @@
+# =============================================================================
+# Configuración de Gitleaks para Optimizador de Inventario y Pedidos
+# Cátedra de Programación Eficiente (UBP - 2026) - Parcial 3
+# =============================================================================
+
+title = "Configuración de Gitleaks - Detección Preventiva de Secretos"
+
+[allowlist]
+description = "Permite rutas de datasets sintéticos, caches, fixtures y artefactos de tests"
+paths = [
+    '''(^|/)data/datasets/.*''',
+    '''(^|/)data/generados/.*''',
+    '''(^|/)docs/mediciones/.*''',
+    '''(^|/)docs/presentation.*/.*''',
+    '''(^|/)tests/.*''',
+    '''uv\.lock$''',
+    '''\.git/.*''',
+    '''\.coverage$''',
+    '''coverage\.xml$''',
+]
+regexes = [
+    '''(?i)test-token-[a-z0-9_-]+''',
+    '''(?i)mock-secret-[a-z0-9_-]+''',
+    '''(?i)dummy_api_key_[a-z0-9]+''',
+    '''example_key''',
+]

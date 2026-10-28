@@ -1,0 +1,42 @@
+# =============================================================================
+# Configuración oficial de Dependabot para Optimizador de Inventario y Pedidos
+# Cátedra de Programación Eficiente (UBP - 2026) - Parcial 3
+# =============================================================================
+
+version: 2
+updates:
+  # 1. Monitoreo y parches de seguridad para dependencias Python (pip / requirements)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Argentina/Cordoba"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "GastMolina267"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  # 2. Monitoreo y actualizaciones de seguridad para GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Argentina/Cordoba"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "GastMolina267"
+    labels:
+      - "github-actions"
+      - "security"
+    commit-message:
+      prefix: "ci(deps)"
+      include: "scope"

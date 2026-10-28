@@ -12,3 +12,6 @@ pytest-benchmark>=4.0.0
 sphinx>=8.0.0
 furo>=2024.8.6
 myst-parser>=4.0.0
+bandit>=1.7.8
+bandit-sarif-formatter>=1.1.1
+pip-audit>=2.7.0
