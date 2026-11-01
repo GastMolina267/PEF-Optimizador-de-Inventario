@@ -289,7 +289,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Descargar reporte SARIF de Bandit
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bandit-sarif-report
 
@@ -317,7 +317,7 @@ jobs:
           python-version: "3.14"
 
       - name: Descargar reporte de cobertura
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-report
 
