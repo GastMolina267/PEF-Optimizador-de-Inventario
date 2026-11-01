@@ -21,7 +21,7 @@
 > - 🛡️ **Política de Seguridad y Clasificación de Vulnerabilidades:** [docs/seguridad-politica.md](docs/seguridad-politica.md)
 > - ⚙️ **Guía Canónica de Reproducción Local de Controles:** [docs/sphinx/secciones/09_mantenimiento.md](docs/sphinx/secciones/09_mantenimiento.md)
 > - 📋 **Planificación Integral del Parcial 3:** [docs/planificacion-parcial-3.md](docs/planificacion-parcial-3.md)
-> - 🖥️ **Presentación Interactiva de Defensa:** [docs/presentation/index.html](docs/presentation/index.html) | [docs/presentation-parcial-2/index.html](docs/presentation-parcial-2/index.html)
+> - 🖥️ **Presentación Interactiva de Defensa:** [docs/presentation-parcial-3/index.html](docs/presentation-parcial-3/index.html) (Aduana de CI) | [docs/presentation-parcial-2/index.html](docs/presentation-parcial-2/index.html) (Auditoría) | [docs/presentation/index.html](docs/presentation/index.html) (P1)
 
 ---
 
@@ -227,7 +227,9 @@ PEF-Parcial-I-Optimizador-de-Inventario/
 │   ├── automatizaciones-origin.md      # Cómo activar los triggers en Cursor
 │   ├── prompts-origin/                 # Prompts listos para el dashboard
 │   ├── mediciones/                     # Salidas crudas y perfiles (.prof, .txt, capturas)
-│   └── presentation/                   # Presentación interactiva para la defensa oral
+│   ├── presentation-parcial-3/         # Presentación interactiva Parcial 3 (Aduana de CI)
+│   ├── presentation-parcial-2/         # Presentación interactiva Parcial 2 (Auditoría)
+│   └── presentation/                   # Presentación interactiva Parcial 1 (11 diapositivas)
 │       ├── index.html                  # Escenario y reproductor web de diapositivas
 │       ├── slides.json                 # Contenido estructurado de las 11 diapositivas
 │       ├── styles.css                  # Tema Obsidian Slate & Electric Sky
@@ -338,7 +340,10 @@ python -m http.server 8000 -d docs/presentation
 
 ## 11. Presentación oral interactiva (Estructura de 10 a 15 minutos)
 
-El proyecto incluye una **plataforma web interactiva de presentación** en [docs/presentation/](docs/presentation/), diseñada en estricta conformidad con la propuesta de PowerPoint de la cátedra detallada en [docs/option-six-to-be-implemented.txt](docs/option-six-to-be-implemented.txt):
+El proyecto cuenta con plataformas web interactivas para la defensa de cada hito de la materia:
+- **Tercer Parcial — Aduana de Integración Continua:** [docs/presentation-parcial-3/index.html](docs/presentation-parcial-3/index.html). Visualiza el flujo de la caja a través de los 7 puestos aduaneros que representan las 7 etapas graduadas del pipeline de CI (`fast-checks`, `test-suite`, `deps-and-docs`, `performance-and-memory`, `sarif-upload`, `sonarqube` y `deploy-docs`), con notas de orador integradas (atajo `N`), cronómetro de 15 minutos (`T`), atajos de navegación (`H`) y animación 3D de la cinta transportadora.
+- **Segundo Parcial — Remito y Auditoría de Caja:** [docs/presentation-parcial-2/index.html](docs/presentation-parcial-2/index.html).
+- **Primer Parcial — Suite de 11 Diapositivas:** [docs/presentation/index.html](docs/presentation/index.html), diseñada en estricta conformidad con la propuesta de PowerPoint de la cátedra detallada en [docs/option-six-to-be-implemented.txt](docs/option-six-to-be-implemented.txt):
 
 - **Atajos de Teclado para la Exposición:**
   - `→` / `Espacio` / `AvPág`: Siguiente diapositiva.

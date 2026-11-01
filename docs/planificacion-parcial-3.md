@@ -311,7 +311,7 @@ p3/f6-cierre-remedicion  -> Verificación integral, reporte final, manual local 
 - **Objetivo:** Consolidar la entrega, actualizar el material de defensa oral, verificar la totalidad de los requisitos del parcial y aplicar la etiqueta de release.
 - **Entregables:**
   - Actualización de `README.md` con los nuevos badges (Bandit, Mypy, Dependabot, Pipeline de 7 Etapas).
-  - Incorporación/actualización de diapositivas interactivas en `docs/presentation/` para la defensa del Tercer Parcial.
+  - Incorporación de la plataforma de defensa interactiva del Tercer Parcial en `docs/presentation-parcial-3/` ("Aduana de Integración Continua" en 7 puestos).
   - Ejecución integral del script de verificación local.
   - Merge a `main` y creación del tag `parcial-3`.
 - **Criterio de Cierre:** Todos los controles de la matriz están en verde, la documentación externa está desplegada en GitHub Pages y el repositorio se encuentra en estado limpio y entregable.
