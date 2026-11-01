@@ -340,7 +340,7 @@ jobs:
 
   deploy-docs:
     name: 7. Publicación en GitHub Pages
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/parcial-2') && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/parcial-2') && github.event_name == 'push'
     needs: deps-and-docs
     runs-on: ubuntu-latest
     permissions:
