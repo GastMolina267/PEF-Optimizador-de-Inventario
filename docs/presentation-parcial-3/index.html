@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aduana de Integración Continua — Tercer Parcial PEF (Opción 6)</title>
+  <meta name="description" content="Defensa oral interactiva del Tercer Parcial de Programación Eficiente (Opción 6, UBP 2026): la caja re-despachada en el Parcial 2 pasa por la aduana de Integración Continua, con 7 puestos que representan las 7 etapas del pipeline.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛃</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&family=Caveat:wght@600;700&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Permanent+Marker&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    try {
+      if (sessionStorage.getItem('pef3-force-motion') !== '0') {
+        document.documentElement.classList.add('force-motion');
+      }
+    } catch (e) {}
+  </script>
+</head>
+<body class="theme-dark state-intro">
+
+  <canvas id="fx-canvas" aria-hidden="true"></canvas>
+
+  <!-- ===================== Barra superior ===================== -->
+  <header class="topbar" id="topbar">
+    <div class="brand">
+      <span class="brand-badge">PEF 2026 · P3</span>
+      <div class="brand-text">
+        <strong>Optimizador de Inventario y Pedidos</strong>
+        <span id="brand-sub">Aduana de Integración Continua — Tercer Parcial (Opción 6)</span>
+      </div>
+    </div>
+    <ol class="ritual-steps" id="ritual-steps" aria-label="Etapas">
+      <li data-step="intro">Presentación</li>
+      <li data-step="aduana">Inspección</li>
+      <li data-step="hub">Informe</li>
+      <li data-step="final">Despacho</li>
+    </ol>
+    <div class="top-actions">
+      <button type="button" class="chip-btn" id="btn-timer" title="Cronómetro (T)">
+        <span class="dot" aria-hidden="true"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/></svg>
+        <span id="timer-display">15:00</span>
+      </button>
+      <button type="button" class="chip-btn" id="btn-motion" title="Forzar / respetar animaciones (M)"><span id="motion-label">Animaciones</span></button>
+      <button type="button" class="chip-btn" id="btn-help" title="Atajos (H)">Atajos</button>
+    </div>
+  </header>
+
+  <!-- ===================== ESCENA 3D: ADUANA ===================== -->
+  <section class="box-scene aduana" id="box-scene" aria-label="Aduana de Integración Continua">
+    <div class="spotlight" aria-hidden="true"></div>
+    <div class="scene3d" id="scene3d">
+      <div class="rig" id="rig">
+        <div class="mat-plane" aria-hidden="true"></div>
+        <div class="belt-plane" id="belt" aria-hidden="true"><div class="belt-rail l"></div><div class="belt-rail r"></div></div>
+
+        <div class="box" id="box">
+          <div class="box-shadow" aria-hidden="true"></div>
+          <div class="face f-bottom kraft"></div>
+
+          <div class="face f-front kraft">
+            <div class="front-brand">
+              <span>CENTRO DE DISTRIBUCIÓN UBP</span>
+              <span id="front-batch">EXPEDICIÓN: PEF-2026-PARCIAL-2</span>
+            </div>
+            <div class="ship-label label-p1">
+              <div class="label-header"><span class="label-title">GUÍA OFICIAL DE EXPEDICIÓN</span><span class="label-badge">PRIORIDAD A1</span></div>
+              <div class="label-routing">
+                <div><span class="rc-tag">REMITENTE:</span><strong>Laboratorio Algorítmico UBP</strong><span>Cátedra Programación Eficiente</span></div>
+                <div><span class="rc-tag">DESTINATARIO:</span><strong>Tribunal Evaluador</strong><span>Defensa Oral Primer Parcial</span></div>
+              </div>
+              <div class="label-kpis">
+                <div><span>Aceleración:</span><strong class="hl">718.3x</strong></div>
+                <div><span>Catálogo:</span><strong>10.000 SKUs</strong></div>
+                <div><span>Búsqueda:</span><strong>O(1) Hash</strong></div>
+                <div><span>Dictamen:</span><strong class="ok">DESPACHADO</strong></div>
+              </div>
+              <div class="label-foot"><div class="barcode" aria-hidden="true"></div><span class="barcode-text">*UBP-PEF-2026-718X*</span></div>
+            </div>
+            <div class="recv-stamp static" aria-hidden="true">
+              <span class="rs-top">LAB. DE CALIDAD UBP</span><strong>RECIBIDO</strong><span class="rs-bot">AUDITORÍA · PARCIAL 2</span>
+            </div>
+            <div class="ship-label label-p2 static">
+              <div class="label-header"><span class="label-title">GUÍA DE EXPEDICIÓN · EDICIÓN 2</span><span class="label-badge green">AUDITADO</span></div>
+              <div class="label-routing">
+                <div><span class="rc-tag">REMITENTE:</span><strong>Laboratorio de Calidad UBP</strong><span>Cátedra Programación Eficiente</span></div>
+                <div><span class="rc-tag">DESTINATARIO:</span><strong>Tribunal Evaluador</strong><span>Defensa Oral Segundo Parcial</span></div>
+              </div>
+              <div class="label-kpis">
+                <div><span>Tests:</span><strong class="hl">193 ✓</strong></div>
+                <div><span>Cobertura:</span><strong>90 %</strong></div>
+                <div><span>CC máxima:</span><strong>12</strong></div>
+                <div><span>Dictamen:</span><strong class="ok">QUALITY GATE</strong></div>
+              </div>
+              <div class="label-foot"><div class="barcode" aria-hidden="true"></div><span class="barcode-text">*UBP-PEF-2026-P2*</span></div>
+            </div>
+            <!-- Sello que pone la aduana al liberar la caja -->
+            <div class="customs-stamp" id="customs-stamp" aria-hidden="true">
+              <span>ADUANA CI · UBP</span><strong>LIBERADO</strong><span>CANAL VERDE · 7 / 7</span>
+            </div>
+          </div>
+
+          <div class="face f-back kraft"><span class="back-print">PEF 2026 · UBP</span></div>
+          <div class="face f-left kraft"><div class="hand-slot" aria-hidden="true"></div><span class="side-arrows" aria-hidden="true">↑↑</span></div>
+          <div class="face f-right kraft">
+            <div class="side-spec">UBP-COR-LOGISTICS</div>
+            <div class="side-barcode" aria-hidden="true"></div>
+            <div class="side-spec">LATENCIA: 0.05ms</div>
+            <!-- Ticket de ingreso a la aduana -->
+            <div class="ingreso-ticket" id="ingreso-ticket" aria-hidden="true">
+              <span>ADUANA CI · INGRESO</span><b>push → main</b><span class="tk-bar"></span><span>PEF-2026-P3</span>
+            </div>
+            <!-- Precinto de dependencias -->
+            <div class="precinto" id="precinto" aria-hidden="true"><i></i><b>uv.lock</b><span>N° 0042</span></div>
+          </div>
+
+          <!-- Solapas cerradas -->
+          <div class="hinge h-left"><div class="flap flap-minor"><div class="flap-out kraft"></div><div class="flap-in kraft-in"></div></div></div>
+          <div class="hinge h-right"><div class="flap flap-minor"><div class="flap-out kraft"></div><div class="flap-in kraft-in"></div></div></div>
+          <div class="hinge h-front"><div class="flap flap-major">
+            <div class="flap-out kraft">
+              <div class="grade-seal" id="seal-p2" hidden>
+                <svg class="seal-ring" viewBox="0 0 160 160" aria-hidden="true">
+                  <circle cx="80" cy="80" r="74" fill="none" stroke="currentColor" stroke-width="2.4"/>
+                  <circle cx="80" cy="80" r="67" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="3 4"/>
+                  <circle cx="80" cy="80" r="44" fill="none" stroke="currentColor" stroke-width="1.4"/>
+                  <path id="arc-top-p2" d="M24 80 A56 56 0 0 1 136 80" fill="none"/>
+                  <path id="arc-bot-p2" d="M28 84 A52 52 0 0 0 132 84" fill="none"/>
+                  <text class="seal-arc"><textPath href="#arc-top-p2" startOffset="50%" text-anchor="middle">TRIBUNAL EVALUADOR</textPath></text>
+                  <text class="seal-arc"><textPath href="#arc-bot-p2" startOffset="50%" text-anchor="middle">PARCIAL 2 · PEF 2026</textPath></text>
+                </svg>
+                <div class="seal-core"><span>NOTA</span><strong id="seal-p2-score">—</strong></div>
+              </div>
+              <div class="grade-seal" id="seal-p3" hidden>
+                <svg class="seal-ring" viewBox="0 0 160 160" aria-hidden="true">
+                  <circle cx="80" cy="80" r="74" fill="none" stroke="currentColor" stroke-width="2.4"/>
+                  <circle cx="80" cy="80" r="67" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="3 4"/>
+                  <circle cx="80" cy="80" r="44" fill="none" stroke="currentColor" stroke-width="1.4"/>
+                  <path id="arc-top-p3" d="M24 80 A56 56 0 0 1 136 80" fill="none"/>
+                  <path id="arc-bot-p3" d="M28 84 A52 52 0 0 0 132 84" fill="none"/>
+                  <text class="seal-arc"><textPath href="#arc-top-p3" startOffset="50%" text-anchor="middle">TRIBUNAL EVALUADOR</textPath></text>
+                  <text class="seal-arc"><textPath href="#arc-bot-p3" startOffset="50%" text-anchor="middle">PARCIAL 3 · PEF 2026</textPath></text>
+                </svg>
+                <div class="seal-core"><span>NOTA</span><strong id="seal-p3-score">—</strong></div>
+              </div>
+            </div>
+            <div class="flap-in kraft-in"></div>
+          </div></div>
+          <div class="hinge h-back"><div class="flap flap-major">
+            <div class="flap-out kraft">
+              <span class="lid-marker">PUNTUAR</span>
+              <div class="grade-seal seal-p1" id="seal-p1" hidden>
+                <svg class="seal-ring" viewBox="0 0 160 160" aria-hidden="true">
+                  <circle cx="80" cy="80" r="74" fill="none" stroke="currentColor" stroke-width="2.4"/>
+                  <circle cx="80" cy="80" r="67" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="3 4"/>
+                  <circle cx="80" cy="80" r="44" fill="none" stroke="currentColor" stroke-width="1.4"/>
+                  <path id="arc-top-p1" d="M24 80 A56 56 0 0 1 136 80" fill="none"/>
+                  <path id="arc-bot-p1" d="M28 84 A52 52 0 0 0 132 84" fill="none"/>
+                  <text class="seal-arc"><textPath href="#arc-top-p1" startOffset="50%" text-anchor="middle">TRIBUNAL EVALUADOR</textPath></text>
+                  <text class="seal-arc"><textPath href="#arc-bot-p1" startOffset="50%" text-anchor="middle">UBP · PEF 2026</textPath></text>
+                </svg>
+                <div class="seal-core"><span>NOTA</span><strong id="seal-p1-score">—</strong></div>
+              </div>
+            </div>
+            <div class="flap-in kraft-in"></div>
+          </div></div>
+
+          <!-- Láser 3D de rayos X: un plano de luz que recorre la caja y dibuja su perfil -->
+          <div class="laser" aria-hidden="true"><div class="laser-plane"><i class="laser-fan"></i><i class="laser-profile"></i><i class="laser-dot"></i></div><i class="laser-face lf-front"></i><i class="laser-face lf-top"></i><i class="laser-face lf-back"></i></div>
+
+          <div class="top-plane tape-plane">
+            <div class="tape-whole p2" id="tape-whole"><div class="tape-inner"><span class="tape-text" data-tape-text></span></div></div>
+          </div>
+        </div>
+
+        <!-- Arco del puesto de inspección (3D: misma perspectiva que la caja) -->
+        <div class="portal" id="portal" aria-hidden="true">
+          <div class="portal-curtain"></div>
+          <div class="cub pil pil-f"><i class="fz"></i><i class="bz"></i><i class="rx"></i><i class="lx"></i><i class="ty"></i><i class="by"></i></div>
+          <div class="cub pil pil-b"><i class="fz"></i><i class="bz"></i><i class="rx"></i><i class="lx"></i><i class="ty"></i><i class="by"></i></div>
+          <div class="cub rail"><i class="fz"></i><i class="bz"></i><i class="rx"></i><i class="lx"></i><i class="ty"></i><i class="by"></i></div>
+          <div class="cub beam"><i class="fz"></i><i class="bz"></i><i class="rx"></i><i class="lx"></i><i class="ty"></i><i class="by"></i></div>
+          <div class="portal-sign"><span class="portal-led" id="portal-led"></span><span id="portal-name">PUESTO 1 · INGRESO</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Efectos de cada puesto (se posicionan sobre la caja) -->
+    <div class="efx" id="efx" aria-hidden="true"></div>
+
+    <!-- Objetos de la oficina de aduana -->
+    <div class="items-layer" id="items-layer"></div>
+
+    <!-- Portada -->
+    <div class="intro-card" id="intro-card">
+      <p class="eyebrow">UBP 2026 · Cátedra de Programación Eficiente · DOC-REF: PARCIAL-3-OPCION-6</p>
+      <h1>La caja va a la <em>aduana</em></h1>
+      <p class="lead">En el Parcial 2 la limpiamos, la auditamos y la volvimos a sellar con la cinta del Quality Gate. Ahora quiere llegar a <code>main</code>, y ya no alcanza con que nosotros digamos que está bien: tiene que pasar un control automático, en cada envío.</p>
+      <button type="button" class="btn btn-accent" id="btn-receive">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h13"/><path d="m12 6 6 6-6 6"/><path d="M21 4v16"/></svg>
+        Presentar la caja en aduana
+      </button>
+      <span class="kbd-hint">Enter</span>
+    </div>
+
+    <!-- Panel del puesto -->
+    <aside class="station-panel" id="station-panel" aria-live="polite">
+      <p class="sp-eyebrow" id="sp-eyebrow">Etapa 1</p>
+      <h2 id="sp-title">Ingreso</h2>
+      <ul class="sp-checks" id="sp-checks"></ul>
+      <p class="sp-foot">Resultados obtenidos al correr los controles sobre el tag <code>parcial-3</code>.</p>
+      <div class="sp-actions">
+        <button type="button" class="btn btn-accent" id="btn-next-station">Siguiente puesto <kbd>Enter</kbd></button>
+        <button type="button" class="btn btn-ghost-dark" id="btn-run-all">Correr toda la cinta <kbd>A</kbd></button>
+      </div>
+    </aside>
+
+    <!-- Recorrido del pipeline -->
+    <nav class="track" id="track" aria-label="Etapas del pipeline"></nav>
+
+    <div class="hub-hud" id="hub-hud" hidden>
+      <div class="hub-title">
+        <p class="eyebrow">Oficina de aduana · informe de inspección</p>
+        <h2>12 documentos del control</h2>
+        <p>Elegí uno o recorré el informe en orden.</p>
+      </div>
+      <div class="hub-actions">
+        <button type="button" class="btn btn-accent" id="btn-start">Abrir el informe <kbd>→</kbd></button>
+        <button type="button" class="btn btn-ghost-dark" id="btn-despachar-hub">Despachar a main <kbd>P</kbd></button>
+      </div>
+    </div>
+
+    <div class="final-hud" id="final-hud" hidden>
+      <p class="final-msg" id="final-msg">Caja despachada a main · tag parcial-3</p>
+      <div class="final-actions">
+        <button type="button" class="btn-marker" id="btn-puntuar">PUNTUAR</button>
+        <button type="button" class="btn btn-ghost-dark" id="btn-reopen">Volver a la oficina <kbd>R</kbd></button>
+      </div>
+      <div class="grade-dock" id="grade-dock" hidden>
+        <p>Elegí la nota del tribunal y sellá la caja</p>
+        <div class="grade-pads" id="grade-pads" role="group" aria-label="Nota del 1 al 10"></div>
+        <div class="grade-actions">
+          <button type="button" class="btn btn-accent" id="btn-seal" disabled>Sellar caja</button>
+          <button type="button" class="btn btn-ghost-dark" id="btn-grade-cancel">Volver</button>
+        </div>
+      </div>
+      <p class="orbit-hint">Arrastrá la caja para rotarla</p>
+    </div>
+
+    <!-- Destino final de la caja -->
+    <div class="destino" id="destino" hidden>
+      <p class="eyebrow">Destino final · rama main · tag parcial-3</p>
+      <h2>La caja llegó a <em>main</em></h2>
+      <p class="dest-lead">Tres parciales, la misma caja: la empaquetamos, la auditamos y ahora pasó la aduana. Queda guardada en el depósito de producción y cada cambio nuevo vuelve a pasar por la misma cinta.</p>
+      <div class="ruta" id="ruta">
+        <span class="ruta-line"><i id="ruta-fill"></i></span>
+        <div class="ruta-st"><span class="rs-dot">P1</span><b>Empaque</b><span>Laboratorio Algorítmico</span><em>búsqueda O(1) · 718× más rápido</em></div>
+        <div class="ruta-st"><span class="rs-dot">P2</span><b>Auditoría</b><span>Laboratorio de Calidad</span><em>193 tests · 90 % · Quality Gate</em></div>
+        <div class="ruta-st"><span class="rs-dot">P3</span><b>Aduana CI</b><span>7 puestos · 15 controles</span><em>canal verde · 7 / 7</em></div>
+        <div class="ruta-st final"><span class="rs-dot">main</span><b>Depósito de producción</b><span>tag <code>parcial-3</code></span><em>docs publicadas en GitHub Pages</em></div>
+        <span class="ruta-box" id="ruta-box" aria-hidden="true"></span>
+      </div>
+      <div class="dest-foot">
+        <div class="dest-notas" id="dest-notas"></div>
+        <div class="dest-stamp" id="dest-stamp"><span>DEPÓSITO MAIN · UBP</span><strong>ENTREGADO</strong><span>PEF 2026 · PARCIAL 3</span></div>
+      </div>
+      <div class="dest-actions">
+        <button type="button" class="btn btn-ghost-dark" id="btn-dest-replay">Ver el recorrido otra vez</button>
+        <button type="button" class="btn btn-accent" id="btn-dest-back">Volver a la oficina para preguntas <kbd>R</kbd></button>
+      </div>
+    </div>
+
+    <button type="button" class="skip-btn" id="btn-skip" title="Saltar directo a la oficina (S)">Saltar inspección <kbd>S</kbd></button>
+  </section>
+
+  <div class="rubber-stamp" id="rubber-stamp" aria-hidden="true"></div>
+
+  <!-- ===================== ESCENA 2D: INFORME ===================== -->
+  <section class="slides-scene" id="slides-scene" aria-label="Informe de aduana" hidden>
+    <div class="desk" id="desk"></div>
+    <nav class="dock" id="dock" aria-label="Navegación del informe">
+      <button type="button" class="dock-btn" id="btn-prev" aria-label="Anterior">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        Anterior
+      </button>
+      <div class="dock-strip" id="dock-strip"></div>
+      <button type="button" class="dock-btn dock-next" id="btn-next" aria-label="Siguiente">
+        Siguiente
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+      <span class="dock-sep" aria-hidden="true"></span>
+      <button type="button" class="dock-btn" id="btn-hub" title="Volver a la oficina (Esc)">Oficina <kbd>Esc</kbd></button>
+      <button type="button" class="dock-btn" id="btn-notes" title="Notas de orador (N)">Notas <kbd>N</kbd></button>
+      <button type="button" class="dock-btn" id="btn-full" title="Pantalla completa (F)">⛶</button>
+    </nav>
+  </section>
+
+  <aside class="notes-panel" id="notes-panel" hidden>
+    <div class="notes-head"><strong>Guía para el orador</strong><button type="button" class="icon-btn" id="btn-notes-close" aria-label="Cerrar notas">✕</button></div>
+    <div class="notes-body" id="notes-body"></div>
+  </aside>
+
+  <div class="modal" id="help-modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <div class="notes-head"><strong id="help-title">Atajos de teclado</strong><button type="button" class="icon-btn" id="btn-help-close" aria-label="Cerrar">✕</button></div>
+      <table class="help-table">
+        <tr><td><kbd>Enter</kbd></td><td>Presentar la caja / pasar al puesto siguiente</td></tr>
+        <tr><td><kbd>A</kbd></td><td>Correr toda la cinta (los 7 puestos seguidos)</td></tr>
+        <tr><td><kbd>S</kbd></td><td>Saltar la inspección e ir a la oficina</td></tr>
+        <tr><td><kbd>→</kbd> <kbd>Espacio</kbd></td><td>Lámina siguiente</td></tr>
+        <tr><td><kbd>←</kbd></td><td>Lámina anterior</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Volver a la oficina de aduana</td></tr>
+        <tr><td><kbd>P</kbd></td><td>Despachar la caja a main</td></tr>
+        <tr><td><kbd>R</kbd></td><td>Volver a la oficina para preguntas</td></tr>
+        <tr><td><kbd>N</kbd></td><td>Notas de orador</td></tr>
+        <tr><td><kbd>T</kbd></td><td>Iniciar / pausar el cronómetro (15 min)</td></tr>
+        <tr><td><kbd>M</kbd></td><td>Forzar / respetar animaciones</td></tr>
+        <tr><td><kbd>F</kbd></td><td>Pantalla completa</td></tr>
+        <tr><td><kbd>H</kbd> <kbd>?</kbd></td><td>Esta ayuda</td></tr>
+      </table>
+      <p class="help-foot">Parámetros opcionales: <code>index.html?notaP1=9&amp;notaP2=10</code> muestran en la tapa los sellos con las notas de los parciales anteriores.</p>
+    </div>
+  </div>
+
+  <script src="contenido.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
