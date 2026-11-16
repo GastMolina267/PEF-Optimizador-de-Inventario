@@ -2,11 +2,14 @@
 
 Proporciona capacidades predictivas y de aprendizaje automático:
 - Extracción vectorial de características operativas del catálogo.
-- Modelos predictivos supervisados (Ridge, RandomForest) para demanda y quiebres.
+- Modelos predictivos supervisados (Ridge, LogisticRegression) para demanda y quiebres.
 - Comparador algorítmico estricto: Regla convencional O(1) vs. Modelo IA vs. Cascada Híbrida.
 - Telemetría de costos computacionales (latencia en µs, memoria heap tracemalloc).
 """
 
+from src.ia.extractor_features import ExtractorFeatures, GeneradorHistorialSintetico
+from src.ia.modelos import ModeloPredictorIA, evaluar_heuristica_convencional
+from src.ia.predictor_demanda import PredictorDemanda
 from src.ia.tipos import (
     NOMBRES_FEATURES,
     DatasetHistorico,
@@ -22,9 +25,14 @@ __all__ = [
     "NOMBRES_FEATURES",
     "DatasetHistorico",
     "EstrategiaPrediccion",
+    "ExtractorFeatures",
     "FeatureVector",
+    "GeneradorHistorialSintetico",
     "MetricasModelo",
+    "ModeloPredictorIA",
     "NivelRiesgo",
+    "PredictorDemanda",
     "RegistroHistoricoDemanda",
     "ResultadoPrediccion",
+    "evaluar_heuristica_convencional",
 ]
