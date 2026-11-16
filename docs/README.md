@@ -27,6 +27,7 @@ docs/
 │   └── Parcial-3.docx                  # Consigna y pautas oficiales del Parcial 3
 ├── final/                              # Proyecto Final (Inteligencia Artificial Aplicada e Integrada)
 │   ├── planificacion-proyecto-final.md # Plan de trabajo (7 fases P4.0 a P4.6) y especificación técnica
+│   ├── resumen-proyecto-final.md       # Resumen ejecutivo, confrontación empírica y justificación de IA
 │   └── Programacion-eficiente.pptx     # Presentación de cátedra con pautas del proyecto final (pág. 356+)
 ├── analisis.md                         # Derivación formal de complejidades temporales y espaciales
 ├── propuestas-mejora.md                # Diagnóstico continuo de hotspots y oportunidades de refactor
@@ -44,6 +45,7 @@ docs/
 ## 🎯 Acceso Rápido por Hito Académico
 
 ### 1. Proyecto Final — Inteligencia Artificial (2026)
+- 📄 **Resumen Ejecutivo y Técnico:** [final/resumen-proyecto-final.md](final/resumen-proyecto-final.md)
 - 🤖 **Plan de Implementación:** [final/planificacion-proyecto-final.md](final/planificacion-proyecto-final.md)
 - 📊 **Presentación de Cátedra:** [final/Programacion-eficiente.pptx](final/Programacion-eficiente.pptx)
 - **Objetivos Centrales:**

@@ -42,6 +42,7 @@ seguridad y control de calidad continua en CI/CD.
    :maxdepth: 2
    :caption: Planificación y Registro Histórico
 
+   guias/resumen_proyecto_final
    guias/planificacion_proyecto_final
    guias/planificacion_parcial_3
    guias/seguridad_politica
