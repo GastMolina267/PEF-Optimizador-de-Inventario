@@ -39,7 +39,11 @@ El sistema cubre integralmente el ciclo operativo de un centro de distribución:
    - Procesamiento de archivos masivos en formato JSON Lines (`.jsonl`) con generadores lazy de consumo de memoria constante $O(1)$ y buffers de escritura atómicos.
 
 7. **Interfaz de Usuario y Auditoría en Vivo:**
-   - Aplicación de escritorio interactiva construida en **Flet** (motor Flutter) con 7 pantallas operativas y panel de estado en tiempo real.
+   - Aplicación de escritorio interactiva construida en **Flet** (motor Flutter) con 8 pantallas operativas y panel de estado en tiempo real.
+
+8. **Predicción Inteligente de Demanda y Quiebre de Stock (Enfoque Dual de IA):**
+   - **IA aplicada al desarrollo de software:** Uso de asistentes de IA para derivación de propiedades invariantes, generación de casos de prueba con `Hypothesis`, perfilado de memoria heap con `tracemalloc` y detección temprana de cuellos de botella algorítmicos.
+   - **IA integrada en la aplicación:** Subsistema con `scikit-learn` (regresión `Ridge` para demanda futura y regresión logística calibrada para probabilidad de quiebre), contrastado rigurosamente contra una heurística convencional $O(1)$ de punto de reorden y optimizado mediante una arquitectura de **Cascada Híbrida reactiva**.
 
 ---
 
@@ -52,6 +56,7 @@ El sistema cubre integralmente el ciclo operativo de un centro de distribución:
 - **RF-04 (Ranking Top-N):** Listado de los $k$ productos con mayor demanda acumulada.
 - **RF-05 (Alternativas DP):** Cálculo de combinaciones óptimas de reemplazo ante stock insuficiente dentro del presupuesto indicado.
 - **RF-06 (Conmutación Algorítmica):** La interfaz debe permitir alternar en caliente entre modo *Baseline* y modo *Optimizado* para auditar el speedup en vivo.
+- **RF-07 (Predicción y Alerta de Quiebre con IA):** El sistema debe predecir la demanda proyectada y clasificar el riesgo de quiebre (Bajo, Medio, Crítico), permitiendo conmutar entre heurística $O(1)$, modelo supervisado puro y cascada híbrida.
 
 ### Requisitos No Funcionales (RNF)
 - **RNF-01 (Eficiencia Temporal):** Speedup global superior a $500\times$ en el procesamiento integral de pedidos masivos (10.000 productos y 2.000 pedidos).
@@ -59,3 +64,4 @@ El sistema cubre integralmente el ciclo operativo de un centro de distribución:
 - **RNF-03 (Concurrencia Segura):** Aislamiento de procesos mediante `ProcessPoolExecutor`, evitando condiciones de carrera en el descuento de inventario.
 - **RNF-04 (Calidad de Código):** 0 errores de sintaxis, 0 observaciones de linter (`Ruff`), complejidad cognitiva $\le 15$ (`complexipy`) y cobertura de pruebas $\ge 85\%$.
 - **RNF-05 (Seguridad):** Cero vulnerabilidades críticas o altas en código fuente (`Bandit`) y dependencias (`pip-audit`), y escaneo preventivo de secretos (`Gitleaks`).
+- **RNF-06 (Presupuesto de Memoria y Latencia de IA):** El artefacto del modelo serializado en disco no debe superar $50\text{ KB}$, el heap adicional en inferencia batch debe mantenerse bajo $3\text{ MB}$, y la cascada híbrida debe ofrecer una reducción de latencia $\ge 70\%$ frente a la inferencia pura de IA.

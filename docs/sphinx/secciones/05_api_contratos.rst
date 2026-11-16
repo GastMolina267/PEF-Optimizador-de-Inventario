@@ -17,4 +17,5 @@ retornos y excepciones lanzadas.
    ../api/cache
    ../api/datos
    ../api/observabilidad
+   ../api/ia
    ../api/ui

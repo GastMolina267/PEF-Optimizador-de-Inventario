@@ -205,6 +205,18 @@ Los scripts de benchmarking (`benchmarks/comparar.py`) completan automáticament
 | **Concurrencia / Paralelismo** | *Medido* | *Medido* | `ProcessPoolExecutor` para procesamiento paralelo de lotes independientes. Evaluación de overhead. |
 | **Versión final integrada** | *Medido* | *Medido* | Catálogo hash + Heaps + Memoización + Caché LRU reactiva + Multiproceso optimizado. |
 
+### Proyecto Final: Evaluación Empírica de IA vs. Heurística Convencional
+
+El Proyecto Final incorpora el **doble enfoque de IA** exigido por la cátedra:
+1. **IA aplicada al desarrollo de software:** Generación de invariantes con `Hypothesis`, testing de presupuesto estricto de memoria heap (`tracemalloc`) y detección de memory leaks en inferencia repetitiva.
+2. **IA integrada en la aplicación:** Subsistema con `scikit-learn` (Ridge + Logistic Regression) para predecir demanda futura y clasificar el riesgo de quiebre de stock, evaluado empíricamente frente a una heurística convencional $O(1)$ y una **Cascada Híbrida**:
+
+| Estrategia Predictiva | Latencia Media ($\mu\text{s}$/prod) | Memoria Heap Pico (KB) | Speedup vs IA | F1-Score | Justificación Técnica |
+|---|---:|---:|:---:|:---:|---|
+| **Heurística Convencional $O(1)$** | **58.46 $\mu\text{s}$** | **15.2 KB** | **23.30x** | N/A | ROP determinista en microsegundos; sin dependencias de ML ni heap extra. |
+| **Modelo Supervisado IA (`scikit-learn`)** | 1.361,91 $\mu\text{s}$ | 29.9 KB | **1.00x** | **0.875** | Predicción multivariada sobre 10 features; probabilidad calibrada de quiebre. |
+| **Cascada Híbrida (Recomendada)** | **263.92 $\mu\text{s}$** | **22.2 KB** | **5.16x** | **0.875** | Filtro rápido $O(1)$ para stock seguro; IA en zonas de riesgo (>75% ahorro de tiempo). |
+
 ---
 
 ## 9. Estructura del repositorio
@@ -265,12 +277,14 @@ PEF-Parcial-I-Optimizador-de-Inventario/
 │   ├── cache/                          # Caché LRU de consultas con invalidación
 │   ├── datos/                          # Cargador y validador de datasets JSON
 │   ├── motor/                          # Fachada unificada del motor de inventario
+│   ├── ia/                             # Subsistema de IA (extractor de features, Ridge, LogReg, cascada híbrida)
 │   └── ui/                             # Aplicación de escritorio en Flet
 │       ├── componentes/                # Tarjetas, tablas de métricas, controles accesibles
-│       └── pantallas/                  # Vistas: catálogo, pedidos, agrupación, top-N, métricas
+│       └── pantallas/                  # Vistas: catálogo, pedidos, agrupación, top-N, predicción IA, métricas
 ├── benchmarks/
 │   ├── generar_datos.py                # Generador determinista de datos sintéticos
 │   ├── comparar.py                     # Ejecutor de la tabla comparativa oficial
+│   ├── comparar_ia.py                  # Evaluación experimental de IA vs Heurística O(1) vs Cascada Híbrida
 │   ├── perfilar_cprofile.py            # Script de perfilado con cProfile
 │   ├── perfilar_lineas.py              # Script de perfilado con line_profiler
 │   └── perfilar_memoria.py             # Script de perfilado con memory_profiler / tracemalloc
@@ -323,6 +337,12 @@ python -m src.ui.app
 ```bash
 # Tabla comparativa completa de la rúbrica (tiempo y memoria)
 python -m benchmarks.comparar
+
+# Evaluación empírica de IA: Heurística O(1) vs. scikit-learn vs. Cascada Híbrida
+python benchmarks/comparar_ia.py
+
+# Entrenamiento y serialización reproducible del modelo de IA
+python -m src.ia.entrenador
 
 # Perfilado por funciones (cProfile)
 python -m benchmarks.perfilar_cprofile

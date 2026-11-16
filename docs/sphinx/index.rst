@@ -31,6 +31,7 @@ seguridad y control de calidad continua en CI/CD.
    :caption: Mediciones Detalladas y Profiling
 
    mediciones/tabla_comparativa
+   mediciones/tabla_comparativa_ia
    mediciones/linea_base_parcial1
    mediciones/linea_base_parcial2
    mediciones/archivos_grandes

@@ -18,6 +18,40 @@ from src.modelos.producto import Producto
 MIN_PEDIDOS_TENDENCIA = 2
 
 
+def _recolectar_historial(
+    id_producto: int, stock: int, pedidos: list[Pedido]
+) -> tuple[list[int], int]:
+    """Recolecta las cantidades y quiebres observados para un producto en el historial."""
+    cantidades: list[int] = []
+    quiebres = 0
+    for pedido in pedidos:
+        for linea in pedido.lineas:
+            if linea.id_producto == id_producto:
+                cantidades.append(linea.cantidad)
+                if linea.cantidad > stock:
+                    quiebres += 1
+    return cantidades, quiebres
+
+
+def _calcular_tendencia(cantidades: list[int]) -> float:
+    """Calcula el ratio de tendencia entre la segunda y la primera mitad del historial."""
+    if len(cantidades) < MIN_PEDIDOS_TENDENCIA:
+        return 1.0
+    mitad = len(cantidades) // 2
+    antigua = float(sum(cantidades[:mitad]))
+    reciente = float(sum(cantidades[mitad:]))
+    if antigua > 0.0:
+        return reciente / antigua
+    return 2.0 if reciente > 0.0 else 1.0
+
+
+def _calcular_cobertura(stock: int, tamano_medio: float) -> float:
+    """Estima los días de cobertura según el stock remanente y tamaño medio de lote."""
+    if tamano_medio > 0.0:
+        return float(stock) / tamano_medio
+    return 999.0 if stock > 0 else 0.0
+
+
 class ExtractorFeatures:
     """Extrae vectores de características a partir de productos y pedidos históricos."""
 
@@ -32,16 +66,9 @@ class ExtractorFeatures:
         Returns:
             Instancia inmutable de FeatureVector.
         """
-        # Recolectar las cantidades solicitadas de este producto en el historial
-        cantidades: list[int] = []
-        quiebres_observados: int = 0
-
-        for pedido in pedidos:
-            for linea in pedido.lineas:
-                if linea.id_producto == producto.id:
-                    cantidades.append(linea.cantidad)
-                    if linea.cantidad > producto.stock:
-                        quiebres_observados += 1
+        cantidades, quiebres_observados = _recolectar_historial(
+            producto.id, producto.stock, pedidos
+        )
 
         if not cantidades:
             # Producto sin histórico de demanda registrado
@@ -65,24 +92,8 @@ class ExtractorFeatures:
         varianza = float(np.var(cantidades)) if len(cantidades) > 1 else 0.0
         ratio_stock_rot = float(producto.stock) / (rotacion_total + 1.0)
         tasa_quiebre = float(quiebres_observados) / frecuencia
-
-        # Tendencia temporal: comparación de demanda entre segunda y primera mitad
-        if len(cantidades) >= MIN_PEDIDOS_TENDENCIA:
-            mitad = len(cantidades) // 2
-            demanda_antigua = float(sum(cantidades[:mitad]))
-            demanda_reciente = float(sum(cantidades[mitad:]))
-            if demanda_antigua > 0.0:
-                tendencia = demanda_reciente / demanda_antigua
-            else:
-                tendencia = 2.0 if demanda_reciente > 0.0 else 1.0
-        else:
-            tendencia = 1.0
-
-        # Días de cobertura estimados en base al tamaño medio de lote
-        if tamano_medio > 0.0:
-            dias_cobertura = float(producto.stock) / tamano_medio
-        else:
-            dias_cobertura = 999.0 if producto.stock > 0 else 0.0
+        tendencia = _calcular_tendencia(cantidades)
+        dias_cobertura = _calcular_cobertura(producto.stock, tamano_medio)
 
         return FeatureVector(
             id_producto=producto.id,
@@ -113,9 +124,7 @@ class ExtractorFeatures:
         Returns:
             Tupla (X, lista_vectores) donde X es una matriz NumPy 2D de float64.
         """
-        vectores: list[FeatureVector] = [
-            cls.extraer_vector(p, pedidos) for p in productos
-        ]
+        vectores: list[FeatureVector] = [cls.extraer_vector(p, pedidos) for p in productos]
         if not vectores:
             return np.empty((0, 10), dtype=np.float64), []
 
@@ -193,10 +202,11 @@ class GeneradorHistorialSintetico:
         """Construye un DatasetHistorico supervisado multi-período para entrenamiento y test.
 
         Simula la evolución de ventas por período temporal:
-        - Para cada período t y cada producto, se computan las características
+
+        * Para cada período t y cada producto, se computan las características
           con base en las ventas acumuladas.
-        - Se genera la demanda observada del período siguiente (t+1).
-        - Se etiqueta el quiebre de stock real (1 si demanda > stock actual, 0 si no).
+        * Se genera la demanda observada del período siguiente (t+1).
+        * Se etiqueta el quiebre de stock real (1 si demanda > stock actual, 0 si no).
         """
         if not catalogo:
             return DatasetHistorico(

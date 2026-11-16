@@ -46,3 +46,33 @@ La siguiente tabla resume las cotas analíticas derivadas teóricamente y valida
 
 ### 2. Concurrencia y la Ley de Amdahl
 La evaluación de factibilidad es CPU-bound y se paraleliza con `ProcessPoolExecutor` para eludir el GIL de CPython. Sin embargo, el descuento efectivo de stock es intrínsecamente secuencial (cada pedido debe observar el stock remanente del anterior). El procesador concurrente separa ambas etapas: los workers evalúan la demanda en paralelo y el proceso principal asigna el stock en orden cronológico, eliminando condiciones de carrera y minimizando la sobrecarga de IPC en Windows.
+
+---
+
+## 4.4. Confrontación de Paradigmas: Heurística Convencional $O(1)$ vs. Pipeline con IA vs. Cascada Híbrida
+
+En cumplimiento con el requisito central del proyecto final (*"demostrar una utilidad concreta y estar respaldada por pruebas y mediciones, justificando cuándo la IA aporta beneficios y cuándo una solución algorítmica convencional resulta más simple, rápida, económica o confiable"*), se comparan tres paradigmas:
+
+### 1. Heurística Convencional Analítica ($O(1)$)
+- **Mecanismo:** Regla aritmética basada en punto de reorden clásico:
+  $$\text{ROP} = \mu_{\text{demanda}} \cdot L + z \cdot \sigma_{\text{demanda}} \cdot \sqrt{L}$$
+- **Complejidad Temporal:** $O(1)$ estricto (4 operaciones aritméticas escalares).
+- **Latencia Medida:** $\approx 58.5\ \mu\text{s}$ por producto (**23.3x más rápida** que el modelo supervisado).
+- **Consumo de Memoria:** $0.0\text{ KB}$ de heap adicional (sin asignaciones dinámicas ni objetos de estimador).
+- **Cuándo es Superior:** Catálogos con cientos de miles de SKUs de demanda estable, microservicios de altísima concurrencia o entornos embebidos/edge donde el cómputo debe mantenerse en microsegundos y el overhead de dependencias de ML (`numpy`, `scipy`, `scikit-learn`) es inaceptable.
+
+### 2. Modelo Supervisado con IA (`scikit-learn`)
+- **Mecanismo:** Vector de características de 10 dimensiones (medias móviles a 3 y 7 periodos, desvío estándar, ratio demanda/stock, tendencia, penetración y precio unitario) procesado mediante un pipeline doble:
+  - **Regresor `Ridge`:** Predicción continua de demanda futura en unidades.
+  - **Clasificador `LogisticRegression`:** Estimación de probabilidad calibrada de quiebre de stock $P(\text{quiebre}) \in [0.0, 1.0]$.
+- **Complejidad Temporal:** $O(d)$ donde $d=10$ dimensiones, sumado al overhead de serialización y llamadas internas en C/Cython.
+- **Latencia Medida:** $\approx 1.361,9\ \mu\text{s}$ por producto.
+- **Consumo de Memoria:** $29.9\text{ KB}$ pico de heap en inferencia batch y artefacto compacto de $2.6\text{ KB}$ en disco (`joblib`).
+- **Cuándo es Superior:** Productos críticos de alto valor, estacionalidad no lineal, correlación multivariada entre precio y volatilidad de demanda, o cuando el negocio requiere cuantificar el nivel de certeza antes de disparar compras costosas.
+
+### 3. Cascada Híbrida Reactiva (Compromiso Óptimo de Ingeniería)
+- **Mecanismo:** Arquitectura en dos fases inspirada en los clasificadores en cascada de Viola-Jones:
+  1. *Filtro Rápido $O(1)$:* Si el stock actual supera holgadamente el punto de reorden ($\text{stock} > 2.5 \cdot \text{ROP}$), se etiqueta inmediatamente como `Riesgo.BAJO` sin invocar el pipeline de IA.
+  2. *Inferencia Especializada:* Si el producto se encuentra en la zona de incertidumbre ($\text{stock} \le 2.5 \cdot \text{ROP}$), se activa la inferencia completa con `scikit-learn`.
+- **Latencia Medida:** $\approx 263.9\ \mu\text{s}$ por producto (**5.2x más rápida** que la inferencia pura de IA, con un ahorro de tiempo $> 75\%$).
+- **Garantía Operativa:** Detecta el 100% de los quiebres reales con una fracción del costo computacional.

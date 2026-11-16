@@ -50,9 +50,12 @@ pytest tests/ -v --cov=src --cov-report=term-missing --cov-fail-under=85
 
 # 9. Verificación de presupuesto de memoria heap (tracemalloc)
 pytest tests/integracion/test_presupuesto_memoria.py -v
+pytest tests/ia/test_presupuesto_memoria_ia.py -v
 
-# 10. Microbenchmarks continuos de no regresión (pytest-benchmark)
+# 10. Microbenchmarks continuos y evaluación de IA (pytest-benchmark / comparar_ia)
 pytest tests/integracion/test_benchmarks.py -v --benchmark-only
+python benchmarks/comparar_ia.py
+python -m src.ia.entrenador
 
 # 11. Auditoría de dependencias y vulnerabilidades (pip-audit)
 pip-audit -r requirements.txt -r requirements-dev.txt

@@ -47,6 +47,7 @@ En estricto cumplimiento con la rúbrica (*"documentar falsos positivos, excepci
 |---|---|---|---|
 | **Bandit `B311`** | `src/datos/generador_archivos.py:45` | `rnd = random.Random(seed)` | **Generación Sintética Determinista:** Se utiliza `random.Random` exclusivamente para generar datasets sintéticos reproducibles con semilla fija (`seed=42`). No se usa para tokens, firmas ni criptografía. Aislado con `# nosec: B311`. |
 | **Bandit `B311`** | `src/datos/generador_archivos.py:69` | `rnd = random.Random(seed + 100)` | **Generación Sintética Determinista:** Misma justificación para la generación de pedidos sintéticos de prueba. Aislado con `# nosec: B311`. |
+| **Bandit `B311`** | `src/ia/extractor_features.py:126` | `rng = random.Random(seed)` | **Simulación Sintética de Historial para IA:** Empleado exclusivamente para entrenar pipelines de ML con series temporales reproducibles. No se usa en contextos criptográficos. Aislado con `# nosec: B311`. |
 | **Gitleaks `generic-api-key`** | `tests/observabilidad/test_apm.py` | `secret_token = "dummy_token"` | **Fixtures de Pruebas Unitarias:** Cadenas mock para verificar que el cliente APM no lance excepciones ante credenciales simuladas. Excluido mediante `.gitleaks.toml`. |
 
 ---

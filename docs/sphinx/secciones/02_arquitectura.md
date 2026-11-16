@@ -14,11 +14,12 @@ Tanto la aplicación de escritorio como los scripts de benchmarking y las prueba
 ```mermaid
 flowchart TD
   subgraph CapaPresentacion ["Capa de Presentación (UI)"]
-    UI["src/ui/app.py (Flet Desktop)\n7 Vistas Operativas + Panel Estado"]
+    UI["src/ui/app.py (Flet Desktop)\n8 Vistas Operativas + Panel Estado"]
   end
 
   subgraph CapaBenchmarking ["Capa de Benchmarking y Diagnóstico"]
     Bench["benchmarks/comparar.py"]
+    BenchIA["benchmarks/comparar_ia.py"]
     ProfCPU["benchmarks/perfilar_cprofile.py"]
     ProfLine["benchmarks/perfilar_lineas.py"]
     ProfMem["benchmarks/perfilar_memoria.py"]
@@ -29,7 +30,7 @@ flowchart TD
     Motor["src/motor/motor_inventario.py (MotorInventario)\nOrquestador y Conmutador de Estrategias"]
   end
 
-  subgraph CapaDominio ["Capa de Dominio y Algoritmos"]
+  subgraph CapaDominio ["Capa de Dominio, Algoritmos e IA"]
     Protocolo["src/inventario/protocolo.py (Catalogo Protocol)"]
     CatBase["src/inventario/catalogo_lineal.py (Baseline O(n))"]
     CatOpt["src/inventario/catalogo_hash.py (Optimizado O(1))"]
@@ -40,6 +41,7 @@ flowchart TD
     ProcConc["src/pedidos/procesador_concurrente.py (ProcessPool)"]
     Cache["src/cache/cache_consultas.py (LRU + Invalidación Reactiva)"]
     Obs["src/observabilidad/apm.py (Elastic APM Instrumentation)"]
+    IA["src/ia/ (PredictorDemanda, Modelo scikit-learn, Cascada Híbrida)"]
   end
 
   subgraph CapaDatos ["Capa de Datos y Persistencia"]
@@ -49,10 +51,12 @@ flowchart TD
     LotesParalelo["src/datos/procesador_lotes_paralelo.py"]
     Validador["src/datos/validador.py (ValidadorDataset)"]
     Datasets["data/datasets/ (*.json)"]
+    ModelosIA["data/modelos/ (*.joblib)"]
   end
 
   UI --> Motor
   Bench --> Motor
+  BenchIA --> Motor
   Motor --> Protocolo
   Protocolo -.-> CatBase
   Protocolo -.-> CatOpt
@@ -63,6 +67,8 @@ flowchart TD
   Motor --> ProcConc
   Motor --> Cache
   Motor --> Obs
+  Motor --> IA
+  IA -.-> ModelosIA
   Motor --> Cargador
   Cargador --> Datasets
   Cargador --> Validador
@@ -73,7 +79,7 @@ flowchart TD
 
 ## 2.3. Módulos y Responsabilidades del Sistema
 
-El código fuente en `src/` se estructura en 9 subsistemas de alta cohesión:
+El código fuente en `src/` se estructura en 10 subsistemas de alta cohesión:
 
 | Módulo / Paquete | Responsabilidad Principal | Patrón / Técnica Aplicada |
 |---|---|---|
@@ -84,5 +90,6 @@ El código fuente en `src/` se estructura en 9 subsistemas de alta cohesión:
 | **`src/cache/`** | Fachada de consultas frecuentes en memoria con capacidad acotada y desalojo. | Caché LRU (128 slots) basada en `OrderedDict` con **invalidación reactiva atómica** ante mutaciones. |
 | **`src/datos/`** | Carga, validación estricta, lectura lazy en streaming, buffering y procesamiento paralelo en lotes. | Generadores de memoria $O(1)$, buffers de disco (`open(buffering=...)`), deserialización tipada. |
 | **`src/observabilidad/`** | Captura de métricas transaccionales, spans y errores para Elastic APM. | Decoradores `@medir`, contextmanagers de spans y fallback seguro desacoplado. |
+| **`src/ia/`** | Predicción de demanda, alerta de quiebres de stock y arquitectura de cascada híbrida. | Pipeline supervisado con `scikit-learn` (Ridge + Logistic Regression), extractor de 10 features y heurística analítica $O(1)$. |
 | **`src/motor/`** | Fachada orquestadora unificada que expone la API del sistema y conmuta estrategias. | Patrón Fachada (*Facade*) y Estrategia (*Strategy*). |
 | **`src/ui/`** | Interfaz gráfica interactiva multiplataforma de escritorio. | **Flet** (arquitectura declarativa sobre Flutter Engine), tema accesible con alto contraste. |

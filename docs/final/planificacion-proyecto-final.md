@@ -143,19 +143,19 @@ Seguiremos la metodología de trabajo rigurosa y trazable consolidada en los par
 | **P4.3** | `final/f3-integracion-motor-tests` | Integración del predictor en `MotorInventario`. Creación de la suite de pruebas unitarias y de propiedades (`tests/ia/test_predictor_ia.py`). | 100% de tests pasando en pytest, cobertura de código $\ge 85\%$. | ✅ Completado |
 | **P4.4** | `final/f4-benchmarks-y-memoria` | Suite de benchmarking comparativo (latencia convencional vs IA vs híbrida) y test de presupuesto de memoria heap con `tracemalloc` (`test_presupuesto_memoria_ia.py`). | Tabla comparativa oficial completa, aserción de no regresión y memoria acotada. | ✅ Completado |
 | **P4.5** | `final/f5-interfaz-flet` | Construcción de la pantalla interactiva `PantallaPrediccionIA` en Flet con sliders de umbral, selector de estrategia, KPIs de tiempo/memoria y visualización de alertas. | Interfaz accesible, fluida y responsive integrada en la navegación principal. | ✅ Completado |
-| **P4.6** | `final/f6-docs-presentacion-cierre` | Documentación técnica en Sphinx (sección de IA en las 9 secciones), actualización de la presentación interactiva (`docs/presentation-final/`), merge a `main` y tag `final`. | CI en verde (Ubuntu/Windows), documentación publicada en Pages y release listo. | ⏳ Pendiente |
+| **P4.6** | `final/f6-docs-cierre` | Documentación técnica integral en Sphinx (sección de IA en las 9 secciones), actualización del README, sincronización a `main` y tag de versión final. (Presentación final diferida a pedido del usuario). | CI en verde (Ubuntu/Windows), documentación Sphinx con 0 warnings (`-W`), 234 tests pasando y release listo. | ✅ Completado |
 
 ---
 
-## 7. Matriz Comparativa Oficial de Rendimiento y Memoria (Estimación y Diseño de Ensayo)
+## 7. Matriz Comparativa Oficial de Rendimiento y Memoria (Mediciones Empíricas Finales)
 
-Siguiendo el estándar de evaluación del proyecto, las mediciones empíricas completarán la siguiente tabla oficial para la defensa final:
+Siguiendo el estándar de evaluación del proyecto, las mediciones empíricas oficiales obtenidas mediante `benchmarks/comparar_ia.py` (50 iteraciones sobre catálogo) confirman:
 
-| Estrategia de Predicción | Complejidad Big-O | Latencia Media (Inferencia) | Memoria Heap (`tracemalloc`) | Precisión / Acierto (F1 / MAE) | Justificación de Ingeniería |
+| Estrategia de Predicción | Complejidad Big-O | Latencia Media (Inferencia) | Memoria Heap Pico (`tracemalloc`) | Precisión / Acierto (F1 / R²) | Justificación de Ingeniería |
 |---|:---:|:---:|:---:|:---:|---|
-| **1. Heurística Convencional** | $O(1)$ | $\approx 25 \text{ ns}$ | $< 0.01 \text{ MB}$ | Aceptable en demanda estable | Óptima para validación online masiva a alta velocidad. |
-| **2. Modelo IA (`scikit-learn`)** | $O(T \cdot d)$ | $\approx 0.25 \text{ ms}$ | $\approx 1.50 \text{ MB}$ | Alta en demanda compleja | Justificada para compras y reabastecimiento estratégico. |
-| **3. Estrategia Híbrida en Cascada** | $O(1)$ amort. | $\approx 0.04 \text{ ms}$ | $\approx 1.50 \text{ MB}$ | Idéntica a la IA | El mejor compromiso entre velocidad y poder predictivo. |
+| **1. Heurística Convencional** | $O(1)$ | **58.46 $\mu\text{s}$/prod** | **15.2 KB** | N/A (Regla ROP fija) | Óptima para validación online masiva a alta velocidad (**23.3x speedup**). |
+| **2. Modelo IA (`scikit-learn`)** | $O(d)$ | 1.361,91 $\mu\text{s}$/prod | 29.9 KB | **F1: 0.875 / R²: 0.88** | Justificada para compras estratégicas ante estacionalidad o demanda volátil. |
+| **3. Cascada Híbrida (Recomendada)** | $O(1)$ amort. | **263.92 $\mu\text{s}$/prod** | **22.2 KB** | **F1: 0.875** (100% recall) | El mejor compromiso: **5.2x más rápida** que IA pura con $>75\%$ reducción de latencia. |
 
 ---
 
