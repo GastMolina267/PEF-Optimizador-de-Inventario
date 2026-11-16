@@ -2,3 +2,5 @@ flet>=0.25.0
 flet-desktop>=0.25.0
 elastic-apm>=6.26.0
 psutil>=5.9.0
+scikit-learn>=1.4.0
+joblib>=1.3.0
