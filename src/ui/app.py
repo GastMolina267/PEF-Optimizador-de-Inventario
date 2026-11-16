@@ -30,6 +30,7 @@ from src.ui.pantallas.catalogo import PantallaCatalogo
 from src.ui.pantallas.comparacion import PantallaComparacion
 from src.ui.pantallas.inicio import PantallaInicio
 from src.ui.pantallas.pedidos import PantallaPedidos
+from src.ui.pantallas.prediccion_ia import PantallaPrediccionIA
 from src.ui.pantallas.top_productos import PantallaTopProductos
 from src.ui.tema import (
     COLOR_FONDO_APP,
@@ -100,6 +101,12 @@ SECCIONES: tuple[Seccion, ...] = (
         ft.Icons.COMPARE_ARROWS_OUTLINED,
         ft.Icons.COMPARE_ARROWS_ROUNDED,
         PantallaComparacion,
+    ),
+    Seccion(
+        "Predicción IA",
+        ft.Icons.PSYCHOLOGY_OUTLINED,
+        ft.Icons.PSYCHOLOGY_ROUNDED,
+        PantallaPrediccionIA,
     ),
 )
 
