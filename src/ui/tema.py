@@ -380,13 +380,15 @@ def crear_banner_explicativo(
     complejidad_base: str,
     complejidad_opt: str,
     por_que_importa: str,
+    etiqueta_base: str = "Baseline",
+    etiqueta_opt: str = "Optimizado",
 ) -> ft.Container:
     """Panel denso: Baseline y Optimizado apilados. Sin expand (evita el bloque gris)."""
     chip_base = ft.Container(
         content=ft.Row(
             controls=[
                 ft.Text(
-                    "Baseline",
+                    etiqueta_base,
                     size=TAM_ETIQUETA,
                     weight=ft.FontWeight.W_700,
                     color=COLOR_ADVERTENCIA,
@@ -411,7 +413,7 @@ def crear_banner_explicativo(
         content=ft.Row(
             controls=[
                 ft.Text(
-                    "Optimizado", size=TAM_ETIQUETA, weight=ft.FontWeight.W_700, color=COLOR_EXITO
+                    etiqueta_opt, size=TAM_ETIQUETA, weight=ft.FontWeight.W_700, color=COLOR_EXITO
                 ),
                 ft.Text(
                     complejidad_opt,

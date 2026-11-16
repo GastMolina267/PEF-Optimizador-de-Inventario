@@ -49,11 +49,43 @@ from src.ui.tema import (
     envolver_lista,
     envolver_metricas,
     estilo_boton_primario,
+    formatear_tiempo_ms,
     padding_symmetric,
 )
 
 # Umbral de stock bajo para resaltado visual preventivo.
 STOCK_BAJO_UMBRAL = 5
+
+# Descripción operativa mostrada al conmutar el selector de Estrategia Predictiva.
+DESCRIPCIONES_ESTRATEGIA: dict[EstrategiaPrediccion, tuple[str, str, str, str]] = {
+    EstrategiaPrediccion.HIBRIDA: (
+        "Cascada Híbrida (O(1) + ML)",
+        COLOR_EXITO,
+        COLOR_FONDO_EXITO,
+        (
+            "1) Descarta al instante en O(1) los SKUs con stock holgado (sin costo ML). "
+            "2) Ejecuta Ridge + LogisticRegression solo en la zona de incertidumbre."
+        ),
+    ),
+    EstrategiaPrediccion.CONVENCIONAL: (
+        "Heurística Analítica O(1)",
+        COLOR_ADVERTENCIA,
+        COLOR_FONDO_ADVERTENCIA,
+        (
+            "Calcula todo el catálogo con la fórmula clásica de Punto de Reorden (ROP). "
+            "No invoca Machine Learning: ~23x más veloz y mínimo consumo de heap."
+        ),
+    ),
+    EstrategiaPrediccion.IA: (
+        "Pipeline Supervisado 100% ML",
+        COLOR_SECUNDARIO,
+        COLOR_SUPERFICIE,
+        (
+            "Evalúa el 100% de los SKUs con Ridge (demanda) y LogisticRegression "
+            "(probabilidad de quiebre) usando 10 features temporales. Mayor costo de cómputo."
+        ),
+    ),
+}
 
 # Claves de ordenamiento de la tabla predictiva.
 CLAVES_ORDEN_IA = {
@@ -164,7 +196,7 @@ def _crear_encabezado_tabla() -> ft.Container:
                 _texto_cabecera("Demanda", align=ft.TextAlign.RIGHT, width=88),
                 _texto_cabecera("Prob. Quiebre", align=ft.TextAlign.RIGHT, width=112),
                 _texto_cabecera("Riesgo", align=ft.TextAlign.CENTER, width=96),
-                _texto_cabecera("Latencia", align=ft.TextAlign.RIGHT, width=76),
+                _texto_cabecera("Inferencia (µs)", align=ft.TextAlign.RIGHT, width=92),
                 _texto_cabecera("Motor y Diagnóstico", expand=3),
             ],
             spacing=12,
@@ -280,7 +312,7 @@ def _crear_fila_resultado(r: ResultadoPrediccion) -> ft.Container:
                     font_family=FAMILIA_DATOS,
                     color=COLOR_TEXTO_SECUNDARIO,
                     text_align=ft.TextAlign.RIGHT,
-                    width=76,
+                    width=92,
                 ),
                 ft.Column(
                     controls=[
@@ -428,6 +460,14 @@ class PantallaPrediccionIA(PantallaBase):
             color=COLOR_TEXTO_MUTED,
         )
 
+        self.barra_estrategia_activa = ft.Container(
+            padding=padding_symmetric(horizontal=12, vertical=8),
+            bgcolor=COLOR_TARJETA,
+            border=borde_all(1, COLOR_BORDE),
+            border_radius=8,
+        )
+        self._actualizar_barra_estrategia()
+
         self.lista_resultados = ft.ListView(spacing=0, expand=True, padding=0)
 
         self._construir_interfaz()
@@ -450,16 +490,18 @@ class PantallaPrediccionIA(PantallaBase):
                 crear_banner_explicativo(
                     titulo="Enfoque Dual de IA — Cátedra de Programación Eficiente (UBP 2026)",
                     descripcion=(
-                        "Cuantifica el costo computacional de la IA frente a algoritmos clásicos: "
-                        "la regla O(1) opera en microsegundos sin heap, scikit-learn captura "
-                        "patrones complejos y la Cascada Híbrida optimiza ambas en producción."
+                        "«Estrategia Predictiva» elige el algoritmo de pronóstico (ROP O(1), ML o "
+                        "Cascada) de forma independiente al conmutador global Baseline O(n) / "
+                        "Optimizado O(1), que cambia la estructura del catálogo (Lista vs. Hash)."
                     ),
-                    complejidad_base="Heurística Analítica O(1) (~58 µs · 0 KB extra)",
-                    complejidad_opt="Cascada Híbrida O(1)+ML (~260 µs · 5.2x speedup sobre IA)",
+                    complejidad_base="Heurística Analítica O(1) (~58 µs/SKU · 0 KB extra)",
+                    complejidad_opt="Filtro O(1) + Ridge/LogReg (~260 µs/SKU · 5.2x vs. ML puro)",
                     por_que_importa=(
                         "Justifica objetivamente cuándo la IA aporta valor predictivo y cuándo "
                         "una solución convencional resulta más simple, rápida y económica."
                     ),
+                    etiqueta_base="Sin ML · O(1)",
+                    etiqueta_opt="Con IA · Cascada",
                 ),
                 crear_barra_herramientas(
                     [
@@ -470,6 +512,7 @@ class PantallaPrediccionIA(PantallaBase):
                         self.btn_entrenar,
                     ]
                 ),
+                self.barra_estrategia_activa,
                 envolver_metricas(self.fila_kpis),
                 ft.Row(
                     controls=[
@@ -493,7 +536,78 @@ class PantallaPrediccionIA(PantallaBase):
         self._ejecutar_evaluacion(None)
 
     def al_cambiar_estrategia_global(self, nueva_estrategia: str) -> None:
-        """Mantiene independiente la estrategia del selector predictivo de IA."""
+        """Actualiza contexto de catálogo al cambiar Baseline/Optimizado sin pisar el modo IA."""
+        self._actualizar_barra_estrategia()
+        if self.motor.catalogo.obtener_todos():
+            self._ejecutar_evaluacion(None)
+
+    def _actualizar_barra_estrategia(self) -> None:
+        """Explica qué ejecuta la Estrategia Predictiva activa y su relación con el catálogo."""
+        nombre, color, fondo, detalle = DESCRIPCIONES_ESTRATEGIA[self.estrategia_seleccionada]
+        es_opt = self.motor.es_optimizado
+        cat_texto = (
+            "Catálogo: Hash O(1) (Optimizado)" if es_opt else "Catálogo: Lista O(n) (Baseline)"
+        )
+        cat_color = COLOR_EXITO if es_opt else COLOR_ADVERTENCIA
+
+        pill_estrategia = ft.Container(
+            content=ft.Text(nombre, size=11.5, weight=ft.FontWeight.W_700, color=color),
+            padding=padding_symmetric(horizontal=8, vertical=3),
+            bgcolor=fondo,
+            border=borde_all(1, color),
+            border_radius=6,
+        )
+        pill_catalogo = ft.Container(
+            content=ft.Text(cat_texto, size=11, weight=ft.FontWeight.W_600, color=cat_color),
+            padding=padding_symmetric(horizontal=8, vertical=3),
+            bgcolor=COLOR_SUPERFICIE,
+            border=borde_all(1, COLOR_BORDE),
+            border_radius=6,
+        )
+        self.barra_estrategia_activa.content = ft.Row(
+            controls=[
+                pill_estrategia,
+                ft.Text(detalle, size=12, color=COLOR_TEXTO_SECUNDARIO, expand=True),
+                pill_catalogo,
+            ],
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        actualizar_control(self.barra_estrategia_activa)
+
+    def _actualizar_barra_estrategia(self) -> None:
+        """Explica qué ejecuta la Estrategia Predictiva activa y su relación con el catálogo."""
+        nombre, color, fondo, detalle = DESCRIPCIONES_ESTRATEGIA[self.estrategia_seleccionada]
+        es_opt = self.motor.es_optimizado
+        cat_texto = (
+            "Catálogo: Hash O(1) (Optimizado)" if es_opt else "Catálogo: Lista O(n) (Baseline)"
+        )
+        cat_color = COLOR_EXITO if es_opt else COLOR_ADVERTENCIA
+
+        pill_estrategia = ft.Container(
+            content=ft.Text(nombre, size=11.5, weight=ft.FontWeight.W_700, color=color),
+            padding=padding_symmetric(horizontal=8, vertical=3),
+            bgcolor=fondo,
+            border=borde_all(1, color),
+            border_radius=6,
+        )
+        pill_catalogo = ft.Container(
+            content=ft.Text(cat_texto, size=11, weight=ft.FontWeight.W_600, color=cat_color),
+            padding=padding_symmetric(horizontal=8, vertical=3),
+            bgcolor=COLOR_SUPERFICIE,
+            border=borde_all(1, COLOR_BORDE),
+            border_radius=6,
+        )
+        self.barra_estrategia_activa.content = ft.Row(
+            controls=[
+                pill_estrategia,
+                ft.Text(detalle, size=12, color=COLOR_TEXTO_SECUNDARIO, expand=True),
+                pill_catalogo,
+            ],
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        actualizar_control(self.barra_estrategia_activa)
 
     def _aplicar_ordenamiento(self) -> None:
         """Ordena resultados in-memory según criterio y actualiza la vista."""
@@ -505,6 +619,7 @@ class PantallaPrediccionIA(PantallaBase):
             self.dd_estrategia.value = e.control.value
         val = self.dd_estrategia.value or EstrategiaPrediccion.HIBRIDA.value
         self.estrategia_seleccionada = EstrategiaPrediccion(val)
+        self._actualizar_barra_estrategia()
         self._ejecutar_evaluacion(None)
 
     def _al_cambiar_filtro_riesgo(self, e: ft.ControlEvent | None) -> None:
@@ -564,7 +679,9 @@ class PantallaPrediccionIA(PantallaBase):
         quiebres_activos = sum(1 for r in self.resultados if r.alerta_quiebre)
 
         self.kpi_latencia = crear_tarjeta_kpi(
-            "Latencia Media", f"{latencia_us:.2f} µs", f"Total: {duracion_ms:.2f} ms"
+            "Latencia Media",
+            f"{latencia_us:.2f} µs/SKU",
+            f"≈ {latencia_us / 1000.0:.3f} ms/SKU · Lote: {formatear_tiempo_ms(duracion_ms)}",
         )
         self.kpi_memoria = crear_tarjeta_kpi(
             "Memoria Heap", f"{pico_kb:.1f} KB", "Pico tracemalloc"

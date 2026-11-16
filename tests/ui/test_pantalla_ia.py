@@ -128,3 +128,32 @@ class TestPantallaPrediccionIA:
         pantalla.al_recargar_dataset()
         assert len(pantalla.resultados) == len(motor_ui.catalogo.obtener_todos())
         assert "Cascada:" in str(pantalla.txt_resumen_tabla.value)
+
+    def test_barra_estrategia_activa_explica_modo_y_catalogo(
+        self, motor_ui: MotorInventario
+    ) -> None:
+        """Verifica la explicación dinámica de estrategia y separación del modo global."""
+        pantalla = PantallaPrediccionIA(
+            motor=motor_ui,
+            on_actualizar_panel=lambda **kw: None,
+            notificar=lambda *a, **kw: None,
+        )
+        assert isinstance(pantalla.barra_estrategia_activa.content, ft.Row)
+        texto_detalle = pantalla.barra_estrategia_activa.content.controls[1]
+        assert isinstance(texto_detalle, ft.Text)
+        assert "O(1)" in str(texto_detalle.value)
+
+        pantalla.dd_estrategia.value = EstrategiaPrediccion.IA.value
+        pantalla._al_cambiar_estrategia(None)
+        texto_detalle_ia = pantalla.barra_estrategia_activa.content.controls[1]
+        assert isinstance(texto_detalle_ia, ft.Text)
+        assert "Ridge" in str(texto_detalle_ia.value)
+
+        # Conmutar estrategia global del motor mantiene el modo IA seleccionado en la vista
+        motor_ui.cambiar_estrategia("baseline")
+        pantalla.al_cambiar_estrategia_global("baseline")
+        assert pantalla.estrategia_seleccionada == EstrategiaPrediccion.IA
+        pill_catalogo = pantalla.barra_estrategia_activa.content.controls[2]
+        assert isinstance(pill_catalogo, ft.Container)
+        assert isinstance(pill_catalogo.content, ft.Text)
+        assert "Baseline" in str(pill_catalogo.content.value)
