@@ -14,6 +14,7 @@ Permite alternar dinámicamente entre:
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Sequence
 from enum import Enum
 from pathlib import Path
@@ -30,6 +31,8 @@ from src.datos.streaming import (
     leer_pedidos_streaming_jsonl,
     leer_productos_streaming_jsonl,
 )
+from src.ia.predictor_demanda import PredictorDemanda
+from src.ia.tipos import EstrategiaPrediccion, MetricasModelo, ResultadoPrediccion
 from src.inventario.catalogo_hash import CatalogoHash
 from src.inventario.catalogo_lineal import CatalogoLineal
 from src.inventario.protocolo import Catalogo
@@ -72,6 +75,15 @@ class MotorInventario:
         lista_inicial = list(productos) if productos else []
         self._catalogo = self._crear_catalogo(lista_inicial)
         self._buscador_alternativas = BuscadorAlternativas(self._catalogo.obtener_todos())
+        self._predictor_ia = PredictorDemanda()
+        self._cargar_modelo_ia_si_existe()
+
+    def _cargar_modelo_ia_si_existe(self) -> None:
+        """Intenta restaurar el modelo de IA serializado por defecto si está disponible."""
+        ruta_defecto = Path("data/modelos/predictor_ia.joblib")
+        if ruta_defecto.is_file():
+            with contextlib.suppress(Exception):
+                self._predictor_ia.cargar_modelo(ruta_defecto)
 
     def _crear_catalogo(self, productos: Sequence[Producto]) -> CatalogoHash | CatalogoLineal:
         """Instancia la estructura de catálogo correspondiente a la estrategia activa."""
@@ -103,6 +115,11 @@ class MotorInventario:
     def cache(self) -> GestorCacheConsultas:
         """Acceso al gestor de caché inteligente."""
         return self._cache
+
+    @property
+    def predictor_ia(self) -> PredictorDemanda:
+        """Acceso al subsistema de predicción de demanda y quiebres de stock."""
+        return self._predictor_ia
 
     def _etiquetar(self, **extra: Any) -> None:
         """Etiqueta la operación en curso en Elastic APM con el contexto del motor."""
@@ -352,6 +369,50 @@ class MotorInventario:
             max_candidatos=max_candidatos,
         )
 
+    @medir("motor.predecir_quiebres_stock")
+    def predecir_quiebres_stock(
+        self,
+        estrategia: EstrategiaPrediccion | str = EstrategiaPrediccion.HIBRIDA,
+        pedidos: Sequence[Pedido] | None = None,
+    ) -> list[ResultadoPrediccion]:
+        """Evalúa proactivamente el riesgo de quiebre de stock para todo el catálogo.
+
+        Permite contrastar la heurística convencional O(1) con el modelo de scikit-learn
+        y con la cascada híbrida.
+        """
+        estrategia_enum = (
+            estrategia
+            if isinstance(estrategia, EstrategiaPrediccion)
+            else EstrategiaPrediccion(str(estrategia).lower())
+        )
+        lote_pedidos = list(pedidos) if pedidos is not None else self._pedidos
+        productos = self._catalogo.obtener_todos()
+        self._etiquetar(
+            estrategia_ia=estrategia_enum.value,
+            total_evaluados=len(productos),
+        )
+        return self._predictor_ia.evaluar_catalogo(
+            productos, lote_pedidos, estrategia=estrategia_enum
+        )
+
+    @medir("motor.entrenar_modelo_ia")
+    def entrenar_modelo_ia(
+        self, seed: int = 42, periodos: int = 25, pedidos_por_periodo: int = 30
+    ) -> MetricasModelo:
+        """Entrena el modelo supervisado de IA utilizando el catálogo actual cargado."""
+        productos = self._catalogo.obtener_todos()
+        metricas = self._predictor_ia.entrenar_con_catalogo(
+            productos,
+            seed=seed,
+            periodos=periodos,
+            pedidos_por_periodo=pedidos_por_periodo,
+        )
+        self._etiquetar(
+            r2_score=metricas.r2_score,
+            f1_score=metricas.f1_score,
+        )
+        return metricas
+
     def obtener_estadisticas(self) -> dict[str, Any]:
         """Retorna estadísticas descriptivas del estado del sistema y de la caché."""
         productos_cargados = self._catalogo.obtener_todos()
@@ -370,6 +431,7 @@ class MotorInventario:
             "total_pedidos": len(self._pedidos),
             "total_lineas_pedidos": total_lineas,
             "unidades_demandadas": unidades_demandadas,
+            "modelo_ia_entrenado": self._predictor_ia.modelo_ia.esta_entrenado,
         }
 
         if self.es_optimizado:
