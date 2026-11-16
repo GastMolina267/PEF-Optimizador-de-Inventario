@@ -5,7 +5,7 @@
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
 [![Mantenibilidad](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
 [![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=GastMolina267_PEF-Optimizador-de-Inventario&metric=coverage)](https://sonarcloud.io/summary/new_code?id=GastMolina267_PEF-Optimizador-de-Inventario)
-[![SAST](https://img.shields.io/badge/SAST-Bandit%20SARIF-brightgreen.svg)](docs/seguridad-politica.md)
+[![SAST](https://img.shields.io/badge/SAST-Bandit%20SARIF-brightgreen.svg)](docs/parcial-3/seguridad-politica.md)
 [![Tipado Estático](https://img.shields.io/badge/typing-mypy%20strict-blue.svg)](pyproject.toml)
 [![Dependencias](https://img.shields.io/badge/SCA-pip--audit%20%26%20Dependabot-success.svg)](.github/dependabot.yml)
 
@@ -18,9 +18,11 @@
 > [!TIP]
 > **Recursos Clave y Documentación Oficial:**
 > - 📚 **Documentación Técnica Completa (Sphinx + Furo, 9 Secciones Canónicas):** [gastmolina267.github.io/PEF-Optimizador-de-Inventario](https://gastmolina267.github.io/PEF-Optimizador-de-Inventario/)
-> - 🛡️ **Política de Seguridad y Clasificación de Vulnerabilidades:** [docs/seguridad-politica.md](docs/seguridad-politica.md)
+> - 🤖 **Planificación y Especificación del Proyecto Final (IA Aplicada e Integrada):** [docs/final/planificacion-proyecto-final.md](docs/final/planificacion-proyecto-final.md)
+> - 🛡️ **Política de Seguridad y Clasificación de Vulnerabilidades:** [docs/parcial-3/seguridad-politica.md](docs/parcial-3/seguridad-politica.md)
 > - ⚙️ **Guía Canónica de Reproducción Local de Controles:** [docs/sphinx/secciones/09_mantenimiento.md](docs/sphinx/secciones/09_mantenimiento.md)
-> - 📋 **Planificación Integral del Parcial 3:** [docs/planificacion-parcial-3.md](docs/planificacion-parcial-3.md)
+> - 📋 **Planificación Integral del Parcial 3:** [docs/parcial-3/planificacion-parcial-3.md](docs/parcial-3/planificacion-parcial-3.md)
+> - 🗂️ **Índice General de Documentación:** [docs/README.md](docs/README.md)
 > - 🖥️ **Presentación Interactiva de Defensa:** [docs/presentation-parcial-3/index.html](docs/presentation-parcial-3/index.html) (Aduana de CI) | [docs/presentation-parcial-2/index.html](docs/presentation-parcial-2/index.html) (Auditoría) | [docs/presentation/index.html](docs/presentation/index.html) (P1)
 
 ---
@@ -219,9 +221,24 @@ PEF-Parcial-I-Optimizador-de-Inventario/
 │       ├── mediano.json
 │       └── grande.json
 ├── docs/
-│   ├── project-planning.md             # Plan canónico de desarrollo por etapas
-│   ├── option-six-to-be-implemented.txt # Enunciado y rúbrica oficial de la cátedra
-│   ├── app-flow-explanation.md         # Guía integral del flujo de la app y funciones backend
+│   ├── README.md                       # Índice y mapa de navegación de la documentación
+│   ├── parcial-1/                      # Artefactos y especificaciones del Parcial 1
+│   │   ├── project-planning.md         # Plan canónico de desarrollo por etapas
+│   │   ├── option-six-to-be-implemented.txt # Enunciado y rúbrica oficial de la cátedra
+│   │   ├── app-flow-explanation.md     # Guía integral del flujo de la app y funciones backend
+│   │   └── Primer-Parcial-Programacion-Eficiente.docx
+│   ├── parcial-2/                      # Artefactos y especificaciones del Parcial 2
+│   │   ├── planificacion-parcial-2.md  # Plan integral de fases del Parcial 2
+│   │   ├── resumen-parcial-2.md        # Resumen ejecutivo de hitos alcanzados
+│   │   ├── observabilidad-apm.md       # Arquitectura de telemetría y Elastic APM
+│   │   └── Parcial-II.txt
+│   ├── parcial-3/                      # Artefactos y especificaciones del Parcial 3
+│   │   ├── planificacion-parcial-3.md  # Plan integral de 7 fases de CI/CD, SAST, SCA, QA
+│   │   ├── seguridad-politica.md       # Política de seguridad y clasificación SAST
+│   │   └── Parcial-3.docx
+│   ├── final/                          # Artefactos y especificaciones del Proyecto Final (IA)
+│   │   ├── planificacion-proyecto-final.md # Plan maestro (IA aplicada al desarrollo e integrada)
+│   │   └── Programacion-eficiente.pptx # Presentación oficial de cátedra con pautas de IA
 │   ├── analisis.md                     # Derivación de complejidad (grupo + bloque Origin)
 │   ├── propuestas-mejora.md            # Informe de hotspots (Automatización 2)
 │   ├── automatizaciones-origin.md      # Cómo activar los triggers en Cursor
@@ -229,11 +246,12 @@ PEF-Parcial-I-Optimizador-de-Inventario/
 │   ├── mediciones/                     # Salidas crudas y perfiles (.prof, .txt, capturas)
 │   ├── presentation-parcial-3/         # Presentación interactiva Parcial 3 (Aduana de CI)
 │   ├── presentation-parcial-2/         # Presentación interactiva Parcial 2 (Auditoría)
-│   └── presentation/                   # Presentación interactiva Parcial 1 (11 diapositivas)
-│       ├── index.html                  # Escenario y reproductor web de diapositivas
-│       ├── slides.json                 # Contenido estructurado de las 11 diapositivas
-│       ├── styles.css                  # Tema Obsidian Slate & Electric Sky
-│       └── app.js                      # Lógica interactiva, timer, atajos y notas
+│   ├── presentation/                   # Presentación interactiva Parcial 1 (11 diapositivas)
+│   │   ├── index.html                  # Escenario y reproductor web de diapositivas
+│   │   ├── slides.json                 # Contenido estructurado de las 11 diapositivas
+│   │   ├── styles.css                  # Tema Obsidian Slate & Electric Sky
+│   │   └── app.js                      # Lógica interactiva, timer, atajos y notas
+│   └── sphinx/                         # Documentación Sphinx con tema Furo (9 secciones)
 ├── automations/                        # Núcleo reproducible de las automations Origin
 │   ├── ejecutar.py                     # CLI: python -m automations.ejecutar
 │   ├── analizar_complejidad.py         # AST → bloque marcado en analisis.md
@@ -343,7 +361,7 @@ python -m http.server 8000 -d docs/presentation
 El proyecto cuenta con plataformas web interactivas para la defensa de cada hito de la materia:
 - **Tercer Parcial — Aduana de Integración Continua:** [docs/presentation-parcial-3/index.html](docs/presentation-parcial-3/index.html). Visualiza el flujo de la caja a través de los 7 puestos aduaneros que representan las 7 etapas graduadas del pipeline de CI (`fast-checks`, `test-suite`, `deps-and-docs`, `performance-and-memory`, `sarif-upload`, `sonarqube` y `deploy-docs`), con notas de orador integradas (atajo `N`), cronómetro de 15 minutos (`T`), atajos de navegación (`H`) y animación 3D de la cinta transportadora.
 - **Segundo Parcial — Remito y Auditoría de Caja:** [docs/presentation-parcial-2/index.html](docs/presentation-parcial-2/index.html).
-- **Primer Parcial — Suite de 11 Diapositivas:** [docs/presentation/index.html](docs/presentation/index.html), diseñada en estricta conformidad con la propuesta de PowerPoint de la cátedra detallada en [docs/option-six-to-be-implemented.txt](docs/option-six-to-be-implemented.txt):
+- **Primer Parcial — Suite de 11 Diapositivas:** [docs/presentation/index.html](docs/presentation/index.html), diseñada en estricta conformidad con la propuesta de PowerPoint de la cátedra detallada en [docs/parcial-1/option-six-to-be-implemented.txt](docs/parcial-1/option-six-to-be-implemented.txt):
 
 - **Atajos de Teclado para la Exposición:**
   - `→` / `Espacio` / `AvPág`: Siguiente diapositiva.
@@ -363,7 +381,7 @@ El proyecto cuenta con plataformas web interactivas para la defensa de cada hito
 8. **Comparación de Resultados (Tabla Oficial):** Tabla obligatoria estandarizada de Tiempo (ms), Memoria (MB), Speedup y Observación.
 9. **Demostración de la Aplicación:** Recorrido por las 7 vistas de la UI en Flet (`Inicio`, `Catálogo`, `Pedidos` con auditoría desplegable, `Batch Picking`, `Top-N`, `Alternativas DP` y `Desafío Experimental`).
 10. **Conclusiones y Autocrítica:** Evaluación de qué optimización produjo mayor impacto (DP y Hash $O(1)$) y autocrítica sobre cuándo la concurrencia no es ventajosa.
-11. **Flujo Detallado de Funciones:** Vinculación directa con la [Guía Canónica de Flujo de la Aplicación](docs/app-flow-explanation.md).
+11. **Flujo Detallado de Funciones:** Vinculación directa con la [Guía Canónica de Flujo de la Aplicación](docs/parcial-1/app-flow-explanation.md).
 
 ---
 
@@ -387,7 +405,7 @@ Prompts listos para pegar en [cursor.com/automations/new](https://cursor.com/aut
 
 ## 13. Plan de implementación por etapas
 
-El proyecto se construye de manera incremental y modular siguiendo las etapas estipuladas en [docs/project-planning.md](docs/project-planning.md):
+El proyecto se construye de manera incremental y modular siguiendo las etapas estipuladas en [docs/parcial-1/project-planning.md](docs/parcial-1/project-planning.md):
 
 - [x] **Etapa 1 — Alcance y documentación:** Redefinición integral del contrato del proyecto y especificación técnica en `README.md`.
 - [x] **Etapa 2 — Baseline y datos:** Modelos de dominio (`Producto`, `Pedido`), catálogo lineal ingenuo y datasets JSON versionados.

@@ -174,7 +174,11 @@ def resolver_raiz(desde: Path | None = None) -> Path:
     if candidato.is_file():
         candidato = candidato.parent
     for directorio in (candidato, *candidato.parents):
-        if (directorio / "docs" / "project-planning.md").is_file():
+        if (
+            (directorio / "docs" / "parcial-1" / "project-planning.md").is_file()
+            or (directorio / "docs" / "project-planning.md").is_file()
+            or (directorio / "docs" / "analisis.md").is_file()
+        ):
             return directorio
     return Path.cwd().resolve()
 

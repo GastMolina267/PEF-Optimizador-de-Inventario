@@ -48,7 +48,7 @@ No es un deck de diapositivas genérico. Es un manual técnico de 11 páginas co
 ## Evidence on Hand
 
 - Presentación: `docs/presentation/index.html`, `styles.css`, `app.js`, `slides.json`.
-- Narrativa y rúbrica: `README.md`, `docs/app-flow-explanation.md`, `docs/analisis.md`, `docs/mediciones/`.
+- Narrativa y rúbrica: `README.md`, `docs/parcial-1/app-flow-explanation.md`, `docs/analisis.md`, `docs/mediciones/`.
 - No hay testimonios de clientes, prensa ni casos de uso comerciales. Está prohibido fabricarlos.
 
 ## Product Principles

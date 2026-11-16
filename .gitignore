@@ -53,5 +53,8 @@ scalene-profile.html
 # Credenciales locales (Elastic APM, etc.)
 .env
 
+# Archivo origen de presentacion en docs root (preservado y versionado en docs/final/)
+/docs/Programacion-eficiente.pptx
+
 # Caché de complexipy (complejidad cognitiva)
 .complexipy_cache/

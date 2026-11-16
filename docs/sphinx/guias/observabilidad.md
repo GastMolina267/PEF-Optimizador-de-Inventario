@@ -1,3 +1,3 @@
-```{include} ../../observabilidad-apm.md
+```{include} ../../parcial-2/observabilidad-apm.md
 :relative-images:
 ```

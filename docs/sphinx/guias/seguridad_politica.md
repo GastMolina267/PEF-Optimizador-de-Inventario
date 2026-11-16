@@ -1,3 +1,3 @@
-```{include} ../../seguridad-politica.md
+```{include} ../../parcial-3/seguridad-politica.md
 :relative-images:
 ```
