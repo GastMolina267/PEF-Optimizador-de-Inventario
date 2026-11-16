@@ -252,9 +252,9 @@ class PantallaPrediccionIA(PantallaBase):
         duracion_ms = (time.perf_counter() - t0) * 1000.0
 
         # Actualizar KPI
-        self.kpi_modelo.content.controls[1].value = (
-            f"F1: {metricas.f1_score:.2f} | R²: {metricas.r2_score:.2f}"
-        )
+        self.kpi_modelo.content.controls[
+            1
+        ].value = f"F1: {metricas.f1_score:.2f} | R²: {metricas.r2_score:.2f}"
         actualizar_control(self.kpi_modelo)
 
         self.notificar(
@@ -304,9 +304,7 @@ class PantallaPrediccionIA(PantallaBase):
         """Filtra y renderiza las filas de la tabla de resultados."""
         filas_filtradas = self.resultados
         if self.filtro_riesgo != "todos":
-            filas_filtradas = [
-                r for r in self.resultados if r.riesgo.value == self.filtro_riesgo
-            ]
+            filas_filtradas = [r for r in self.resultados if r.riesgo.value == self.filtro_riesgo]
 
         nuevas_filas: list[ft.DataRow] = []
         for r in filas_filtradas:

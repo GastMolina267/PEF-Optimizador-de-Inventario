@@ -30,15 +30,11 @@ from src.modelos.producto import Producto
 def catalogo_prueba() -> list[Producto]:
     """Catálogo pequeño y variado para pruebas de predicción."""
     return [
-        Producto(
-            id=1, nombre="Tornillo Zincado", categoria="Fijaciones", stock=100, precio=15.0
-        ),
+        Producto(id=1, nombre="Tornillo Zincado", categoria="Fijaciones", stock=100, precio=15.0),
         Producto(
             id=2, nombre="Taladro Percutor", categoria="Herramientas", stock=5, precio=25000.0
         ),
-        Producto(
-            id=3, nombre="Disco de Corte", categoria="Abrasivos", stock=0, precio=850.0
-        ),
+        Producto(id=3, nombre="Disco de Corte", categoria="Abrasivos", stock=0, precio=850.0),
         Producto(
             id=4, nombre="Amoladora Angular", categoria="Herramientas", stock=2, precio=32000.0
         ),
@@ -121,9 +117,7 @@ class TestModeloPredictorIA:
         assert 0.0 <= metricas.f1_score <= 1.0
         assert metricas.total_muestras_test > 0
 
-    def test_roundtrip_guardar_y_cargar_joblib(
-        self, dataset_entrenado: DatasetHistorico
-    ) -> None:
+    def test_roundtrip_guardar_y_cargar_joblib(self, dataset_entrenado: DatasetHistorico) -> None:
         """Verifica la persistencia y restauración idéntica con joblib."""
         modelo = ModeloPredictorIA()
         modelo.entrenar(dataset_entrenado)
@@ -163,9 +157,7 @@ class TestPredictorDemanda:
             prod, fv, estrategia=EstrategiaPrediccion.CONVENCIONAL
         )
         res_ia = predictor.evaluar_producto(prod, fv, estrategia=EstrategiaPrediccion.IA)
-        res_hib = predictor.evaluar_producto(
-            prod, fv, estrategia=EstrategiaPrediccion.HIBRIDA
-        )
+        res_hib = predictor.evaluar_producto(prod, fv, estrategia=EstrategiaPrediccion.HIBRIDA)
 
         assert res_conv.estrategia == EstrategiaPrediccion.CONVENCIONAL
         assert res_ia.estrategia == EstrategiaPrediccion.IA
@@ -236,18 +228,14 @@ class TestPropiedadesInferencia:
 
     @given(
         stock=st.integers(min_value=0, max_value=5000),
-        rotacion=st.floats(
-            min_value=0.0, max_value=1000.0, allow_nan=False, allow_infinity=False
-        ),
+        rotacion=st.floats(min_value=0.0, max_value=1000.0, allow_nan=False, allow_infinity=False),
         frecuencia=st.floats(
             min_value=0.0, max_value=100.0, allow_nan=False, allow_infinity=False
         ),
         tamano_medio=st.floats(
             min_value=0.0, max_value=50.0, allow_nan=False, allow_infinity=False
         ),
-        tendencia=st.floats(
-            min_value=0.1, max_value=5.0, allow_nan=False, allow_infinity=False
-        ),
+        tendencia=st.floats(min_value=0.1, max_value=5.0, allow_nan=False, allow_infinity=False),
     )
     def test_invariantes_heuristica_probabilidades(
         self,

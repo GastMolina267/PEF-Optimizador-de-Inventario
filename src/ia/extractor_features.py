@@ -124,9 +124,7 @@ class ExtractorFeatures:
         Returns:
             Tupla (X, lista_vectores) donde X es una matriz NumPy 2D de float64.
         """
-        vectores: list[FeatureVector] = [
-            cls.extraer_vector(p, pedidos) for p in productos
-        ]
+        vectores: list[FeatureVector] = [cls.extraer_vector(p, pedidos) for p in productos]
         if not vectores:
             return np.empty((0, 10), dtype=np.float64), []
 

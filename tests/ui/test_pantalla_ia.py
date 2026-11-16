@@ -98,9 +98,7 @@ class TestPantallaPrediccionIA:
         pantalla._al_cambiar_estrategia(None)
 
         assert pantalla.estrategia_seleccionada == EstrategiaPrediccion.CONVENCIONAL
-        assert all(
-            r.estrategia == EstrategiaPrediccion.CONVENCIONAL for r in pantalla.resultados
-        )
+        assert all(r.estrategia == EstrategiaPrediccion.CONVENCIONAL for r in pantalla.resultados)
 
     def test_reentrenar_modelo_ia(self, motor_ui: MotorInventario) -> None:
         """Verifica que el botón de reentrenar ejecute el ajuste y notifique al usuario."""

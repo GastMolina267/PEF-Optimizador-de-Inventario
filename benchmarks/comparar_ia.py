@@ -135,9 +135,7 @@ def generar_reporte_ia() -> list[FilaBenchmarkIA]:
             else 1.0
         )
         fila_hib.speedup_vs_ia = (
-            round(tiempo_ia / fila_hib.tiempo_total_ms, 2)
-            if fila_hib.tiempo_total_ms > 0
-            else 1.0
+            round(tiempo_ia / fila_hib.tiempo_total_ms, 2) if fila_hib.tiempo_total_ms > 0 else 1.0
         )
         fila_ia.speedup_vs_ia = 1.00
 
