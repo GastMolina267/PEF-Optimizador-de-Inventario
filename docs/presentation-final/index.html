@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Entrega en Destino — Proyecto Final PEF</title>
+  <meta name="description" content="Defensa oral interactiva del Proyecto Final de Programación Eficiente (Opción 6, UBP 2026): la caja que viajó por los tres parciales llega al Centro de Distribución, donde la recibe el operario PRD-01, la IA que agregamos al sistema.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&family=Caveat:wght@600;700&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Permanent+Marker&family=Saira+Stencil+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    try {
+      if (sessionStorage.getItem('pef4-force-motion') !== '0') document.documentElement.classList.add('force-motion');
+    } catch (e) {}
+  </script>
+</head>
+<body class="mode-stage state-intro">
+
+  <canvas id="fx-canvas" aria-hidden="true"></canvas>
+  <div class="flash" id="flash" aria-hidden="true"></div>
+
+  <!-- ===================== Barra superior ===================== -->
+  <header class="topbar" id="topbar">
+    <div class="brand">
+      <span class="brand-badge">PEF 2026 · FINAL</span>
+      <div class="brand-text">
+        <strong>Optimizador de Inventario y Pedidos</strong>
+        <span>Entrega en destino — Proyecto Final (Opción 6)</span>
+      </div>
+    </div>
+    <ol class="ritual-steps" id="ritual-steps" aria-label="Etapas">
+      <li data-step="llegada">Llegada</li>
+      <li data-step="lectura">Lectura</li>
+      <li data-step="descarga">Descarga</li>
+      <li data-step="apertura">Apertura</li>
+      <li data-step="mesa">Mesa</li>
+      <li data-step="entrega">Entrega</li>
+    </ol>
+    <div class="top-actions">
+      <button type="button" class="chip-btn" id="btn-timer" title="Cronómetro (T)">
+        <span class="dot" aria-hidden="true"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/></svg>
+        <span id="timer-display">15:00</span>
+      </button>
+      <button type="button" class="chip-btn" id="btn-sound" title="Sonido (A)"><span id="sound-label">Sonido</span></button>
+      <button type="button" class="chip-btn" id="btn-motion" title="Forzar / respetar animaciones (M)"><span id="motion-label">Animaciones</span></button>
+      <button type="button" class="chip-btn" id="btn-help" title="Atajos (H)">Atajos</button>
+    </div>
+  </header>
+
+  <!-- ===================== ESCENA: MUELLE DE RECEPCIÓN ===================== -->
+  <section class="dock-scene" id="dock-scene" aria-label="Muelle de recepción del Centro de Distribución">
+    <div class="stage">
+      <svg id="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax meet" role="img" aria-label="Muelle de recepción: cinta transportadora, operario robótico PRD-01 sobre un riel, mesa de inspección y estantería">
+        <defs>
+          <linearGradient id="g-wall" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#1A1D23"/>
+            <stop offset="1" stop-color="#101216"/>
+          </linearGradient>
+          <linearGradient id="g-floor" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#22252B"/>
+            <stop offset="1" stop-color="#0C0D10"/>
+          </linearGradient>
+          <linearGradient id="g-cone" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFD9A0" stop-opacity="0.22"/>
+            <stop offset="1" stop-color="#FFD9A0" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="g-kraft" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#D6AE82"/>
+            <stop offset="1" stop-color="#BF9264"/>
+          </linearGradient>
+          <linearGradient id="g-kraft-side" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#A57A4D"/>
+            <stop offset="1" stop-color="#8D5F38"/>
+          </linearGradient>
+          <linearGradient id="g-link" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#4A505B"/>
+            <stop offset="0.45" stop-color="#2F333B"/>
+            <stop offset="1" stop-color="#1D2026"/>
+          </linearGradient>
+          <linearGradient id="g-cover" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFC24A"/>
+            <stop offset="1" stop-color="#D98E07"/>
+          </linearGradient>
+          <linearGradient id="g-steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#6B7280"/>
+            <stop offset="1" stop-color="#2E333B"/>
+          </linearGradient>
+          <linearGradient id="g-outside" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#0E1A2B"/>
+            <stop offset="1" stop-color="#1B2638"/>
+          </linearGradient>
+          <radialGradient id="g-glow" cx="0.5" cy="0.6" r="0.5">
+            <stop offset="0" stop-color="#FFE6B0" stop-opacity="0.85"/>
+            <stop offset="1" stop-color="#FFE6B0" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="g-laser" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#5BD2F0" stop-opacity="0.65"/>
+            <stop offset="1" stop-color="#5BD2F0" stop-opacity="0.08"/>
+          </linearGradient>
+          <pattern id="p-hazard" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="22" height="22" fill="#F2A516"/>
+            <rect width="11" height="22" fill="#1D2026"/>
+          </pattern>
+          <pattern id="p-slats" width="12" height="16" patternUnits="userSpaceOnUse">
+            <rect width="12" height="16" fill="#2A2F37"/>
+            <rect y="13" width="12" height="3" fill="#20242A"/>
+          </pattern>
+          <pattern id="p-wall" width="40" height="40" patternUnits="userSpaceOnUse">
+            <rect width="40" height="40" fill="url(#g-wall)"/>
+            <rect x="38" width="2" height="40" fill="#0D0F12" opacity="0.6"/>
+          </pattern>
+          <linearGradient id="g-beam" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" stop-color="#FFE6B0" stop-opacity="0.75"/>
+            <stop offset="1" stop-color="#FFE6B0" stop-opacity="0"/>
+          </linearGradient>
+          <pattern id="p-scan" width="4" height="4" patternUnits="userSpaceOnUse">
+            <rect width="4" height="4" fill="#5BD2F0" fill-opacity="0.07"/>
+            <rect width="4" height="1" fill="#5BD2F0" fill-opacity="0.16"/>
+          </pattern>
+          <radialGradient id="g-flare">
+            <stop offset="0" stop-color="#FFFFFF"/>
+            <stop offset="0.35" stop-color="#FFE0A3"/>
+            <stop offset="0.7" stop-color="#FF7A2E" stop-opacity="0.6"/>
+            <stop offset="1" stop-color="#FF4A1A" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="g-spot" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFE2B0" stop-opacity="0.32"/>
+            <stop offset="1" stop-color="#FFE2B0" stop-opacity="0.04"/>
+          </linearGradient>
+          <mask id="m-spot" maskUnits="userSpaceOnUse" x="-400" y="-400" width="2400" height="1700">
+            <rect x="-400" y="-400" width="2400" height="1700" fill="#FFFFFF"/>
+            <ellipse cx="1414" cy="430" rx="190" ry="170" fill="#000000" filter="url(#f-blur)"/>
+          </mask>
+          <filter id="f-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="f-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+          <filter id="f-soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2"/></filter>
+        </defs>
+
+        <!-- Pared -->
+        <rect x="0" y="0" width="1600" height="770" fill="url(#p-wall)"/>
+        <text x="560" y="150" class="svg-stencil" font-size="58" fill="#F6EFE5" opacity="0.07">MUELLE 04 · RECEPCIÓN</text>
+        <text x="562" y="186" class="svg-mono" font-size="15" fill="#F6EFE5" opacity="0.18" letter-spacing="3">CENTRO DE DISTRIBUCIÓN UBP · DESTINO FINAL DE LA EXPEDICIÓN PEF-2026</text>
+
+        <!-- Portón del muelle -->
+        <g id="door">
+          <rect x="20" y="250" width="330" height="520" fill="#08090B"/>
+          <rect x="34" y="262" width="302" height="508" fill="url(#g-outside)"/>
+          <circle cx="250" cy="330" r="2" fill="#F6EFE5" opacity="0.6"/>
+          <circle cx="120" cy="300" r="1.5" fill="#F6EFE5" opacity="0.5"/>
+          <circle cx="300" cy="420" r="1.2" fill="#F6EFE5" opacity="0.4"/>
+          <rect id="door-shutter" x="34" y="262" width="302" height="508" fill="url(#p-slats)"/>
+          <g id="door-handle"><rect x="150" y="756" width="70" height="12" rx="4" fill="#F2A516"/><rect x="176" y="744" width="18" height="14" rx="3" fill="#B97A06"/></g>
+          <rect x="20" y="236" width="330" height="18" fill="url(#p-hazard)"/>
+          <text x="185" y="228" text-anchor="middle" class="svg-mono" font-size="13" fill="#F2A516" letter-spacing="2">PORTÓN 04 · ENTRADA</text>
+        </g>
+
+        <!-- Lámparas colgantes -->
+        <g id="lamps">
+          <polygon class="cone" points="470,90 400,770 720,770 610,90" fill="url(#g-cone)" opacity="0"/>
+          <polygon class="cone" points="900,90 820,770 1180,770 1040,90" fill="url(#g-cone)" opacity="0"/>
+          <polygon class="cone" points="1310,90 1220,770 1560,770 1440,90" fill="url(#g-cone)" opacity="0"/>
+          <g fill="#2A2E35">
+            <rect x="538" y="0" width="4" height="70"/><path d="M500 92 Q540 58 580 92 Z"/>
+            <rect x="968" y="0" width="4" height="70"/><path d="M930 92 Q970 58 1010 92 Z"/>
+            <rect x="1373" y="0" width="4" height="70"/><path d="M1335 92 Q1375 58 1415 92 Z"/>
+          </g>
+          <g><rect class="bulb" x="512" y="90" width="56" height="4" rx="2" fill="#4A4234"/><rect class="bulb" x="942" y="90" width="56" height="4" rx="2" fill="#4A4234"/><rect class="bulb" x="1347" y="90" width="56" height="4" rx="2" fill="#4A4234"/></g>
+        </g>
+
+        <!-- Estantería -->
+        <g id="rack">
+          <g fill="#B4430E">
+            <rect x="1236" y="230" width="16" height="540"/>
+            <rect x="1546" y="230" width="16" height="540"/>
+          </g>
+          <g fill="#D9520F">
+            <rect x="1236" y="330" width="326" height="14"/>
+            <rect x="1236" y="520" width="326" height="14"/>
+            <rect x="1236" y="700" width="326" height="12"/>
+          </g>
+          <g stroke="#7A2D09" stroke-width="2" opacity="0.7">
+            <line x1="1244" y1="240" x2="1244" y2="760" stroke-dasharray="4 10"/>
+            <line x1="1554" y1="240" x2="1554" y2="760" stroke-dasharray="4 10"/>
+          </g>
+          <!-- Carga existente -->
+          <g>
+            <rect x="1262" y="252" width="88" height="78" fill="#A57A4D"/><rect x="1262" y="252" width="88" height="10" fill="#8D5F38"/>
+            <rect x="1360" y="270" width="70" height="60" fill="#B58B5D"/><rect x="1390" y="270" width="10" height="60" fill="#D4A45A" opacity="0.7"/>
+            <rect x="1440" y="242" width="96" height="88" fill="#9C7146"/><text x="1488" y="296" text-anchor="middle" class="svg-mono" font-size="11" fill="#2A1A0C" opacity="0.7">SKU-0412</text>
+            <rect x="1262" y="622" width="130" height="78" fill="#9C7146"/><text x="1327" y="666" text-anchor="middle" class="svg-mono" font-size="11" fill="#2A1A0C" opacity="0.7">SKU-1187</text>
+            <rect x="1402" y="640" width="64" height="60" fill="#B58B5D"/>
+            <rect x="1476" y="612" width="62" height="88" fill="#A57A4D"/>
+          </g>
+          <!-- Lugar reservado -->
+          <g id="slot">
+            <rect x="1290" y="400" width="250" height="118" fill="none" stroke="#F2A516" stroke-width="2" stroke-dasharray="8 7" opacity="0.55"/>
+            <text x="1415" y="465" text-anchor="middle" class="svg-mono" font-size="12" fill="#F2A516" opacity="0.7" letter-spacing="1">RESERVADO</text>
+            <text x="1415" y="483" text-anchor="middle" class="svg-mono" font-size="11" fill="#F2A516" opacity="0.55">PEF-2026 · FINAL</text>
+          </g>
+          <rect x="1236" y="208" width="326" height="22" fill="#1D2026"/>
+          <text x="1399" y="224" text-anchor="middle" class="svg-mono" font-size="12" fill="#F6EFE5" opacity="0.7" letter-spacing="2">ESTANTE E-12 · PRODUCCIÓN</text>
+        </g>
+
+        <!-- Piso -->
+        <rect x="0" y="770" width="1600" height="130" fill="url(#g-floor)"/>
+        <g opacity="0.8">
+          <rect x="0" y="770" width="1600" height="3" fill="#2E323A"/>
+          <line x1="380" y1="868" x2="1600" y2="868" stroke="#F2A516" stroke-width="5" stroke-dasharray="40 22" opacity="0.5"/>
+        </g>
+        <!-- Riel del operario -->
+        <g id="rail">
+          <rect x="560" y="784" width="660" height="9" rx="3" fill="url(#g-steel)"/>
+          <rect x="560" y="806" width="660" height="9" rx="3" fill="url(#g-steel)"/>
+          <g fill="#2A2E35">
+            <rect x="572" y="780" width="12" height="40"/><rect x="652" y="780" width="12" height="40"/><rect x="732" y="780" width="12" height="40"/><rect x="812" y="780" width="12" height="40"/><rect x="892" y="780" width="12" height="40"/><rect x="972" y="780" width="12" height="40"/><rect x="1052" y="780" width="12" height="40"/><rect x="1132" y="780" width="12" height="40"/><rect x="1196" y="780" width="12" height="40"/>
+          </g>
+          <text x="890" y="846" text-anchor="middle" class="svg-mono" font-size="12" fill="#F6EFE5" opacity="0.35" letter-spacing="2">RIEL R-1 · ZONA DE OPERARIO · NO PISAR</text>
+        </g>
+
+        <!-- Cinta transportadora -->
+        <g id="conveyor">
+          <g fill="#23262C">
+            <rect x="60" y="668" width="14" height="102"/><rect x="260" y="668" width="14" height="102"/><rect x="470" y="668" width="14" height="102"/>
+          </g>
+          <rect x="0" y="650" width="540" height="22" rx="4" fill="#1A1C21"/>
+          <svg x="0" y="650" width="540" height="10" overflow="hidden">
+            <g class="belt-stripes" id="belt-stripes">
+              <rect x="0" y="0" width="600" height="10" fill="#33373F"/>
+              <g fill="#23262C"><rect x="0" width="6" height="10"/><rect x="40" width="6" height="10"/><rect x="80" width="6" height="10"/><rect x="120" width="6" height="10"/><rect x="160" width="6" height="10"/><rect x="200" width="6" height="10"/><rect x="240" width="6" height="10"/><rect x="280" width="6" height="10"/><rect x="320" width="6" height="10"/><rect x="360" width="6" height="10"/><rect x="400" width="6" height="10"/><rect x="440" width="6" height="10"/><rect x="480" width="6" height="10"/><rect x="520" width="6" height="10"/><rect x="560" width="6" height="10"/></g>
+            </g>
+          </svg>
+          <g fill="#4A505B"><circle cx="20" cy="666" r="5"/><circle cx="140" cy="666" r="5"/><circle cx="260" cy="666" r="5"/><circle cx="380" cy="666" r="5"/><circle cx="520" cy="666" r="5"/></g>
+          <rect x="530" y="642" width="14" height="34" rx="3" fill="#F2A516"/>
+          <text x="270" y="700" text-anchor="middle" class="svg-mono" font-size="12" fill="#F6EFE5" opacity="0.35" letter-spacing="2">CINTA C-1 · DESDE MAIN</text>
+        </g>
+
+        <!-- Mesa de inspección -->
+        <g id="table">
+          <rect x="880" y="660" width="260" height="16" rx="3" fill="#3A3F48"/>
+          <rect x="880" y="660" width="260" height="4" fill="#6B7280"/>
+          <rect x="896" y="676" width="12" height="94" fill="#23262C"/><rect x="1112" y="676" width="12" height="94" fill="#23262C"/>
+          <rect x="908" y="726" width="204" height="6" fill="#23262C"/>
+          <g stroke="#9CA3AF" stroke-width="1" opacity="0.6">
+            <line x1="890" y1="668" x2="890" y2="672"/><line x1="910" y1="668" x2="910" y2="671"/><line x1="930" y1="668" x2="930" y2="671"/><line x1="950" y1="668" x2="950" y2="672"/><line x1="970" y1="668" x2="970" y2="671"/><line x1="990" y1="668" x2="990" y2="671"/><line x1="1010" y1="668" x2="1010" y2="672"/><line x1="1030" y1="668" x2="1030" y2="671"/><line x1="1050" y1="668" x2="1050" y2="671"/><line x1="1070" y1="668" x2="1070" y2="672"/><line x1="1090" y1="668" x2="1090" y2="671"/><line x1="1110" y1="668" x2="1110" y2="671"/><line x1="1130" y1="668" x2="1130" y2="672"/>
+          </g>
+          <text x="1010" y="752" text-anchor="middle" class="svg-mono" font-size="11" fill="#F6EFE5" opacity="0.4" letter-spacing="2">MESA DE INSPECCIÓN</text>
+        </g>
+
+
+        <!-- Sombra de la caja -->
+        <ellipse id="box-shadow" cx="420" cy="652" rx="120" ry="9" fill="#000" opacity="0.45" filter="url(#f-soft)"/>
+
+        <!-- ===================== LA CAJA ===================== -->
+        <g id="box" transform="translate(-260 650)">
+          <!-- Brillo que sale al abrir -->
+          <polygon class="box-beam" points="-70,-140 108,-140 230,-620 -190,-620" fill="url(#g-beam)"/>
+          <ellipse class="box-glow" cx="19" cy="-170" rx="120" ry="70" fill="url(#g-glow)"/>
+          <!-- Lateral derecho -->
+          <polygon points="95,0 95,-125 133,-149 133,-24" fill="url(#g-kraft-side)"/>
+          <text x="114" y="-80" text-anchor="middle" font-size="16" fill="#3B2410" opacity="0.65" transform="skewY(-32) translate(0 72)">↑↑</text>
+          <!-- Frente -->
+          <rect x="-95" y="-125" width="190" height="125" fill="url(#g-kraft)"/>
+          <rect x="-95" y="-125" width="190" height="125" fill="none" stroke="#8D5F38" stroke-width="1.2"/>
+          <rect id="tape-front" x="-11" y="-125" width="22" height="26" fill="#D4A45A" opacity="0.95"/>
+          <!-- Guía P1 -->
+          <g transform="translate(-86 -112) rotate(-2)">
+            <rect width="74" height="50" rx="2" fill="#FFFEFB"/>
+            <rect width="74" height="10" fill="#1B1410"/>
+            <text x="4" y="8" class="svg-mono" font-size="6.5" fill="#FFFEFB" font-weight="700">GUÍA · P1</text>
+            <text x="4" y="22" class="svg-mono" font-size="7" fill="#1B1410">Búsqueda O(1)</text>
+            <text x="4" y="34" class="svg-mono" font-size="10" fill="#C2410C" font-weight="700">718,3×</text>
+            <rect x="4" y="40" width="40" height="6" fill="#1B1410" opacity="0.7"/>
+          </g>
+          <!-- Guía P2 -->
+          <g transform="translate(-6 -94) rotate(3)">
+            <rect width="66" height="44" rx="2" fill="#FFFEFB"/>
+            <rect width="66" height="10" fill="#15803D"/>
+            <text x="4" y="8" class="svg-mono" font-size="6.5" fill="#FFFEFB" font-weight="700">GUÍA · P2</text>
+            <text x="4" y="22" class="svg-mono" font-size="7" fill="#1B1410">193 tests</text>
+            <text x="4" y="34" class="svg-mono" font-size="7" fill="#1B1410">cobertura 90 %</text>
+          </g>
+          <!-- Sello de la aduana P3 -->
+          <g transform="translate(18 -46) rotate(-9)" opacity="0.85">
+            <rect width="70" height="32" rx="3" fill="none" stroke="#15803D" stroke-width="2.4"/>
+            <text x="35" y="12" text-anchor="middle" class="svg-mono" font-size="6.5" fill="#15803D">ADUANA CI · P3</text>
+            <text x="35" y="26" text-anchor="middle" class="svg-stencil" font-size="11" fill="#15803D">LIBERADO</text>
+          </g>
+          <text x="-86" y="-8" class="svg-mono" font-size="7" fill="#3B2410" opacity="0.7">CENTRO DE DISTRIBUCIÓN UBP · PEF-2026</text>
+          <!-- Guía final (se pega en la entrega) -->
+          <g class="final-label">
+            <g transform="translate(-88 -64) rotate(-3)">
+              <rect width="104" height="50" rx="2" fill="#FFFEFB" stroke="#F2A516" stroke-width="2"/>
+              <rect width="104" height="11" fill="#F2A516"/>
+              <text x="4" y="8.5" class="svg-mono" font-size="6.5" fill="#1B1306" font-weight="700">GUÍA FINAL · ENTREGA</text>
+              <text x="4" y="23" class="svg-mono" font-size="7" fill="#1B1410">Destino: Estante E-12</text>
+              <text x="4" y="34" class="svg-mono" font-size="7" fill="#1B1410">Riesgo: BAJO · P=0,0 %</text>
+              <rect x="4" y="39" width="62" height="7" fill="#1B1410" opacity="0.8"/>
+            </g>
+          </g>
+          <!-- Grabado láser de la nota (lateral derecho) -->
+          <g class="engr engr-side" transform="matrix(0.95 -0.6 0 1 95 0)">
+            <text x="20" y="-92" text-anchor="middle" class="svg-mono" font-size="6" fill="#2B1708" letter-spacing="1">NOTA</text>
+            <text id="engr-side-grade" x="20" y="-58" text-anchor="middle" font-family="DM Serif Display, Georgia, serif" font-size="30" fill="#2B1708">—</text>
+            <text x="20" y="-44" text-anchor="middle" class="svg-mono" font-size="4.6" fill="#2B1708">PEF 2026</text>
+          </g>
+          <!-- Sello de la nota -->
+          <g class="seal-on-box">
+            <circle cx="54" cy="-78" r="30" fill="none" stroke="#BE123C" stroke-width="3"/>
+            <circle cx="54" cy="-78" r="24" fill="none" stroke="#BE123C" stroke-width="1" stroke-dasharray="2 3"/>
+            <text x="54" y="-86" text-anchor="middle" class="svg-mono" font-size="7" fill="#BE123C">NOTA FINAL</text>
+            <text id="box-grade" x="54" y="-62" text-anchor="middle" font-family="DM Serif Display, Georgia, serif" font-size="24" fill="#BE123C">—</text>
+          </g>
+          <!-- Tapa cerrada -->
+          <g class="box-top-closed">
+            <polygon points="-95,-125 95,-125 133,-149 -57,-149" fill="#D9B48A"/>
+            <polygon id="tape-top" points="-12,-125 12,-125 50,-149 26,-149" fill="#D4A45A"/>
+            <line x1="-95" y1="-125" x2="95" y2="-125" stroke="#8D5F38" stroke-width="1.2"/>
+            <line id="tape-cut" x1="0" y1="-125" x2="0" y2="-125" stroke="#FFF7E0" stroke-width="2.4" opacity="0"/>
+          </g>
+          <!-- Grabado láser de los nombres (tapa) -->
+          <g class="engr engr-top" transform="matrix(1 0 -1.583 1 -95 -125)">
+            <text x="100" y="-17.5" text-anchor="middle" class="svg-mono" font-size="3.6" fill="#2B1708" letter-spacing="0.6">ENTREGA FINAL · PEF 2026 · FIN DEL RECORRIDO</text>
+            <text x="100" y="-11" text-anchor="middle" font-family="Caveat, cursive" font-size="6.4" fill="#2B1708">Edgar Karpowicz · Gastón Molina · Tomás Molina</text>
+          </g>
+          <!-- Tapa abierta -->
+          <g class="box-flap-open">
+            <polygon points="-95,-125 95,-125 133,-149 -57,-149" fill="#4A2F17"/>
+            <polygon class="flap flap-l" points="-95,-125 -57,-149 -78,-214 -122,-188" fill="#C49A6C" stroke="#8D5F38" stroke-width="1"/>
+            <polygon class="flap flap-r" points="95,-125 133,-149 160,-210 118,-186" fill="#B88D5F" stroke="#8D5F38" stroke-width="1"/>
+            <polygon class="flap flap-f" points="-95,-125 95,-125 98,-150 -92,-150" fill="#D6AE82" stroke="#8D5F38" stroke-width="1" opacity="0.9"/>
+          </g>
+        </g>
+
+        <!-- Láser del escáner (lo dibuja app.js) -->
+        <polygon id="laser" points="0,0 0,0 0,0" fill="url(#g-laser)" opacity="0"/>
+        <line id="laser-line" x1="0" y1="0" x2="0" y2="0" stroke="#A5F3FC" stroke-width="2.5" opacity="0"/>
+
+        <!-- ===================== OPERARIO PRD-01 ===================== -->
+        <g id="robot" class="robot" data-eye="off" transform="translate(720 0)">
+          <!-- Carro sobre el riel -->
+          <rect x="-96" y="752" width="192" height="34" rx="6" fill="#1D2026"/>
+          <rect x="-96" y="752" width="192" height="8" rx="3" fill="url(#p-hazard)"/>
+          <circle cx="-62" cy="790" r="13" fill="#3A3F48" stroke="#111" stroke-width="3"/><circle cx="-62" cy="790" r="4" fill="#9CA3AF"/>
+          <circle cx="62" cy="790" r="13" fill="#3A3F48" stroke="#111" stroke-width="3"/><circle cx="62" cy="790" r="4" fill="#9CA3AF"/>
+          <!-- Pedestal -->
+          <path d="M-64 752 L-50 650 L50 650 L64 752 Z" fill="url(#g-link)"/>
+          <rect x="-52" y="674" width="104" height="42" rx="5" fill="#0B1418" stroke="#0E7490" stroke-width="1.5"/>
+          <text id="base-l1" x="0" y="692" text-anchor="middle" class="base-screen-text" font-size="10">PRD-01</text>
+          <text id="base-l2" x="0" y="707" text-anchor="middle" class="base-screen-text" font-size="9" opacity="0.8">EN ESPERA</text>
+          <text x="0" y="740" text-anchor="middle" class="svg-stencil" font-size="13" fill="#F2A516">PRD-01</text>
+          <!-- Torreta -->
+          <ellipse cx="0" cy="650" rx="62" ry="13" fill="#3A3F48"/>
+          <rect x="-46" y="616" width="92" height="34" rx="8" fill="url(#g-link)"/>
+          <circle class="beacon" id="beacon" cx="34" cy="612" r="7" fill="#5A4A1A"/>
+
+          <!-- Brazo: hombro → codo → muñeca → cabezal -->
+          <g id="j1" transform="translate(0 600) rotate(-120)">
+            <rect x="-26" y="-27" width="292" height="54" rx="27" fill="url(#g-link)"/>
+            <rect x="46" y="-19" width="170" height="38" rx="10" fill="url(#g-cover)"/>
+            <text x="131" y="6" text-anchor="middle" class="svg-stencil" font-size="17" fill="#3A2603" opacity="0.85">PRD-01</text>
+            <path d="M20 26 C 90 52, 170 52, 252 24" fill="none" stroke="#111318" stroke-width="7" stroke-linecap="round"/>
+            <path d="M20 26 C 90 52, 170 52, 252 24" fill="none" stroke="#3A3F48" stroke-width="2" stroke-dasharray="3 5"/>
+            <circle r="42" fill="#3A3F48"/>
+            <circle r="32" fill="url(#g-cover)"/>
+            <circle r="13" fill="#1D2026"/>
+            <g fill="#1D2026"><circle cx="0" cy="-23" r="3"/><circle cx="23" cy="0" r="3"/><circle cx="0" cy="23" r="3"/><circle cx="-23" cy="0" r="3"/></g>
+
+            <g id="j2" transform="translate(240 0) rotate(100)">
+              <rect x="-20" y="-20" width="245" height="40" rx="20" fill="url(#g-link)"/>
+              <rect x="40" y="-13" width="130" height="26" rx="7" fill="#20232A"/>
+              <g fill="#5BD2F0" opacity="0.7"><rect x="52" y="-3" width="14" height="6" rx="2"/><rect x="72" y="-3" width="14" height="6" rx="2"/><rect x="92" y="-3" width="14" height="6" rx="2" opacity="0.5"/><rect x="112" y="-3" width="14" height="6" rx="2" opacity="0.3"/><rect x="132" y="-3" width="26" height="6" rx="2" fill="#F2A516"/></g>
+              <circle r="31" fill="#3A3F48"/>
+              <circle r="23" fill="url(#g-cover)"/>
+              <circle r="9" fill="#1D2026"/>
+
+              <g id="j3" transform="translate(215 0) rotate(80)">
+                <circle r="19" fill="#3A3F48"/>
+                <circle r="11" fill="url(#g-cover)"/>
+                <rect x="0" y="-12" width="72" height="24" rx="5" fill="url(#g-link)"/>
+                <!-- Cabezal: brida, cámara y ventosa -->
+                <rect x="66" y="-30" width="22" height="60" rx="4" fill="#3A3F48"/>
+                <g id="eye">
+                  <rect x="42" y="-58" width="40" height="30" rx="6" fill="#1D2026" stroke="#3A3F48" stroke-width="2"/>
+                  <circle id="eye-glow" cx="62" cy="-43" r="18" fill="#5BD2F0" opacity="0" filter="url(#f-blur)"/>
+                  <circle cx="62" cy="-43" r="10" fill="#0B1418"/>
+                  <circle id="eye-core" cx="62" cy="-43" r="6.5" fill="#1A2A30"/>
+                  <circle cx="59.5" cy="-45.5" r="2" fill="#FFFFFF" opacity="0.7"/>
+                </g>
+                <rect x="88" y="-40" width="10" height="80" rx="3" fill="#15171B"/>
+                <g fill="#2A2E35"><rect x="98" y="-34" width="6" height="14" rx="2"/><rect x="98" y="-7" width="6" height="14" rx="2"/><rect x="98" y="20" width="6" height="14" rx="2"/></g>
+                <rect id="suction-led" x="80" y="-3" width="5" height="6" rx="1" fill="#3A3F48"/>
+              </g>
+            </g>
+          </g>
+        </g>
+
+        <!-- Hologramas y guías de interacción (los crea app.js) -->
+        <!-- Bultos que salen de la caja (los agrega app.js): por delante del operario -->
+        <g id="bultos"></g>
+        <g id="holo"></g>
+        <rect id="darkness" x="-400" y="-400" width="2400" height="1700" fill="#05060A" opacity="0.62" pointer-events="none"/>
+        <polygon id="spot-cone" points="1340,0 1490,0 1610,560 1220,560" fill="url(#g-spot)" opacity="0" pointer-events="none"/>
+        <!-- Conos de luz encima (iluminan robot y caja) -->
+        <g opacity="0.35" style="mix-blend-mode: screen" pointer-events="none">
+          <ellipse cx="540" cy="770" rx="170" ry="16" fill="#FFD9A0" opacity="0.18"/>
+          <ellipse cx="1000" cy="770" rx="190" ry="16" fill="#FFD9A0" opacity="0.16"/>
+        </g>
+      </svg>
+      <canvas id="dust" aria-hidden="true"></canvas>
+    </div>
+
+    <!-- Indicación de la maniobra interactiva -->
+    <div class="hint" id="hint" hidden>
+      <span class="hint-ico" aria-hidden="true"></span>
+      <span id="hint-text"></span>
+      <span class="hint-prog" id="hint-prog"></span>
+      <span class="hint-auto"><kbd>Enter</kbd> automático</span>
+    </div>
+
+    <!-- Consola del operario -->
+    <div class="console" id="console" aria-live="polite">
+      <div class="console-head"><span>Consola · operario PRD-01</span><span class="led" aria-hidden="true"></span></div>
+      <div class="console-body" id="console-body"></div>
+    </div>
+
+    <!-- Portada -->
+    <div class="intro-card" id="intro-card">
+      <p class="eyebrow">UBP 2026 · Programación Eficiente · Proyecto Final · Opción 6</p>
+      <h1>La caja llega a <em>destino</em></h1>
+      <p class="lead">Viajó tres parciales: la empaquetamos, la auditamos y pasó la aduana de CI. Hoy llega al Centro de Distribución para el que la construimos. La recibe <b>PRD-01</b>, el operario que sumamos en el Final: la IA que predice quiebres de stock.</p>
+      <div class="trail" aria-label="Recorrido de la caja">
+        <span>P1 · Empaque</span><span>P2 · Auditoría</span><span>P3 · Aduana CI</span><span class="next">Final · Entrega</span>
+      </div>
+      <button type="button" class="btn btn-accent" id="btn-start">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V8l8-4 8 4v12"/><path d="M8 20v-7h8v7"/></svg>
+        Encender el muelle
+      </button>
+      <span class="kbd-hint">Enter</span>
+    </div>
+
+    <!-- Panel de la maniobra -->
+    <aside class="step-panel" id="step-panel" aria-live="polite">
+      <p class="sp-eyebrow" id="sp-eyebrow">Maniobra 1 de 4</p>
+      <h2 id="sp-title">—</h2>
+      <p class="sp-text" id="sp-text"></p>
+      <p class="sp-src" id="sp-src"></p>
+      <div class="sp-actions">
+        <button type="button" class="btn btn-accent" id="btn-next-step">Siguiente maniobra <kbd>Enter</kbd></button>
+      </div>
+    </aside>
+
+    <ol class="maneuvers" id="maneuvers" aria-hidden="true"><li></li><li></li><li></li><li></li></ol>
+
+    <!-- Mesa de descarga -->
+    <div class="hub" id="hub" hidden>
+      <div class="hub-title">
+        <p class="eyebrow">Mesa de inspección · 11 bultos</p>
+        <h2>Lo que traía la caja</h2>
+        <p>Elegí un bulto en la escena o en el manifiesto: el operario lo alcanza a cámara. <kbd>→</kbd> sigue el orden recomendado y <kbd>Esc</kbd> vuelve siempre acá.</p>
+        <div class="hub-actions">
+          <button type="button" class="btn btn-accent" id="btn-open-first">Abrir el primer bulto <kbd>→</kbd></button>
+          <button type="button" class="btn btn-ghost-dark" id="btn-deliver-hub">Entregar la caja <kbd>P</kbd></button>
+        </div>
+      </div>
+      <div class="manifest" role="region" aria-label="Manifiesto de descarga">
+        <div class="manifest-head"><b>MANIFIESTO · PEF-2026-FINAL</b><span id="mf-count">11 bultos</span></div>
+        <ol id="manifest-list"></ol>
+      </div>
+    </div>
+
+    <!-- Cierre -->
+    <div class="final-hud" id="final-hud" hidden>
+      <p class="final-msg" id="final-msg">Caja en el estante E-12 · entrega final</p>
+      <div class="final-actions">
+        <button type="button" class="btn-marker" id="btn-puntuar">PUNTUAR</button>
+        <button type="button" class="btn btn-ghost-dark" id="btn-back-hub">Volver a la mesa <kbd>R</kbd></button>
+      </div>
+      <div class="grade-dock" id="grade-dock" hidden>
+        <p>Elegí la nota: el operario la graba con láser en la caja</p>
+        <div class="grade-pads" id="grade-pads" role="group" aria-label="Nota del 1 al 10"></div>
+        <div class="grade-actions">
+          <button type="button" class="btn btn-accent" id="btn-seal" disabled>Grabar la nota</button>
+          <button type="button" class="btn btn-ghost-dark" id="btn-grade-cancel">Volver</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Primer plano del grabado láser -->
+    <section class="macro" id="macro" hidden aria-label="Grabado láser en la caja">
+      <svg id="macro-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="El cabezal del operario graba con láser sobre el cartón">
+        <defs>
+          <filter id="f-kraft" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" seed="11" result="n"/>
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.22  0 0 0 0 0.1  0 0 0 0.55 0"/>
+          </filter>
+          <filter id="f-fiber" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.004 0.18" numOctaves="2" seed="4" result="n"/>
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.3  0 0 0 0 0.15  0 0 0 0.4 0"/>
+          </filter>
+          <filter id="f-burn" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="1.1"/></filter>
+          <filter id="f-hot" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <clipPath id="engr-clip"><rect id="engr-clip-rect" x="0" y="0" width="1600" height="0"/></clipPath>
+          <clipPath id="engr-band"><rect id="engr-band-rect" x="0" y="0" width="1600" height="12"/></clipPath>
+          <radialGradient id="g-flare2">
+            <stop offset="0" stop-color="#FFFFFF"/>
+            <stop offset="0.3" stop-color="#FFE0A3"/>
+            <stop offset="0.65" stop-color="#FF7A2E" stop-opacity="0.55"/>
+            <stop offset="1" stop-color="#FF4A1A" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="1600" height="900" fill="#C49A6C"/>
+        <rect width="1600" height="900" filter="url(#f-fiber)"/>
+        <rect width="1600" height="900" filter="url(#f-kraft)"/>
+        <g id="macro-side">
+          <rect x="70" y="40" width="1460" height="820" fill="none" stroke="#8D5F38" stroke-width="6" opacity="0.6"/>
+          <text x="1440" y="190" text-anchor="end" font-size="120" fill="#3B2410" opacity="0.5">↑↑</text>
+          <text x="140" y="820" class="svg-mono" font-size="26" fill="#3B2410" opacity="0.55" letter-spacing="4">UBP-COR-LOGISTICS · PEF-2026 · LATERAL DERECHO</text>
+        </g>
+        <g id="macro-lid" opacity="0">
+          <rect x="0" y="700" width="1600" height="90" fill="#D4A45A" opacity="0.92"/>
+          <text x="800" y="756" text-anchor="middle" class="svg-mono" font-size="22" fill="#6B4314" opacity="0.6" letter-spacing="10">QUALITY GATE · QUALITY GATE · QUALITY GATE</text>
+          <rect x="0" y="788" width="1600" height="6" fill="#8D5F38" opacity="0.55"/>
+        </g>
+        <g id="engr-burnt" clip-path="url(#engr-clip)" filter="url(#f-burn)"></g>
+        <g id="engr-hot" clip-path="url(#engr-band)" filter="url(#f-hot)"></g>
+        <line id="mc-beam-glow" x1="0" y1="0" x2="0" y2="0" stroke="#FF5A2E" stroke-width="22" opacity="0" filter="url(#f-hot)"/>
+        <line id="mc-beam" x1="0" y1="0" x2="0" y2="0" stroke="#FFF4E0" stroke-width="4" opacity="0"/>
+        <circle id="mc-flare" cx="0" cy="0" r="26" fill="url(#g-flare2)" opacity="0"/>
+        <g id="mc-head" transform="translate(800 0)">
+          <rect x="-70" y="-40" width="140" height="120" rx="14" fill="#2A2E35"/>
+          <rect x="-70" y="40" width="140" height="18" fill="#F2A516"/>
+          <rect x="-34" y="58" width="68" height="30" rx="6" fill="#1D2026"/>
+          <path d="M -20 88 L 20 88 L 8 118 L -8 118 Z" fill="#3A3F48"/>
+          <circle cx="0" cy="120" r="5" fill="#FF7A2E"/>
+          <text x="0" y="22" text-anchor="middle" class="svg-stencil" font-size="22" fill="#F2A516">PRD-01</text>
+        </g>
+      </svg>
+      <div class="macro-tag"><span class="rec" aria-hidden="true"></span><span id="macro-label">CÁMARA 2 · CABEZAL PRD-01 · GRABADO LÁSER</span></div>
+      <div class="macro-progress"><span id="macro-step">Grabando la nota</span><span class="bar"><b id="macro-bar"></b></span></div>
+    </section>
+
+    <!-- Destino final -->
+    <div class="destino" id="destino" hidden>
+      <p class="eyebrow">Programación Eficiente · UBP 2026 · Opción 6</p>
+      <h2>Fin del <em>recorrido</em></h2>
+      <p class="dest-lead">La caja salió del laboratorio en el Parcial 1, pasó la auditoría y la aduana de CI, y hoy quedó en su estante con la nota y nuestros nombres grabados. El sistema ya no solo responde rápido: anticipa los quiebres de stock, y usa la IA solo donde hay duda.</p>
+      <div class="ruta" id="ruta">
+        <span class="ruta-line"><i id="ruta-fill"></i></span>
+        <div class="ruta-st"><span class="rs-dot">P1</span><b>Empaque</b><span>Laboratorio Algorítmico</span><em>búsqueda O(1) · 718×</em></div>
+        <div class="ruta-st"><span class="rs-dot">P2</span><b>Auditoría</b><span>Laboratorio de Calidad</span><em>193 tests · 90 %</em></div>
+        <div class="ruta-st"><span class="rs-dot">P3</span><b>Aduana CI</b><span>7 etapas · 15 controles</span><em>canal verde · 7 / 7</em></div>
+        <div class="ruta-st"><span class="rs-dot">main</span><b>Depósito</b><span>rama de producción</span><em>docs en GitHub Pages</em></div>
+        <div class="ruta-st final"><span class="rs-dot">FIN</span><b>Estante E-12</b><span>operario PRD-01</span><em>235 tests · IA en cascada</em></div>
+        <span class="ruta-box" id="ruta-box" aria-hidden="true"></span>
+      </div>
+      <div class="dest-foot">
+        <div class="dest-notas" id="dest-notas"></div>
+        <div class="firmas">
+          <div class="firma"><i>Edgar K.</i><span>Edgar Karpowicz</span></div>
+          <div class="firma"><i>Gastón M.</i><span>Gastón Molina</span></div>
+          <div class="firma"><i>Tomás M.</i><span>Tomás Molina</span></div>
+        </div>
+        <div class="dest-stamp" id="dest-stamp"><span>ESTANTE E-12 · UBP</span><strong>ENTREGADO</strong><span>PEF 2026 · FINAL</span></div>
+      </div>
+      <div class="dest-actions">
+        <p class="dest-gracias">Gracias. La caja ya no viaja más: queda en el estante.</p>
+        <button type="button" class="btn btn-ghost-dark" id="btn-dest-replay">Ver el recorrido otra vez</button>
+        <button type="button" class="btn btn-accent" id="btn-dest-back">Volver a la mesa para preguntas <kbd>R</kbd></button>
+      </div>
+    </div>
+
+    <button type="button" class="skip-btn" id="btn-skip" title="Saltar las maniobras e ir a la mesa (S)">Saltar maniobras <kbd>S</kbd></button>
+  </section>
+
+  <!-- ===================== ESCENA 2D: LÁMINAS ===================== -->
+  <section class="slides-scene" id="slides-scene" aria-label="Bultos de la defensa" hidden>
+    <div class="desk" id="desk"></div>
+    <nav class="dock" id="dock" aria-label="Navegación de los bultos">
+      <button type="button" class="dock-btn" id="btn-prev" aria-label="Anterior">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        Anterior
+      </button>
+      <div class="dock-strip" id="dock-strip"></div>
+      <button type="button" class="dock-btn dock-next" id="btn-next" aria-label="Siguiente">
+        Siguiente
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+      <span class="dock-sep" aria-hidden="true"></span>
+      <button type="button" class="dock-btn" id="btn-hub" title="Volver a la mesa (Esc)">Mesa <kbd>Esc</kbd></button>
+      <button type="button" class="dock-btn" id="btn-notes" title="Notas de orador (N)">Notas <kbd>N</kbd></button>
+      <button type="button" class="dock-btn" id="btn-full" title="Pantalla completa (F)" aria-label="Pantalla completa">⛶</button>
+    </nav>
+  </section>
+
+  <aside class="notes-panel" id="notes-panel" hidden>
+    <div class="notes-head"><strong>Guía para el orador</strong><button type="button" class="icon-btn" id="btn-notes-close" aria-label="Cerrar notas">✕</button></div>
+    <div class="notes-body" id="notes-body"></div>
+  </aside>
+
+  <div class="modal" id="help-modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <div class="notes-head"><strong id="help-title">Atajos de teclado</strong><button type="button" class="icon-btn" id="btn-help-close" aria-label="Cerrar">✕</button></div>
+      <table class="help-table">
+        <tr><td>Mouse</td><td>Manejar al operario: apuntar el escáner, agarrar la caja, cortar la cinta</td></tr>
+        <tr><td><kbd>Enter</kbd></td><td>Empezar / hacer automática la maniobra / siguiente</td></tr>
+        <tr><td><kbd>S</kbd></td><td>Saltar las maniobras e ir a la mesa</td></tr>
+        <tr><td><kbd>→</kbd> <kbd>Espacio</kbd></td><td>Bulto siguiente</td></tr>
+        <tr><td><kbd>←</kbd></td><td>Bulto anterior</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Volver a la mesa de inspección</td></tr>
+        <tr><td><kbd>P</kbd></td><td>Entregar la caja (cierre)</td></tr>
+        <tr><td><kbd>R</kbd></td><td>Volver a la mesa para preguntas</td></tr>
+        <tr><td><kbd>N</kbd></td><td>Notas de orador</td></tr>
+        <tr><td><kbd>T</kbd></td><td>Iniciar / pausar el cronómetro</td></tr>
+        <tr><td><kbd>M</kbd></td><td>Forzar / respetar animaciones</td></tr>
+        <tr><td><kbd>A</kbd></td><td>Activar / silenciar el sonido</td></tr>
+        <tr><td><kbd>F</kbd></td><td>Pantalla completa</td></tr>
+        <tr><td><kbd>H</kbd> <kbd>?</kbd></td><td>Esta ayuda</td></tr>
+      </table>
+      <p class="help-foot">Parámetros opcionales: <code>index.html?notaP1=9&amp;notaP2=10&amp;notaP3=10</code> muestra las notas de los parciales en el recorrido final; <code>min=20</code> cambia el cronómetro (15 min por defecto).</p>
+    </div>
+  </div>
+
+  <script src="datos.js"></script>
+  <script src="contenido.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
