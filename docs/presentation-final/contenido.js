@@ -153,11 +153,17 @@
           <div class="rv" style="--i:1">
             <div class="panel">
               <h3>La regla convencional (O(1))</h3>
+              <p class="small-p">Fórmula aritmética fija (sin IA): calcula un umbral mínimo de stock (<b>ROP</b>) en tiempo constante y lo compara contra el stock actual.</p>
               <div class="formula">
                 demanda = μ<sub>lote</sub> × máx(0,2; tendencia)<br>
                 seguridad = <b>1,5</b> × √σ²<sub>lote</sub><br>
                 ROP = demanda + seguridad
               </div>
+              <ul class="formula-gloss">
+                <li><b>Demanda (<code>μ<sub>lote</sub> × máx(0,2; tendencia)</code>):</b> cuánto se espera vender según el lote medio y si los pedidos suben o bajan.</li>
+                <li><b>Seguridad (<code>1,5 × √σ²<sub>lote</sub></code>):</b> colchón extra por variabilidad de pedidos (si <code>σ² = 0</code>, usa <code>0,5 × demanda</code>).</li>
+                <li><b>ROP (<code>demanda + seguridad</code>):</b> umbral mínimo; si el stock baja de acá, se dispara la alerta.</li>
+              </ul>
               <table class="tbl" style="margin-top:10px">
                 <thead><tr><th>Si el stock…</th><th class="r">P(quiebre)</th><th class="r">Alerta</th></tr></thead>
                 <tbody>
@@ -167,11 +173,12 @@
                   <tr><td>supera el ROP</td><td class="r">≤ 30 %</td><td class="r">no</td></tr>
                 </tbody>
               </table>
+              <p class="foot-note">Sin historial previo de pedidos, devuelve demanda 0 y no alerta.</p>
             </div>
             <p class="callout">Es rápida y se puede explicar en una línea. Pero es fija: usa 3 de los 10 datos que tenemos y no aprende de cómo se comportó la demanda.</p>
           </div>
         </div>`,
-      notas: 'Hasta el Parcial 3 el sistema contestaba rápido sobre el presente: cuánto stock hay, dónde está, qué alternativa ofrecer. El Final agrega una pregunta sobre el futuro: ¿se va a terminar? La respuesta clásica es el punto de reorden; está implementada tal cual en evaluar_heuristica_convencional. Es O(1) y explicable. Su límite: es una fórmula fija con lote medio, varianza y tendencia; no combina el resto de la información. Esa es la puerta para probar un modelo.'
+      notas: 'Hasta el Parcial 3 el sistema contestaba rápido sobre el presente: cuánto stock hay, dónde está, qué alternativa ofrecer. El Final agrega una pregunta sobre el futuro: ¿se va a terminar? La respuesta clásica es el punto de reorden (ROP), implementado en evaluar_heuristica_convencional: estima la demanda esperada (lote medio ajustado por tendencia), suma un colchón de seguridad con la varianza y compara ese total contra el stock actual. Es O(1) y explicable. Su límite: es una fórmula fija con 3 de los 10 datos y no aprende de patrones más complejos. Esa es la puerta para probar un modelo.'
     },
 
     /* 03 ---------------------------------------------------------------- */
