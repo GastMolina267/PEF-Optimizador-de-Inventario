@@ -108,7 +108,27 @@ Al ejecutar `python main.py`, la aplicación de escritorio en **Flet** incluye l
 
 ---
 
-## 6. Guía Rápida para Probarlo
+## 6. Mapa Rápido de Archivos y Código (Presentación B-01 a B-11)
+
+Índice directo a cada archivo, clase, función y rango de líneas mencionado en los 11 bultos de [docs/presentation-final/](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/docs/presentation-final) para navegar y explicar el código al instante durante la defensa oral:
+
+| Bulto | Tema en Presentación | Archivos y Símbolos Clave | Qué Mostrar / Explicar |
+|:---:|---|---|---|
+| **B-01** | **Orden de trabajo y fases** | [Programacion-eficiente.pptx](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/docs/final/Programacion-eficiente.pptx)<br>[planificacion-proyecto-final.md](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/docs/final/planificacion-proyecto-final.md) | Doble enfoque de IA (láminas 386 y 400) y hoja de ruta P4.0–P4.6. |
+| **B-02** | **Quiebre de stock y regla $O(1)$** | [`evaluar_heuristica_convencional()`](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/ia/modelos.py#L35-L89) | Fórmula `ROP = demanda + seguridad`, las 4 bandas de probabilidad y el fallback sin historial. |
+| **B-03** | **La etiqueta (10 datos por SKU)** | [`NOMBRES_FEATURES` / `FeatureVector`](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/ia/tipos.py#L11-L81)<br>[`ExtractorFeatures`](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/ia/extractor_features.py#L55-L132)<br>[demo_oral.json](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/data/datasets/demo_oral.json) | Cómo se transforma el historial de pedidos de cada producto en un vector numérico de 10 dimensiones. |
+| **B-04** | **Cómo aprende (Ridge + LogReg)** | [`ModeloPredictorIA`](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/ia/modelos.py#L92-L203)<br>[`GeneradorHistorialSintetico`](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/ia/extractor_features.py#L135-L276)<br>[entrenador.py](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/ia/entrenador.py#L20-L52)<br>[predictor_ia.joblib](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/data/modelos/predictor_ia.joblib) | Simulación Pareto (`seed=42`), corte cronológico 75/25, `StandardScaler` y modelo serializado (2,6 KB). |
+| **B-05** | **El desviador (Cascada híbrida)** | [`PredictorDemanda._resolver_estrategia()`](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/ia/predictor_demanda.py#L79-L135)<br>[`MotorInventario.predecir_quiebres_stock()`](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/motor/motor_inventario.py#L373-L412) | Filtro rápido $O(1)$ vs. derivación al modelo e integración en la fachada del motor. |
+| **B-06** | **Balanza y cronómetro (Costos)** | [comparar_ia.py](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/benchmarks/comparar_ia.py#L43-L105)<br>[tabla_comparativa_ia.md](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/docs/mediciones/tabla_comparativa_ia.md) | Por qué se miden tiempo y heap en corridas separadas (`tracemalloc` vs. `timeit`). |
+| **B-07** | **¿Cuándo conviene la IA?** | [Rama `HIBRIDA` (`predictor_demanda.py:110-134`)](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/ia/predictor_demanda.py#L110-L134)<br>[04_diseno_tecnico.md](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/docs/sphinx/secciones/04_diseno_tecnico.md) | Regla de derivación por holgura de stock y justificación de ingeniería del compromiso híbrido. |
+| **B-08** | **IA en el desarrollo (Validación)** | [`test_predictor_ia.py` (`TestPropiedadesInferencia`)](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/tests/ia/test_predictor_ia.py#L226-L270)<br>[`test_presupuesto_memoria_ia.py`](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/tests/ia/test_presupuesto_memoria_ia.py#L75-L105) | Invariantes generadas con Hypothesis y test de fugas de memoria en 200 iteraciones con `tracemalloc`. |
+| **B-09** | **Aduana de calidad y CI** | [verify.yml](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/.github/workflows/verify.yml)<br>[pyproject.toml](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/pyproject.toml)<br>[test_extractor_features.py](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/tests/ia/test_extractor_features.py) | Gates de Ruff, Mypy, Complexipy ($\le 15$), Bandit SAST y pytest con cobertura $\ge 85\%$. |
+| **B-10** | **Demo en vivo (UI Flet)** | [prediccion_ia.py](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/src/ui/pantallas/prediccion_ia.py)<br>[main.py](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/main.py)<br>[test_pantalla_ia.py](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/tests/ui/test_pantalla_ia.py) | Vista «Predicción IA», selector de estrategia en caliente, KPIs en vivo y botón «Re-entrenar». |
+| **B-11** | **Conclusiones y presentación** | [presentation-final/index.html](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/docs/presentation-final/index.html)<br>[contenido.js](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/docs/presentation-final/contenido.js)<br>[datos.js](file:///c:/Users/edgar/OneDrive/Escritorio/UBP/PEF/Parcial/docs/presentation-final/datos.js) | Escenario web de defensa y snapshot JSON usado por las láminas interactivas. |
+
+---
+
+## 7. Guía Rápida para Probarlo
 
 ```bash
 # 1. Instalar dependencias (incluye scikit-learn y joblib)

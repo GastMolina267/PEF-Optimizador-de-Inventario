@@ -190,26 +190,28 @@
       html: () => `
         <div class="etq-wrap fit">
           <div class="rv" style="--i:0">
+            <p class="small-p" style="margin-top:0">Los modelos de <code>scikit-learn</code> no leen objetos <code>Producto</code> ni listas de pedidos: <code>ExtractorFeatures</code> resume cada SKU en un vector fijo de 10 números (<code>FeatureVector</code>).</p>
             <div class="etq-pick" id="etq-pick">
               ${[1, 5, 21, 2, 7].map((id) => { const p = D.find((x) => x.id === id); return `<button type="button" class="mini-btn" data-id="${id}">${p.n.split(' ').slice(0, 2).join(' ')}</button>`; }).join('')}
             </div>
             <div class="etiqueta" id="etiqueta"></div>
+            <p class="callout" id="etq-why"></p>
           </div>
           <div class="panel rv" style="--i:1">
-            <h3>Qué significa cada dato</h3>
+            <h3>Qué significa cada dato <span class="chip chip-amber">ROP = usado en la fórmula O(1)</span></h3>
             <ul class="feat-list" id="feat-list">
               ${[
-                ['rotacion_historica', 'unidades vendidas en total'],
-                ['frecuencia_pedidos', 'en cuántos pedidos aparece'],
-                ['tamano_medio_lote', 'unidades por pedido (μ)'],
-                ['varianza_lote', 'qué tanto varía el lote (σ²)'],
-                ['stock_actual', 'unidades en el estante'],
-                ['precio_unitario', 'precio de lista'],
-                ['ratio_stock_rotacion', 'stock ÷ (rotación + 1)'],
-                ['tasa_quiebre_reciente', 'quiebres vistos ÷ pedidos'],
-                ['tendencia_demanda', 'mitad reciente ÷ mitad antigua'],
-                ['dias_cobertura_estimados', 'stock ÷ lote medio (999 = sin consumo)']
-              ].map((f, i) => `<li data-f="${i}"><b>F${i + 1}</b><span><code>${f[0]}</code><br>${f[1]}</span></li>`).join('')}
+                ['rotacion_historica', 'total de unidades pedidas en todo el historial', false],
+                ['frecuencia_pedidos', 'cantidad de pedidos donde apareció el SKU', false],
+                ['tamano_medio_lote', 'promedio de unidades por pedido (μ)', true],
+                ['varianza_lote', 'cuánto cambian las cantidades entre pedidos (σ²)', true],
+                ['stock_actual', 'unidades físicas disponibles hoy en estante', false],
+                ['precio_unitario', 'precio de lista (pondera impacto de negocio)', false],
+                ['ratio_stock_rotacion', 'stock ÷ (rotación + 1) — respaldo relativo (+1 evita ÷ 0)', false],
+                ['tasa_quiebre_reciente', 'proporción de pedidos que superaron el stock actual', false],
+                ['tendencia_demanda', 'mitad reciente ÷ mitad antigua (> 1 acelera; 1 si < 2 pedidos)', true],
+                ['dias_cobertura_estimados', 'stock ÷ lote medio — cuántos pedidos cubre (999 si sin consumo)', false]
+              ].map((f, i) => `<li data-f="${i}"><b>F${i + 1}</b><span><code>${f[0]}</code>${f[2] ? ' <em class="f-tag">ROP</em>' : ''}<br>${f[1]}</span></li>`).join('')}
             </ul>
             <p class="foot-note">Extraer los 10 datos de un producto cuesta ${fmt(MED.timeit.ext, 1)} µs en la demo: recorre sus pedidos, así que crece con el historial.</p>
             <h3 class="mt">Qué responde cada estrategia</h3>
@@ -219,7 +221,15 @@
       init(root) {
         const etq = root.querySelector('#etiqueta');
         const res = root.querySelector('#etq-res');
+        const why = root.querySelector('#etq-why');
         const nombres = ['rotación', 'frecuencia', 'lote medio', 'varianza', 'stock', 'precio', 'stock/rotación', 'tasa quiebre', 'tendencia', 'cobertura'];
+        const motivos = {
+          1: '<b>1 pedido y 15 en stock:</b> la regla O(1) ve cobertura holgada (Bajo), mientras el modelo sube a Medio (43,4 %) influido por el precio alto y el patrón sintético.',
+          5: '<b>Stock 0 con demanda previa:</b> ambas estrategias coinciden en Crítico y disparan alerta inmediata.',
+          21: '<b>Stock 2 frente a un pedido de 5 u (cobertura 0,4 lotes):</b> ambas disparan alerta; la regla marca Crítico (85 %) y el modelo Medio (63 %).',
+          2: '<b>0 pedidos previos (cobertura 999):</b> la regla no arriesga (demanda 0, Bajo), pero el modelo entrenado con datos sintéticos proyecta 14,5 u (Medio). Caso límite de IA sin historial.',
+          7: '<b>Alta rotación (30 u en 2 pedidos, tendencia 2,0), pero 120 unidades en stock:</b> ambas coinciden en riesgo Bajo sin alerta.'
+        };
         const pintar = (id) => {
           const p = D.find((x) => x.id === id);
           root.querySelectorAll('#etq-pick button').forEach((b) => b.classList.toggle('on', Number(b.dataset.id) === id));
@@ -227,8 +237,9 @@
             <header><b>${p.n}</b><span>SKU-${String(p.id).padStart(4, '0')} · ${p.cat}</span></header>
             <table><tbody>${p.fv.map((v, i) => `<tr data-f="${i}"><td>F${i + 1}</td><td>${nombres[i]}</td><td>${i === 5 ? '$ ' + fmt(v, 0) : fmt(v, v % 1 ? 2 : 0)}</td></tr>`).join('')}</tbody></table>
             <footer><span class="bars" aria-hidden="true"></span><span>PEF-2026</span></footer>`;
-          const fila = (t, r) => `<div class="panel ${r[2] === 'critico' ? 'tint-red' : r[2] === 'medio' ? 'tint-amber' : ''}"><h3>${t} ${riskChip(r[2])}</h3><p class="small-p">Demanda <b>${fmt(r[0], 1)}</b> u · P(quiebre) <b>${pct(r[1])}</b></p></div>`;
+          const fila = (t, r) => `<div class="panel ${r[2] === 'critico' ? 'tint-red' : r[2] === 'medio' ? 'tint-amber' : ''}"><h3>${t} ${riskChip(r[2])}</h3><p class="small-p">Demanda <b>${fmt(r[0], 1)}</b> u · P(quiebre) <b>${pct(r[1])}</b> · Alerta: <b>${r[3] ? 'sí' : 'no'}</b></p></div>`;
           res.innerHTML = fila('Regla O(1)', p.conv) + fila('Modelo', p.ia);
+          why.innerHTML = motivos[id] || '';
           etq.querySelectorAll('tr').forEach((tr) => tr.addEventListener('mouseenter', () => resaltar(Number(tr.dataset.f))));
         };
         const resaltar = (i) => {
@@ -251,26 +262,28 @@
         <div class="fit" style="display:flex;flex-direction:column;gap:14px">
           <div class="panel rv" style="--i:0">
             <h3>Pipeline de scikit-learn <span class="chip chip-blue">Pipeline(StandardScaler → modelo)</span></h3>
+            <p class="small-p" style="margin:0 0 8px">Como el JSON es una foto sin historial temporal, <code>GeneradorHistorialSintetico</code> simula ciclos de pedidos sobre el catálogo real (<b>Pareto</b>, <code>seed=42</code>): extrae las 10 features con pedidos anteriores y etiqueta el ciclo siguiente (75 % entrenamiento / 25 % prueba cronológica).</p>
             <div class="pipe">
               <div class="pipe-row">
-                <div class="pipe-node"><code>Historial</code><span>sintético · seed 42</span></div>
+                <div class="pipe-node"><code>Ciclos Pareto</code><span>catálogo real · seed 42</span></div>
                 <div class="pipe-arrow">→</div>
-                <div class="pipe-node"><code>10 datos</code><span>por producto y período</span></div>
+                <div class="pipe-node"><code>X (10 features · 75/25)</code><span>sin fuga futura</span></div>
                 <div class="pipe-arrow">→</div>
-                <div class="pipe-node"><code>StandardScaler → Ridge(alpha=1.0)</code><span>regresión lineal regularizada</span></div>
+                <div class="pipe-node"><code>StandardScaler → Ridge(α=1.0)</code><span>regresión lineal regularizada</span></div>
                 <div class="pipe-arrow">→</div>
-                <div class="pipe-node out"><code>demanda</code><span>unidades del período</span></div>
+                <div class="pipe-node out"><code>demanda</code><span>unidades del ciclo</span></div>
               </div>
               <div class="pipe-row">
-                <div class="pipe-node"><code>Etiqueta</code><span>quiebre = demanda &gt; stock</span></div>
+                <div class="pipe-node"><code>Etiqueta (y)</code><span>1 si demanda &gt; stock</span></div>
                 <div class="pipe-arrow">→</div>
-                <div class="pipe-node"><code>75 % / 25 %</code><span>entrenamiento / prueba, en orden</span></div>
+                <div class="pipe-node"><code>Mismo X (75 % / 25 %)</code><span>corte cronológico</span></div>
                 <div class="pipe-arrow">→</div>
-                <div class="pipe-node"><code>StandardScaler → LogisticRegression(C=1.0)</code><span>clasificador, max_iter=300</span></div>
+                <div class="pipe-node"><code>StandardScaler → LogisticRegression</code><span>C=1.0 · max_iter=300</span></div>
                 <div class="pipe-arrow">→</div>
-                <div class="pipe-node out"><code>P(quiebre)</code><span>0 a 1 · alerta si ≥ 0,5</span></div>
+                <div class="pipe-node out"><code>P(quiebre)</code><span>0–100 % · alerta ≥ 50 %</span></div>
               </div>
             </div>
+            <p class="foot-note"><b>¿Por qué <code>StandardScaler</code>?</b> Porque <code>precio</code> está en miles y <code>tasa_quiebre</code> en 0–1: escalar evita que las magnitudes grandes dominen los pesos. Al iniciar la app se carga <code>predictor_ia.joblib</code> y el botón «Re-entrenar» reajusta en memoria sobre el catálogo activo.</p>
           </div>
           <div class="grid-split">
             <div class="panel rv" style="--i:1">
@@ -278,9 +291,9 @@
               <div class="learn-bar"><i id="learn-fill"></i></div>
               <p class="foot-note" id="learn-txt" style="margin-top:0">Historial sintético con semilla 42 · ${MED.modelo.test} muestras de prueba</p>
               <div class="metrics" style="margin-top:8px">
-                <div class="metric"><span>F1 (ponderado)</span><strong data-v="${MED.modelo.f1}">0,00</strong><em>clasificador</em></div>
-                <div class="metric"><span>Precisión / Recall</span><strong data-v="${MED.modelo.prec}" data-v2="${MED.modelo.rec}">0,00</strong><em>clasificador</em></div>
-                <div class="metric"><span>R² · MAE</span><strong data-v="${MED.modelo.r2}" data-mae="${MED.modelo.mae}">0,00</strong><em>regresor</em></div>
+                <div class="metric"><span>F1 (ponderado)</span><strong data-v="${MED.modelo.f1}">0,00</strong><em>balance precisión / recall</em></div>
+                <div class="metric"><span>Precisión / Recall</span><strong data-v="${MED.modelo.prec}" data-v2="${MED.modelo.rec}">0,00</strong><em>acierto / detección de quiebres</em></div>
+                <div class="metric"><span>R² · MAE</span><strong data-v="${MED.modelo.r2}" data-mae="${MED.modelo.mae}">0,00</strong><em>ajuste (0–1) · error medio (u)</em></div>
               </div>
             </div>
             <div class="rv" style="--i:2">
@@ -321,7 +334,7 @@
         root.querySelector('#btn-train').addEventListener('click', entrenar);
         api.later(api.ms(500), entrenar);
       },
-      notas: 'No hay historial real de ventas, así que el generador sintético simula períodos de pedidos con semilla fija; es reproducible. La etiqueta es simple: hubo quiebre si la demanda del período superó al stock. Dos modelos lineales con escalado: Ridge para la demanda, regresión logística para la probabilidad. Ser honestos con las métricas: el clasificador anda bien, pero el regresor explica poco, R² 0,12. Por eso las alertas se deciden con la probabilidad. Si preguntan por qué no una red: la consigna pide medir costo; un modelo lineal de 2,6 KB es lo más barato que puede competir con la regla.'
+      notas: 'No hay historial temporal real en el JSON, así que GeneradorHistorialSintetico simula ciclos de pedidos con distribución Pareto y semilla 42 sobre el catálogo real. Sin fuga futura: las 10 features se calculan con ciclos anteriores y la etiqueta evalúa el ciclo siguiente; el corte 75/25 es cronológico. StandardScaler equilibra magnitudes antes de entrenar Ridge y regresión logística. Al iniciar la app se carga predictor_ia.joblib (2,6 KB) y «Re-entrenar» reajusta en memoria sobre el catálogo activo. Ser honestos con las métricas: el clasificador funciona (F1 0,87), el regresor explica poco (R² 0,12), y las alertas usan solo la probabilidad.'
     },
 
     /* 05 ---------------------------------------------------------------- */
@@ -523,6 +536,10 @@
                 </svg><span></span></div>
             </div>
             <p class="callout" id="bench-msg"></p>
+            <div class="tm-note">
+              <b>¿Para qué sirve <code>tracemalloc</code> y por qué suma tiempo?</b>
+              <p class="small-p" style="margin:4px 0 0">Rastrea el heap de Python para medir el <b>pico real de memoria</b> y detectar <b>fugas</b> en CI (200 inferencias). Al estar encendido intercepta cada reserva/liberación de memoria y guarda su traza, sumando decenas de µs por llamada: por eso <b>tiempo y memoria se miden en corridas separadas</b>.</p>
+            </div>
           </div>
           <div class="rv" style="--i:1">
             <div class="panel">
