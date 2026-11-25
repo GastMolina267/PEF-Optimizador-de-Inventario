@@ -149,6 +149,7 @@
               </svg>
               <figcaption class="tl-cap">El aviso sirve si llega cuando el stock cruza el punto de reorden, no cuando ya está en cero.</figcaption>
             </figure>
+            <p class="callout">Es rápida y se puede explicar en una línea. Pero es fija: usa 3 de los 10 datos que tenemos y no aprende de cómo se comportó la demanda.</p>
           </div>
           <div class="rv" style="--i:1">
             <div class="panel">
@@ -175,7 +176,6 @@
               </table>
               <p class="foot-note">Sin historial previo de pedidos, devuelve demanda 0 y no alerta.</p>
             </div>
-            <p class="callout">Es rápida y se puede explicar en una línea. Pero es fija: usa 3 de los 10 datos que tenemos y no aprende de cómo se comportó la demanda.</p>
           </div>
         </div>`,
       notas: 'Hasta el Parcial 3 el sistema contestaba rápido sobre el presente: cuánto stock hay, dónde está, qué alternativa ofrecer. El Final agrega una pregunta sobre el futuro: ¿se va a terminar? La respuesta clásica es el punto de reorden (ROP), implementado en evaluar_heuristica_convencional: estima la demanda esperada (lote medio ajustado por tendencia), suma un colchón de seguridad con la varianza y compara ese total contra el stock actual. Es O(1) y explicable. Su límite: es una fórmula fija con 3 de los 10 datos y no aprende de patrones más complejos. Esa es la puerta para probar un modelo.'

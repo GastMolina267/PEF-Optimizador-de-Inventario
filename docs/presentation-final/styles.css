@@ -1188,3 +1188,45 @@ kbd {
 .dest-actions { align-items: center; }
 @media (max-width: 1100px) { .destino { padding-right: 24px; background: rgba(6, 7, 10, 0.94); } }
 .holo-card { pointer-events: none; }
+
+/* Proyectores (≤ 800 px de alto): las láminas 2, 3 y 4 entran sin desplazamiento */
+@media (max-height: 800px) {
+  /* 02 · El problema */
+  .shelf-demo .small-p { margin: 0 0 6px; font-size: 12.5px; }
+  .shelf-demo .formula { font-size: 13.5px; padding: 7px 12px; line-height: 1.6; }
+  .shelf-demo .formula-gloss { margin-top: 5px; font-size: 11.8px; }
+  .shelf-demo .formula-gloss li { margin: 1px 0; }
+  .shelf-demo .tbl td { padding: 3px 8px; }
+  .shelf-demo .tbl th { padding: 4px 8px; }
+  .shelf-demo .foot-note { margin-top: 4px; }
+  .shelf-demo .callout { margin-top: 8px; font-size: 13px; }
+
+  /* 03 · La etiqueta */
+  .etq-wrap > div > .small-p { font-size: 12.5px; margin-bottom: 6px; }
+  .etq-pick { margin-bottom: 6px; }
+  .etiqueta header { padding: 5px 12px; }
+  .etiqueta td { padding: 1.5px 12px; }
+  .etiqueta footer { padding: 4px 12px; }
+  .etiqueta .bars { height: 18px; }
+  #etq-why { margin-top: 6px; padding: 7px 10px; font-size: 12.3px; }
+  .feat-list { gap: 2px 14px; font-size: 12px; }
+  .feat-list li { padding: 2px 0; line-height: 1.3; }
+  .etq-wrap .foot-note { margin-top: 6px; }
+  .etq-wrap h3.mt { margin-top: 8px; margin-bottom: 6px; }
+  #etq-res { gap: 10px; }
+  #etq-res .panel { padding: 7px 10px; }
+  #etq-res .panel h3 { margin-bottom: 4px; }
+  #etq-res .small-p { margin: 0; font-size: 12.5px; }
+
+  /* 04 · Cómo aprende */
+  .pipe { gap: 6px; }
+  .pipe-node { padding: 5px 8px; line-height: 1.2; }
+  .panel:has(> .pipe) ~ .grid-split .callout { margin-top: 8px; padding: 8px 12px; }
+  .metrics { gap: 8px; }
+  .metric { padding: 6px 10px; }
+  .metric strong { font-size: 22px; }
+  .learn-bar { margin: 4px 0 2px; }
+  .panel:has(> .pipe) .small-p { font-size: 12.5px; margin-bottom: 6px !important; }
+  .panel:has(> .pipe) .foot-note { margin-top: 6px; }
+  .metric em { font-size: 10.5px; line-height: 1.25; }
+}
